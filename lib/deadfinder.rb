@@ -1,6 +1,7 @@
 require 'thor'
 require 'open-uri'
 require 'nokogiri'
+require 'deadfinder/utils'
 
 def run_pipe
   while STDIN.gets
@@ -8,7 +9,10 @@ def run_pipe
     page = Nokogiri::HTML(URI.open(target))
     nodeset = page.css('a')
     link_a = nodeset.map {|element| element["href"]}.compact
-    puts link_a
+    link_a.each do |node|
+      result = generate_url node, target
+      puts result
+    end
   end
 end
 
