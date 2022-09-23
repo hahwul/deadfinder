@@ -1,7 +1,13 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    concurrent-ruby (1.1.10)
+    concurrent-ruby-edge (0.6.0)
+      concurrent-ruby (~> 1.1.6)
     date (3.2.2)
+    ethon (0.15.0)
+      ffi (>= 1.15.0)
+    ffi (1.15.5)
     nokogiri (1.13.8-x86_64-darwin)
       racc (~> 1.4)
     open-uri (0.2.0)
@@ -9,18 +15,25 @@ GEM
       time
       uri
     racc (1.6.0)
+    sitemap-parser (0.5.6)
+      nokogiri (~> 1.6)
+      typhoeus (>= 0.6, < 2.0)
     stringio (3.0.2)
     thor (1.2.1)
     time (0.2.0)
       date
+    typhoeus (1.4.0)
+      ethon (>= 0.9.0)
     uri (0.11.0)
 
 PLATFORMS
   x86_64-darwin-21
 
 DEPENDENCIES
+  concurrent-ruby-edge
   nokogiri
   open-uri
+  sitemap-parser
   thor
 
 BUNDLED WITH

@@ -6,6 +6,7 @@ require 'open-uri'
 require 'nokogiri'
 require 'deadfinder/utils'
 require 'concurrent-edge'
+require 'sitemap-parser'
 
 Channel = Concurrent::Channel
 
@@ -38,7 +39,9 @@ class DeadFinderRunner
       begin
         URI.open(j)
       rescue => exception
-        puts " ㄴ [#{exception}] #{j}"
+        if exception.to_s.include? '404 Not Found'
+          puts " ㄴ [#{exception}] #{j}"
+        end
       end  
       results << j
     end
@@ -66,22 +69,37 @@ def run_url(url)
   app.run url
 end
 
+def run_sitemap(sitemap_url)
+  app = DeadFinderRunner.new
+  sitemap = SitemapParser.new sitemap_url, {recurse: true}
+  sitemap.to_a.each do |url|
+    app.run url
+  end
+end
+
 class DeadFinder < Thor
-  desc 'pipe', 'URLs from STDIN (e.g cat urls.txt | deadfinder pipe)'
+  
+  desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
   def pipe
     puts 'pipe mode'
     run_pipe
   end
 
-  desc 'file', 'URLs from File (e.g deadfinder file urls.txt)'
+  desc 'file', 'Scan the URLs from File. (e.g deadfinder file urls.txt)'
   def file(filename)
     puts 'file mode'
     run_file filename
   end
 
-  desc 'url', 'Single URL'
+  desc 'url', 'Scan the Single URL.'
   def url(url)
     puts 'url mode'
     run_url url
+  end
+
+  desc 'sitemap', 'Scan the URLs from sitemap.'
+  def sitemap(sitemap)
+    puts 'sitemap mode'
+    run_sitemap sitemap
   end
 end
