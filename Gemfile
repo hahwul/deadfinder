@@ -1,5 +1,7 @@
-source "https://rubygems.org"
+# frozen_string_literal: true
 
-gem "nokogiri"
-gem "open-uri"
-gem "thor"
+source 'https://rubygems.org'
+
+gem 'nokogiri'
+gem 'open-uri'
+gem 'thor'
