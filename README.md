@@ -17,19 +17,17 @@ Commands:
   deadfinder url             # Scan the Single URL.
 ```
 
-## Usecase
+## Modes
 ```shell
+# Scan the URLs from STDIN (multiple URLs)
 cat urls.txt | deadfinder pipe
-```
 
-```shell
+# Scan the URLs from File. (multiple URLs)
 deadfinder file urls.txt
-```
 
-```shell
+# Scan the Single URL.
 deadfinder url https://www.hahwul.com
-```
 
-```shell
+# Scan the URLs from sitemap. (multiple URLs)
 deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```
