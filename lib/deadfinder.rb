@@ -82,25 +82,25 @@ class DeadFinder < Thor
   
   desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
   def pipe
-    puts 'pipe mode'
+    Logger.info 'Pipe mode'
     run_pipe
   end
 
   desc 'file', 'Scan the URLs from File. (e.g deadfinder file urls.txt)'
   def file(filename)
-    puts 'file mode'
+    Logger.info 'File mode'
     run_file filename
   end
 
   desc 'url', 'Scan the Single URL.'
   def url(url)
-    puts 'url mode'
+    Logger.info 'Single URL mode'
     run_url url
   end
 
   desc 'sitemap', 'Scan the URLs from sitemap.'
   def sitemap(sitemap)
-    puts 'sitemap mode'
+    Logger.info 'Sitemap mode'
     run_sitemap sitemap
   end
 end
