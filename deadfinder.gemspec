@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = 'deadfinder'
-  s.version     = '0.0.1'
+  s.version     = '1.0.0'
   s.summary     = 'Find dead-links (broken links)'
   s.description = 'Find dead-links (broken links)'
   s.authors     = ['hahwul']
