@@ -17,6 +17,8 @@ class DeadFinderRunner
     nodeset = page.css('a')
     link_a = nodeset.map { |element| element['href'] }.compact
     Logger.target target
+    Logger.sub_info "Found #{link_a.length} point"
+    Logger.sub_info 'Checking'
     jobs    = Channel.new(buffer: :buffered, capacity: 100)
     results = Channel.new(buffer: :buffered, capacity: 100)
 
@@ -33,6 +35,7 @@ class DeadFinderRunner
     (1..link_a.uniq.length).each do 
       ~results
     end
+    Logger.sub_info 'Done'
   end
 
   def worker(id, jobs, results)

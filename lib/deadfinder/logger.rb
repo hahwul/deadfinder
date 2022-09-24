@@ -2,7 +2,7 @@
 
 require 'colorize'
 
-class Logger 
+class Logger     
     def self.info text
         puts "[*]".colorize(:blue) + " #{text}".colorize(:light_blue)
     end
@@ -11,7 +11,11 @@ class Logger
         puts "[+]".colorize(:green) + " #{text}".colorize(:light_green)
     end
 
+    def self.sub_info text
+        puts "  ● ".colorize(:blue) + " #{text}".colorize(:light_blue)
+    end
+
     def self.found text
-        puts " ㄴ  #{text}".colorize(:red)
+        puts "  ✗ #{text}".colorize(:red)
     end
 end
