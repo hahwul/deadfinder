@@ -1,6 +1,6 @@
 # deadfinder
 
-![](https://user-images.githubusercontent.com/13212227/192077687-8067c240-5e0c-4a5a-a8bc-862d6dd79b0d.png)
+![](https://user-images.githubusercontent.com/13212227/192097414-d735ac3e-930a-4c36-9592-dedabac22a19.png)
 
 ## Installation
 ```
@@ -15,4 +15,21 @@ Commands:
   deadfinder pipe            # Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)
   deadfinder sitemap         # Scan the URLs from sitemap.
   deadfinder url             # Scan the Single URL.
+```
+
+## Usecase
+```shell
+cat urls.txt | deadfinder pipe
+```
+
+```shell
+deadfinder file urls.txt
+```
+
+```shell
+deadfinder url https://www.hahwul.com
+```
+
+```shell
+deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```
