@@ -5,6 +5,7 @@ require 'thor'
 require 'open-uri'
 require 'nokogiri'
 require 'deadfinder/utils'
+require 'deadfinder/logger'
 require 'concurrent-edge'
 require 'sitemap-parser'
 
@@ -15,7 +16,7 @@ class DeadFinderRunner
     page = Nokogiri::HTML(URI.open(target))
     nodeset = page.css('a')
     link_a = nodeset.map { |element| element['href'] }.compact
-    puts target
+    Logger.target target
     jobs    = Channel.new(buffer: :buffered, capacity: 100)
     results = Channel.new(buffer: :buffered, capacity: 100)
 
@@ -40,7 +41,7 @@ class DeadFinderRunner
         URI.open(j)
       rescue => exception
         if exception.to_s.include? '404 Not Found'
-          puts " ㄴ [#{exception}] #{j}"
+          Logger.found "[#{exception}] #{j}"
         end
       end  
       results << j

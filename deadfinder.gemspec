@@ -12,6 +12,6 @@ Gem::Specification.new do |s|
     'https://www.hahwul.com'
   s.license = 'MIT'
   s.executables << 'deadfinder'
-  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/utils.rb']
+  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/logger.rb']
   s.metadata['rubygems_mfa_required'] = 'true'
 end
