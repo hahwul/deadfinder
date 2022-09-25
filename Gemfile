@@ -2,9 +2,9 @@
 
 source 'https://rubygems.org'
 
+gem 'colorize'
+gem 'concurrent-ruby-edge'
 gem 'nokogiri'
 gem 'open-uri'
-gem 'thor'
-gem 'concurrent-ruby-edge'
 gem 'sitemap-parser'
-gem 'colorize'
+gem 'thor'

@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative 'lib/deadfinder/version'
+
 Gem::Specification.new do |s|
   s.name = 'deadfinder'
-  s.version     = '1.0.0'
+  s.version     = VERSION
   s.summary     = 'Find dead-links (broken links)'
   s.description = 'Find dead-links (broken links)'
   s.authors     = ['hahwul']
@@ -11,7 +13,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://www.hahwul.com'
   s.license = 'MIT'
   s.executables << 'deadfinder'
-  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/logger.rb']
+  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/version.rb']
   s.metadata['rubygems_mfa_required'] = 'true'
-  s.metadata["source_code_uri"] = "https://github.com/hahwul/deadfinder"
+  s.metadata['source_code_uri'] = 'https://github.com/hahwul/deadfinder'
 end
