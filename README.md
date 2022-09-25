@@ -15,6 +15,11 @@ Commands:
   deadfinder pipe            # Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)
   deadfinder sitemap         # Scan the URLs from sitemap.
   deadfinder url             # Scan the Single URL.
+  deadfinder version         # Show version.
+
+Options:
+  c, [--concurrency=N]  
+                        # Default: 20
 ```
 
 ## Modes
