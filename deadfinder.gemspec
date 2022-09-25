@@ -8,10 +8,10 @@ Gem::Specification.new do |s|
   s.authors     = ['hahwul']
   s.email       = 'hahwul@gmail.com'
   s.files       = ['lib/deadfinder.rb']
-  s.homepage    =
-    'https://www.hahwul.com'
+  s.homepage    = 'https://www.hahwul.com'
   s.license = 'MIT'
   s.executables << 'deadfinder'
   s.files = ['lib/deadfinder.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/logger.rb']
   s.metadata['rubygems_mfa_required'] = 'true'
+  s.metadata["source_code_uri"] = "https://github.com/hahwul/deadfinder"
 end
