@@ -114,8 +114,8 @@ def gen_output
 end
 
 class DeadFinder < Thor
-  class_option :concurrency, aliases: :c, default: 20, type: :numeric
-  class_option :timeout, aliases: :t, default: 10, type: :numeric
+  class_option :concurrency, aliases: :c, default: 20, type: :numeric, desc: 'Set Concurrncy'
+  class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Set HTTP Timeout'
   class_option :output, aliases: :o, default: '', type: :string, desc: 'Save JSON Result'
 
   desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
