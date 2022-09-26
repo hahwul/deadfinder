@@ -5,8 +5,14 @@ Dead link (broken link) means a link within a web page that cannot be connected.
 ![](https://user-images.githubusercontent.com/13212227/192243070-0c960680-ae08-4f30-8cf9-0844eca7c5ea.png)
 
 ## Installation
+Install with Gem
 ```
 gem install deadfinder
+```
+
+Docker Image
+```shell
+docker pull ghcr.io/hahwul/deadfinder:main
 ```
 
 ## Usage
