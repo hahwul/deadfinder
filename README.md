@@ -26,9 +26,9 @@ Commands:
   deadfinder version         # Show version.
 
 Options:
-  c, [--concurrency=N]
+  c, [--concurrency=N]  # Set Concurrncy
                         # Default: 20
-  t, [--timeout=N]
+  t, [--timeout=N]      # Set HTTP Timeout
                         # Default: 10
   o, [--output=OUTPUT]  # Save JSON Result
 ```
