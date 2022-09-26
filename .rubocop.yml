@@ -3,3 +3,5 @@ AllCops:
   Exclude:
     - '.git/**/*'
     - 'bin/*'
+Style/MutableConstant:
+  Enabled: false
