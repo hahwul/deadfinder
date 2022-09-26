@@ -5,7 +5,7 @@ Gem::Specification.new do |s|
   s.name = 'deadfinder'
   s.version     = VERSION
   s.summary     = 'Find dead-links (broken links)'
-  s.description = 'Dead link (broken link) means a link within a web page that cannot be connected. These links can have a security negative impact with SEO. This tool makes it easy to identify and modify.'
+  s.description = 'Find dead-links (broken links). Dead link (broken link) means a link within a web page that cannot be connected. These links can have a negative impact to SEO and Security. This tool makes it easy to identify and modify.'
   s.authors     = ['hahwul']
   s.email       = 'hahwul@gmail.com'
   s.files       = ['lib/deadfinder.rb']
