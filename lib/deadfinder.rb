@@ -14,8 +14,8 @@ require 'json'
 
 Channel = Concurrent::Channel
 CacheSet = Set.new
-CacheQue = {}.freeze
-Output = {}.freeze
+CacheQue = {}
+Output = {}
 
 class DeadFinderRunner
   def run(target, options)
