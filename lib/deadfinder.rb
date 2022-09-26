@@ -14,8 +14,8 @@ require 'json'
 
 Channel = Concurrent::Channel
 CacheSet = Set.new
-CacheQue = {}
-Output = {}
+CacheQue = {}.freeze
+Output = {}.freeze
 
 class DeadFinderRunner
   def run(target, options)
@@ -29,7 +29,7 @@ class DeadFinderRunner
     link_link = nodeset_link.map { |element| element['href'] }.compact
 
     link_merged = []
-    link_merged = link_merged.concat link_a, link_script, link_link
+    link_merged.concat link_a, link_script, link_link
 
     Logger.target target
     Logger.sub_info "Found #{link_merged.length} point. [a:#{link_a.length}/s:#{link_script.length}/l:#{link_link.length}]"
@@ -59,26 +59,19 @@ class DeadFinderRunner
         CacheSet.add j
         begin
           CacheQue[j] = true
-          URI.open(j, :read_timeout => options['timeout'])
+          URI.open(j, read_timeout: options['timeout'])
         rescue StandardError => e
           if e.to_s.include? '404 Not Found'
             Logger.found "[#{e}] #{j}"
             CacheQue[j] = false
-            if Output[target] != nil
-              Output[target].push j
-            else 
-              Output[target] = []
-              Output[target].push j
-            end
-         end
+            Output[target] = [] if Output[target].nil?
+            Output[target].push j
+          end
         end
-        results << j
-      else 
-        if !CacheQue[j] 
-          Logger.found "[404 Not Found] #{j}"
-        end
-        results << j
+      elsif !CacheQue[j]
+        Logger.found "[404 Not Found] #{j}"
       end
+      results << j
     end
   end
 end
@@ -116,10 +109,8 @@ def run_sitemap(sitemap_url, options)
   gen_output
 end
 
-def gen_output 
-  if options['output'] != ''
-    File.write options['output'], Output.to_json
-  end
+def gen_output
+  File.write options['output'], Output.to_json if options['output'] != ''
 end
 
 class DeadFinder < Thor

@@ -1,6 +1,6 @@
 # deadfinder
 
-![](https://user-images.githubusercontent.com/13212227/192097414-d735ac3e-930a-4c36-9592-dedabac22a19.png)
+![](https://user-images.githubusercontent.com/13212227/192243070-0c960680-ae08-4f30-8cf9-0844eca7c5ea.png)
 
 ## Installation
 ```
@@ -18,8 +18,10 @@ Commands:
   deadfinder version         # Show version.
 
 Options:
-  c, [--concurrency=N]  
+  c, [--concurrency=N]
                         # Default: 20
+  t, [--timeout=N]
+                        # Default: 10
 ```
 
 ## Modes
