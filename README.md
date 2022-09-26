@@ -22,6 +22,7 @@ Options:
                         # Default: 20
   t, [--timeout=N]
                         # Default: 10
+  o, [--output=OUTPUT]  # Save JSON Result
 ```
 
 ## Modes
@@ -37,4 +38,12 @@ deadfinder url https://www.hahwul.com
 
 # Scan the URLs from sitemap. (multiple URLs)
 deadfinder sitemap https://www.hahwul.com/sitemap.xml
+```
+
+## JSON Handling
+```shell
+deadfinder sitemap https://www.hahwul.com/sitemap.xml \
+  -o output.json
+  
+cat output.json | jq
 ```
