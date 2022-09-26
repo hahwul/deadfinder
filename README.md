@@ -12,7 +12,7 @@ gem install deadfinder
 
 Docker Image
 ```shell
-docker pull ghcr.io/hahwul/deadfinder:main
+docker pull ghcr.io/hahwul/deadfinder:latest
 ```
 
 ## Usage
