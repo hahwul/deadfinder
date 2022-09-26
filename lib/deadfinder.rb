@@ -9,22 +9,34 @@ require 'deadfinder/logger'
 require 'deadfinder/version'
 require 'concurrent-edge'
 require 'sitemap-parser'
+require 'set'
 
 Channel = Concurrent::Channel
+CacheSet = Set.new
+CacheQue = {}
 
 class DeadFinderRunner
   def run(target, options)
     page = Nokogiri::HTML(URI.open(target))
-    nodeset = page.css('a')
-    link_a = nodeset.map { |element| element['href'] }.compact
+
+    nodeset_a = page.css('a')
+    link_a = nodeset_a.map { |element| element['href'] }.compact
+    nodeset_script = page.css('script')
+    link_script = nodeset_script.map { |element| element['src'] }.compact
+    nodeset_link = page.css('link')
+    link_link = nodeset_link.map { |element| element['href'] }.compact
+
+    link_merged = []
+    link_merged = link_merged.concat link_a, link_script, link_link
+
     Logger.target target
-    Logger.sub_info "Found #{link_a.length} point"
+    Logger.sub_info "Found #{link_merged.length} point. [a:#{link_a.length}/s:#{link_script.length}/l:#{link_link.length}]"
     Logger.sub_info 'Checking'
-    jobs    = Channel.new(buffer: :buffered, capacity: 100)
-    results = Channel.new(buffer: :buffered, capacity: 100)
+    jobs    = Channel.new(buffer: :buffered, capacity: 1000)
+    results = Channel.new(buffer: :buffered, capacity: 1000)
 
     (1..options['concurrency']).each do |w|
-      Channel.go { worker(w, jobs, results) }
+      Channel.go { worker(w, jobs, results, options) }
     end
 
     link_a.uniq.each do |node|
@@ -36,17 +48,27 @@ class DeadFinderRunner
     (1..link_a.uniq.length).each do
       ~results
     end
-    Logger.sub_info 'Done'
+    Logger.sub_done 'Done'
   end
 
-  def worker(_id, jobs, results)
+  def worker(_id, jobs, results, options)
     jobs.each do |j|
-      begin
-        URI.open(j)
-      rescue StandardError => e
-        Logger.found "[#{e}] #{j}" if e.to_s.include? '404 Not Found'
+      if !CacheSet.include? j
+        CacheSet.add j
+        begin
+          CacheQue[j] = true
+          URI.open(j, :read_timeout => options['timeout'])
+        rescue StandardError => e
+          Logger.found "[#{e}] #{j}" if e.to_s.include? '404 Not Found'
+          CacheQue[j] = false
+        end
+        results << j
+      else 
+        if !CacheQue[j] 
+          Logger.found "[404 Not Found] #{j}"
+        end
+        results << j
       end
-      results << j
     end
   end
 end
@@ -82,6 +104,7 @@ end
 
 class DeadFinder < Thor
   class_option :concurrency, aliases: :c, default: 20, type: :numeric
+  class_option :timeout, aliases: :t, default: 10, type: :numeric
 
   desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
   def pipe

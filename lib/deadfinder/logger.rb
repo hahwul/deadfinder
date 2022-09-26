@@ -15,6 +15,10 @@ class Logger
     puts '  ● '.colorize(:blue) + text.to_s.colorize(:light_blue)
   end
 
+  def self.sub_done(text)
+    puts '  ✓ '.colorize(:blue) + text.to_s.colorize(:light_blue)
+  end
+
   def self.found(text)
     puts "  ✘ #{text}".colorize(:red)
   end
