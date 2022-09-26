@@ -19,38 +19,42 @@ Output = {}
 
 class DeadFinderRunner
   def run(target, options)
-    page = Nokogiri::HTML(URI.open(target))
+    begin
+      page = Nokogiri::HTML(URI.open(target))
 
-    nodeset_a = page.css('a')
-    link_a = nodeset_a.map { |element| element['href'] }.compact
-    nodeset_script = page.css('script')
-    link_script = nodeset_script.map { |element| element['src'] }.compact
-    nodeset_link = page.css('link')
-    link_link = nodeset_link.map { |element| element['href'] }.compact
+      nodeset_a = page.css('a')
+      link_a = nodeset_a.map { |element| element['href'] }.compact
+      nodeset_script = page.css('script')
+      link_script = nodeset_script.map { |element| element['src'] }.compact
+      nodeset_link = page.css('link')
+      link_link = nodeset_link.map { |element| element['href'] }.compact
 
-    link_merged = []
-    link_merged.concat link_a, link_script, link_link
+      link_merged = []
+      link_merged.concat link_a, link_script, link_link
 
-    Logger.target target
-    Logger.sub_info "Found #{link_merged.length} point. [a:#{link_a.length}/s:#{link_script.length}/l:#{link_link.length}]"
-    Logger.sub_info 'Checking'
-    jobs    = Channel.new(buffer: :buffered, capacity: 1000)
-    results = Channel.new(buffer: :buffered, capacity: 1000)
+      Logger.target target
+      Logger.sub_info "Found #{link_merged.length} point. [a:#{link_a.length}/s:#{link_script.length}/l:#{link_link.length}]"
+      Logger.sub_info 'Checking'
+      jobs    = Channel.new(buffer: :buffered, capacity: 1000)
+      results = Channel.new(buffer: :buffered, capacity: 1000)
 
-    (1..options['concurrency']).each do |w|
-      Channel.go { worker(w, jobs, results, target, options) }
+      (1..options['concurrency']).each do |w|
+        Channel.go { worker(w, jobs, results, target, options) }
+      end
+
+      link_merged.uniq.each do |node|
+        result = generate_url node, target
+        jobs << result
+      end
+      jobs.close
+
+      (1..link_merged.uniq.length).each do
+        ~results
+      end
+      Logger.sub_done 'Done'
+    rescue => e 
+      Logger.error "[#{e}] #{target}"
     end
-
-    link_a.uniq.each do |node|
-      result = generate_url node, target
-      jobs << result
-    end
-    jobs.close
-
-    (1..link_a.uniq.length).each do
-      ~results
-    end
-    Logger.sub_done 'Done'
   end
 
   def worker(_id, jobs, results, target, options)
@@ -102,9 +106,11 @@ end
 
 def run_sitemap(sitemap_url, options)
   app = DeadFinderRunner.new
+  base_uri = URI(sitemap_url)
   sitemap = SitemapParser.new sitemap_url, { recurse: true }
   sitemap.to_a.each do |url|
-    app.run url, options
+    turl = generate_url url, base_uri
+    app.run turl, options
   end
   gen_output
 end

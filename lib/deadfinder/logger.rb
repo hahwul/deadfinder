@@ -7,6 +7,10 @@ class Logger
     puts 'ℹ '.colorize(:blue) + text.to_s.colorize(:light_blue)
   end
 
+  def self.error(text)
+    puts '⚠︎ '.colorize(:red) + text.to_s
+  end
+
   def self.target(text)
     puts '► '.colorize(:green) + text.to_s.colorize(:light_green)
   end
