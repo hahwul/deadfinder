@@ -10,10 +10,12 @@ require 'deadfinder/version'
 require 'concurrent-edge'
 require 'sitemap-parser'
 require 'set'
+require 'json'
 
 Channel = Concurrent::Channel
 CacheSet = Set.new
 CacheQue = {}
+Output = {}
 
 class DeadFinderRunner
   def run(target, options)
@@ -36,7 +38,7 @@ class DeadFinderRunner
     results = Channel.new(buffer: :buffered, capacity: 1000)
 
     (1..options['concurrency']).each do |w|
-      Channel.go { worker(w, jobs, results, options) }
+      Channel.go { worker(w, jobs, results, target, options) }
     end
 
     link_a.uniq.each do |node|
@@ -51,7 +53,7 @@ class DeadFinderRunner
     Logger.sub_done 'Done'
   end
 
-  def worker(_id, jobs, results, options)
+  def worker(_id, jobs, results, target, options)
     jobs.each do |j|
       if !CacheSet.include? j
         CacheSet.add j
@@ -59,8 +61,16 @@ class DeadFinderRunner
           CacheQue[j] = true
           URI.open(j, :read_timeout => options['timeout'])
         rescue StandardError => e
-          Logger.found "[#{e}] #{j}" if e.to_s.include? '404 Not Found'
-          CacheQue[j] = false
+          if e.to_s.include? '404 Not Found'
+            Logger.found "[#{e}] #{j}"
+            CacheQue[j] = false
+            if Output[target] != nil
+              Output[target].push j
+            else 
+              Output[target] = []
+              Output[target].push j
+            end
+         end
         end
         results << j
       else 
@@ -79,6 +89,7 @@ def run_pipe(options)
     target = $LAST_READ_LINE.gsub("\n", '')
     app.run target, options
   end
+  gen_output
 end
 
 def run_file(filename, options)
@@ -87,11 +98,13 @@ def run_file(filename, options)
     target = line.gsub("\n", '')
     app.run target, options
   end
+  gen_output
 end
 
 def run_url(url, options)
   app = DeadFinderRunner.new
   app.run url, options
+  gen_output
 end
 
 def run_sitemap(sitemap_url, options)
@@ -100,11 +113,19 @@ def run_sitemap(sitemap_url, options)
   sitemap.to_a.each do |url|
     app.run url, options
   end
+  gen_output
+end
+
+def gen_output 
+  if options['output'] != ''
+    File.write options['output'], Output.to_json
+  end
 end
 
 class DeadFinder < Thor
   class_option :concurrency, aliases: :c, default: 20, type: :numeric
   class_option :timeout, aliases: :t, default: 10, type: :numeric
+  class_option :output, aliases: :o, default: '', type: :string, desc: 'Save JSON Result'
 
   desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
   def pipe
