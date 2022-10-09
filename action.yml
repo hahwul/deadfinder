@@ -1,0 +1,21 @@
+name: 'DeadFinder'
+description: 'Find dead-links (broken links)'
+branding:
+  icon: 'link'
+  color: 'purple'
+inputs:
+  command: 
+    description: 'command for scan (url/sitemap/file)'
+    required: true
+  target:
+    description: 'target for command'
+    required: true
+outputs:
+  output: 
+    description: 'JSON Result'
+runs:
+  using: 'docker'
+  image: 'github-action/Dockerfile'
+  args:
+    - ${{ inputs.command }}
+    - ${{ inputs.target }}
