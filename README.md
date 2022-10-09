@@ -17,16 +17,16 @@ docker pull ghcr.io/hahwul/deadfinder:latest
 
 ### Github Action
 ```yml
-    steps:
-    - name: DeadLink
-      uses: hahwul/deadfinder@1.2.3
-      id: broken-link
-      with:
-        command: sitemap
-        target: https://www.hahwul.com/sitemap.xml
-        
-    - name: Output Handling
-      run: echo "deadfinder result >> ${{ steps.broken-link.outputs.output }}"
+steps:
+- name: Run DeadFinder
+  uses: hahwul/deadfinder@1.2.3
+  id: broken-link
+  with:
+    command: sitemap
+    target: https://www.hahwul.com/sitemap.xml
+
+- name: Output Handling
+  run: echo "deadfinder result >> ${{ steps.broken-link.outputs.output }}"
 ```
 
 ## Usage
