@@ -15,6 +15,12 @@ gem install deadfinder
 docker pull ghcr.io/hahwul/deadfinder:latest
 ```
 
+## Using In
+### CLI
+```shell
+deadfinder sitemap https://www.hahwul.com/sitemap.xml
+```
+
 ### Github Action
 ```yml
 steps:
@@ -27,6 +33,18 @@ steps:
 
 - name: Output Handling
   run: echo "deadfinder result >> ${{ steps.broken-link.outputs.output }}"
+```
+
+### Ruby Code
+```ruby
+require 'deadfinder'
+
+app = DeadFinderRunner.new
+options = {}
+options['concurrency'] = 30
+
+app.run('https://www.hahwul.com/2022/09/30/deadfinder/', options)
+puts Output
 ```
 
 ## Usage
