@@ -1,4 +1,4 @@
-name: 'DeadFinder'
+name: 'DeadFinder Action'
 description: 'Find dead-links (broken links)'
 branding:
   icon: 'link'
