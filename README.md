@@ -23,7 +23,7 @@ docker pull ghcr.io/hahwul/deadfinder:latest
   with:
     command: sitemap
     target: https://www.hahwul.com/sitemap.xml
-  - run: echo "deadfinder result >> ${{ steps.xss-result.outputs.result }}"
+  - run: echo "deadfinder result >> ${{ steps.broken-link.outputs.output }}"
 ```
 
 ## Usage
