@@ -18,12 +18,12 @@ docker pull ghcr.io/hahwul/deadfinder:latest
 ## Usage
 ```
 Commands:
-  deadfinder file            # Scan the URLs from File. (e.g deadfinder file urls.txt)
-  deadfinder help [COMMAND]  # Describe available commands or one specific command
-  deadfinder pipe            # Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)
-  deadfinder sitemap         # Scan the URLs from sitemap.
-  deadfinder url             # Scan the Single URL.
-  deadfinder version         # Show version.
+  deadfinder file <FILE>            # Scan the URLs from File. (e.g deadfinder file urls.txt)
+  deadfinder help [COMMAND]         # Describe available commands or one specific command
+  deadfinder pipe                   # Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)
+  deadfinder sitemap <SITEMAP-URL>  # Scan the URLs from sitemap.
+  deadfinder url <URL>              # Scan the Single URL.
+  deadfinder version                # Show version.
 
 Options:
   c, [--concurrency=N]  # Set Concurrncy
