@@ -87,3 +87,13 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml \
   
 cat output.json | jq
 ```
+
+```json
+{
+  "Origin URL": [
+    "DeadLink URL",
+    "DeadLink URL",
+    "DeadLink URL"
+  ]
+}
+```
