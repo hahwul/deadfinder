@@ -32,7 +32,7 @@ steps:
     target: https://www.hahwul.com/sitemap.xml
 
 - name: Output Handling
-  run: echo "deadfinder result >> ${{ steps.broken-link.outputs.output }}"
+  run: echo '${{ steps.broken-link.outputs.output }}'
 ```
 
 ### Ruby Code
