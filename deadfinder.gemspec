@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require_relative 'lib/deadfinder/version'
 Gem::Specification.new do |s|
   s.name = 'deadfinder'
@@ -17,10 +15,10 @@ Gem::Specification.new do |s|
   s.metadata['source_code_uri'] = 'https://github.com/hahwul/deadfinder'
   s.add_runtime_dependency 'colorize', '~> 0.8.0'
   s.add_runtime_dependency 'concurrent-ruby-edge', '~> 0.6.0'
+  s.add_runtime_dependency 'json', '~> 2.6.0'
   s.add_runtime_dependency 'nokogiri', '~> 1.13.0'
   s.add_runtime_dependency 'open-uri', '~> 0.2.0'
+  s.add_runtime_dependency 'set', '~> 1.0.0'
   s.add_runtime_dependency 'sitemap-parser', '~> 0.5.0'
   s.add_runtime_dependency 'thor', '~> 1.2.0'
-  s.add_runtime_dependency 'set', '~> 1.0.0'
-  s.add_runtime_dependency 'json', '~> 2.6.0'
 end
