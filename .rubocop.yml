@@ -3,5 +3,7 @@ AllCops:
   Exclude:
     - '.git/**/*'
     - 'bin/*'
+    - '*.gemspec'
+    - 'Gemfile*'
 Style/MutableConstant:
   Enabled: false
