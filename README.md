@@ -58,11 +58,12 @@ Commands:
   deadfinder version                # Show version.
 
 Options:
-  c, [--concurrency=N]  # Set Concurrncy
-                        # Default: 20
-  t, [--timeout=N]      # Set HTTP Timeout
-                        # Default: 10
-  o, [--output=OUTPUT]  # Save JSON Result
+  c, [--concurrency=N]          # Number of concurrncy
+                                # Default: 20
+  t, [--timeout=N]              # Timeout in seconds
+                                # Default: 10
+  o, [--output=OUTPUT]          # File to write JSON result
+  H, [--headers=one two three]  # Custom HTTP headers to send with request
 ```
 
 ## Modes
