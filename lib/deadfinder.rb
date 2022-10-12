@@ -19,42 +19,53 @@ Output = {}
 
 class DeadFinderRunner
   def run(target, options)
-    begin
+    page = nil
+
+    if options['headers'].length.positive?
+      headers = {}
+      options['headers'].each do |header|
+        kv = header.split ': '
+        headers[kv[0]] = kv[1]
+      rescue StandardError
+      end
+
+      page = Nokogiri::HTML(URI.open(target, headers))
+    else
       page = Nokogiri::HTML(URI.open(target))
-
-      nodeset_a = page.css('a')
-      link_a = nodeset_a.map { |element| element['href'] }.compact
-      nodeset_script = page.css('script')
-      link_script = nodeset_script.map { |element| element['src'] }.compact
-      nodeset_link = page.css('link')
-      link_link = nodeset_link.map { |element| element['href'] }.compact
-
-      link_merged = []
-      link_merged.concat link_a, link_script, link_link
-
-      Logger.target target
-      Logger.sub_info "Found #{link_merged.length} point. [a:#{link_a.length}/s:#{link_script.length}/l:#{link_link.length}]"
-      Logger.sub_info 'Checking'
-      jobs    = Channel.new(buffer: :buffered, capacity: 1000)
-      results = Channel.new(buffer: :buffered, capacity: 1000)
-
-      (1..options['concurrency']).each do |w|
-        Channel.go { worker(w, jobs, results, target, options) }
-      end
-
-      link_merged.uniq.each do |node|
-        result = generate_url node, target
-        jobs << result
-      end
-      jobs.close
-
-      (1..link_merged.uniq.length).each do
-        ~results
-      end
-      Logger.sub_done 'Done'
-    rescue => e 
-      Logger.error "[#{e}] #{target}"
     end
+
+    nodeset_a = page.css('a')
+    link_a = nodeset_a.map { |element| element['href'] }.compact
+    nodeset_script = page.css('script')
+    link_script = nodeset_script.map { |element| element['src'] }.compact
+    nodeset_link = page.css('link')
+    link_link = nodeset_link.map { |element| element['href'] }.compact
+
+    link_merged = []
+    link_merged.concat link_a, link_script, link_link
+
+    Logger.target target
+    Logger.sub_info "Found #{link_merged.length} point. [a:#{link_a.length}/s:#{link_script.length}/l:#{link_link.length}]"
+    Logger.sub_info 'Checking'
+    jobs    = Channel.new(buffer: :buffered, capacity: 1000)
+    results = Channel.new(buffer: :buffered, capacity: 1000)
+
+    (1..options['concurrency']).each do |w|
+      Channel.go { worker(w, jobs, results, target, options) }
+    end
+
+    link_merged.uniq.each do |node|
+      result = generate_url node, target
+      jobs << result
+    end
+    jobs.close
+
+    (1..link_merged.uniq.length).each do
+      ~results
+    end
+    Logger.sub_done 'Done'
+  rescue StandardError => e
+    Logger.error "[#{e}] #{target}"
   end
 
   def worker(_id, jobs, results, target, options)
@@ -120,9 +131,10 @@ def gen_output
 end
 
 class DeadFinder < Thor
-  class_option :concurrency, aliases: :c, default: 20, type: :numeric, desc: 'Set Concurrncy'
-  class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Set HTTP Timeout'
-  class_option :output, aliases: :o, default: '', type: :string, desc: 'Save JSON Result'
+  class_option :concurrency, aliases: :c, default: 20, type: :numeric, desc: 'Number of concurrncy'
+  class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
+  class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write JSON result'
+  class_option :headers, aliases: :H, default: [], type: :array, desc: 'Custom HTTP headers to send with request'
 
   desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
   def pipe
