@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    colorize (0.8.1)
     concurrent-ruby (1.1.10)
     concurrent-ruby-edge (0.6.0)
       concurrent-ruby (~> 1.1.6)
@@ -8,13 +9,17 @@ GEM
     ethon (0.15.0)
       ffi (>= 1.15.0)
     ffi (1.15.5)
-    nokogiri (1.13.8-x86_64-darwin)
+    json (2.6.3)
+    mini_portile2 (2.8.2)
+    nokogiri (1.13.8)
+      mini_portile2 (~> 2.8.0)
       racc (~> 1.4)
     open-uri (0.2.0)
       stringio
       time
       uri
     racc (1.6.0)
+    set (1.0.3)
     sitemap-parser (0.5.6)
       nokogiri (~> 1.6)
       typhoeus (>= 0.6, < 2.0)
@@ -27,12 +32,16 @@ GEM
     uri (0.11.0)
 
 PLATFORMS
+  arm64-darwin-22
   x86_64-darwin-21
 
 DEPENDENCIES
+  colorize
   concurrent-ruby-edge
+  json
   nokogiri
   open-uri
+  set
   sitemap-parser
   thor
 
