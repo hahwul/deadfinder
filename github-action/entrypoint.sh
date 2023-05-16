@@ -19,4 +19,4 @@ case $1 in
 esac
 
 out=$(cat /output.json)
-echo "::set-output name=output::$out"
+echo "$out" >> $GITHUB_OUTPUT
