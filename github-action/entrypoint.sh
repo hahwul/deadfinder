@@ -19,4 +19,4 @@ case $1 in
 esac
 
 out=$(cat /output.json)
-echo "$out" >> $GITHUB_OUTPUT
+echo "output=$out" >> $GITHUB_OUTPUT
