@@ -11,7 +11,7 @@ def generate_url(text, base_url)
         return "#{uri.scheme}:#{node}"
       elsif node.start_with? '/'
         return "#{uri.scheme}://#{uri.host}#{node}"
-      elsif node.start_with? 'mailto:'
+      elsif ignore_scheme? node
         return nil
       else
         return "#{uri}#{node}"
@@ -21,4 +21,8 @@ def generate_url(text, base_url)
     # puts e
   end
   node
+end
+
+def ignore_scheme?(url)
+  url.start_with?('mailto:', 'tel:', 'sms:', 'data:', 'file:')
 end
