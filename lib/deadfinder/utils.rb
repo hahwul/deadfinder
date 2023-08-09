@@ -17,7 +17,7 @@ def generate_url(text, base_url)
         return "#{uri}#{node}"
       end
     end
-  rescue StandardError => e
+  rescue StandardError
     # puts e
   end
   node
