@@ -56,11 +56,13 @@ class DeadFinderRunner
 
     link_merged.uniq.each do |node|
       result = generate_url node, target
-      jobs << result
+      jobs << result unless result.nil?
     end
+
+    jobs_size = jobs.size
     jobs.close
 
-    (1..link_merged.uniq.length).each do
+    (1..jobs_size).each do
       ~results
     end
     Logger.sub_done 'Done'
