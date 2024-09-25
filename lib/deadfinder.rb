@@ -13,49 +13,37 @@ require 'set'
 require 'json'
 
 Channel = Concurrent::Channel
-CacheSet = Set.new
-CacheQue = {}
-Output = {}
+CacheSet = Concurrent::Map.new
+CacheQue = Concurrent::Map.new
+Output = Concurrent::Map.new
 
 class DeadFinderRunner
   def run(target, options)
-    page = nil
-
-    if options['headers'].length.positive?
-      headers = {}
-      options['headers'].each do |header|
-        kv = header.split ': '
-        headers[kv[0]] = kv[1]
-      rescue StandardError
-      end
-
-      page = Nokogiri::HTML(URI.open(target, headers))
-    else
-      page = Nokogiri::HTML(URI.open(target))
+    headers = options['headers'].each_with_object({}) do |header, hash|
+      kv = header.split(': ')
+      hash[kv[0]] = kv[1]
+    rescue StandardError
     end
+    page = Nokogiri::HTML(URI.open(target, headers))
+    links = extract_links(page)
 
-    nodeset_a = page.css('a')
-    link_a = nodeset_a.map { |element| element['href'] }.compact
-    nodeset_script = page.css('script')
-    link_script = nodeset_script.map { |element| element['src'] }.compact
-    nodeset_link = page.css('link')
-    link_link = nodeset_link.map { |element| element['href'] }.compact
+    total_links_count = links.values.flatten.length
+    # Generate link info string for non-empty link types
+    link_info = links.map { |type, urls| "#{type}:#{urls.length}" if urls.length.positive? }.compact.join(' / ')
 
-    link_merged = []
-    link_merged.concat link_a, link_script, link_link
-
-    Logger.target target
-    Logger.sub_info "Found #{link_merged.length} point. [a:#{link_a.length}/s:#{link_script.length}/l:#{link_link.length}]"
+    # Log the information if there are any links
+    Logger.sub_info "Found #{total_links_count} URLs. [#{link_info}]" unless link_info.empty?
     Logger.sub_info 'Checking'
-    jobs    = Channel.new(buffer: :buffered, capacity: 1000)
+
+    jobs = Channel.new(buffer: :buffered, capacity: 1000)
     results = Channel.new(buffer: :buffered, capacity: 1000)
 
     (1..options['concurrency']).each do |w|
       Channel.go { worker(w, jobs, results, target, options) }
     end
 
-    link_merged.uniq.each do |node|
-      result = generate_url node, target
+    links.values.flatten.uniq.each do |node|
+      result = generate_url(node, target)
       jobs << result unless result.nil?
     end
 
@@ -72,8 +60,10 @@ class DeadFinderRunner
 
   def worker(_id, jobs, results, target, options)
     jobs.each do |j|
-      if !CacheSet.include? j
-        CacheSet.add j
+      if CacheSet[j]
+        Logger.found "[404 Not Found] #{j}" unless CacheQue[j]
+      else
+        CacheSet[j] = true
         begin
           CacheQue[j] = true
           URI.open(j, read_timeout: options['timeout'])
@@ -81,40 +71,52 @@ class DeadFinderRunner
           if e.to_s.include? '404 Not Found'
             Logger.found "[#{e}] #{j}"
             CacheQue[j] = false
-            Output[target] = [] if Output[target].nil?
-            Output[target].push j
+            Output[target] ||= []
+            Output[target] << j
           end
         end
-      elsif !CacheQue[j]
-        Logger.found "[404 Not Found] #{j}"
       end
       results << j
     end
+  end
+
+  private
+
+  def extract_links(page)
+    {
+      anchor: page.css('a').map { |element| element['href'] }.compact,
+      script: page.css('script').map { |element| element['src'] }.compact,
+      link: page.css('link').map { |element| element['href'] }.compact,
+      iframe: page.css('iframe').map { |element| element['src'] }.compact,
+      form: page.css('form').map { |element| element['action'] }.compact,
+      object: page.css('object').map { |element| element['data'] }.compact,
+      embed: page.css('embed').map { |element| element['src'] }.compact
+    }
   end
 end
 
 def run_pipe(options)
   app = DeadFinderRunner.new
   while $stdin.gets
-    target = $LAST_READ_LINE.gsub("\n", '')
+    target = $LAST_READ_LINE.chomp
     app.run target, options
   end
-  gen_output
+  gen_output(options)
 end
 
 def run_file(filename, options)
   app = DeadFinderRunner.new
-  File.open(filename).each do |line|
-    target = line.gsub("\n", '')
+  File.foreach(filename) do |line|
+    target = line.chomp
     app.run target, options
   end
-  gen_output
+  gen_output(options)
 end
 
 def run_url(url, options)
   app = DeadFinderRunner.new
   app.run url, options
-  gen_output
+  gen_output(options)
 end
 
 def run_sitemap(sitemap_url, options)
@@ -125,15 +127,15 @@ def run_sitemap(sitemap_url, options)
     turl = generate_url url, base_uri
     app.run turl, options
   end
-  gen_output
+  gen_output(options)
 end
 
-def gen_output
-  File.write options['output'], Output.to_json if options['output'] != ''
+def gen_output(options)
+  File.write(options['output'], Output.to_json) unless options['output'].empty?
 end
 
 class DeadFinder < Thor
-  class_option :concurrency, aliases: :c, default: 20, type: :numeric, desc: 'Number of concurrncy'
+  class_option :concurrency, aliases: :c, default: 50, type: :numeric, desc: 'Number of concurrency'
   class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
   class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write JSON result'
   class_option :headers, aliases: :H, default: [], type: :array, desc: 'Custom HTTP headers to send with request'

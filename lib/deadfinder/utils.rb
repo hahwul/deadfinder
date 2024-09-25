@@ -28,12 +28,10 @@ def ignore_scheme?(url)
 end
 
 def extract_directory(uri)
-  if uri.path.end_with?('/')
-    return "#{uri.scheme}://#{uri.host}#{uri.path}"
-  end
+  return "#{uri.scheme}://#{uri.host}#{uri.path}" if uri.path.end_with?('/')
 
   path_components = uri.path.split('/')
-  last_component = path_components.last
+  path_components.last
   path_components.pop
 
   directory_path = path_components.join('/')

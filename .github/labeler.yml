@@ -1,0 +1,22 @@
+---
+config:
+  - changed-files:
+      - any-glob-to-any-file: [deadfinder.gemspec, ruby-version, .rubocop.yml]
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: [Gemfile, Gemfile.lock, deadfinder.gemspec]
+workflow:
+  - changed-files:
+      - any-glob-to-any-file: [.github/workflows/**, .github/labeler.yml]
+github-action:
+  - changed-files:
+      - any-glob-to-any-file: [github-action/**, action.yml]
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - Dockerfile
+          - .github/workflows/docker-ghcr.yml
+          - github-action/Dockerfile
+code:
+  - changed-files:
+      - any-glob-to-any-file: [lib/**, bin/**, spec/**]
