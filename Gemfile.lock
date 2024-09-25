@@ -6,20 +6,37 @@ GEM
     concurrent-ruby-edge (0.7.1)
       concurrent-ruby (~> 1.3)
     date (3.3.4)
+    diff-lcs (1.5.1)
     ethon (0.16.0)
       ffi (>= 1.15.0)
     ffi (1.17.0-arm64-darwin)
     ffi (1.17.0-x86_64-darwin)
+    ffi (1.17.0-x86_64-linux-gnu)
     json (2.7.2)
     nokogiri (1.16.7-arm64-darwin)
       racc (~> 1.4)
     nokogiri (1.16.7-x86_64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.16.7-x86_64-linux)
       racc (~> 1.4)
     open-uri (0.4.1)
       stringio
       time
       uri
     racc (1.8.1)
+    rspec (3.13.0)
+      rspec-core (~> 3.13.0)
+      rspec-expectations (~> 3.13.0)
+      rspec-mocks (~> 3.13.0)
+    rspec-core (3.13.1)
+      rspec-support (~> 3.13.0)
+    rspec-expectations (3.13.3)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-mocks (3.13.1)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-support (3.13.1)
     set (1.1.0)
     sitemap-parser (0.5.6)
       nokogiri (~> 1.6)
@@ -36,6 +53,7 @@ PLATFORMS
   arm64-darwin-22
   arm64-darwin-23
   x86_64-darwin-21
+  x86_64-linux
 
 DEPENDENCIES
   colorize
@@ -43,6 +61,7 @@ DEPENDENCIES
   json
   nokogiri
   open-uri (>= 0.4.0)
+  rspec
   set
   sitemap-parser
   thor
