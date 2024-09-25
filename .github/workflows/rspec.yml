@@ -1,0 +1,16 @@
+name: RSpec
+on:
+  pull_request:
+
+jobs:
+  rspec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test
+        run: bundle exec rspec -f j -o tmp/rspec_results.json -f p
+
+      - name: RSpec Report
+        uses: SonicGarden/rspec-report-action@v5
+        with:
+          json-path: tmp/rspec_results.json
+        if: always()
