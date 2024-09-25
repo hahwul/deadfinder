@@ -107,3 +107,20 @@ cat output.json | jq
   ]
 }
 ```
+
+## Contributions Welcome!
+
+We welcome contributions from everyone! If you have an idea for an improvement or want to report a bug:
+
+- **Fork the repository.**
+- **Create a new branch** for your feature or bug fix (e.g., `feature/awesome-feature` or `bugfix/annoying-bug`).
+- **Make your changes.**
+- **Commit your changes** with a clear commit message.
+- **Push** to the branch.
+- **Submit a Pull Request (PR)** to our `dev` branch.
+
+We'll review your PR as soon as possible. Thank you for contributing to our project!
+
+### Contributors
+
+![](CONTRIBUTORS.svg)
