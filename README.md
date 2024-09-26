@@ -52,8 +52,8 @@ app = DeadFinderRunner.new
 options = app.default_options
 options['concurrency'] = 30
 
-app.run('https://www.hahwul.com/2022/09/30/deadfinder/', options)
-puts Output
+result = app.run('https://www.hahwul.com/2022/09/30/deadfinder/', options)
+puts result
 ```
 
 ## Usage
