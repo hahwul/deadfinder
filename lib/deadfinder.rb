@@ -18,7 +18,18 @@ CacheQue = Concurrent::Map.new
 Output = Concurrent::Map.new
 
 class DeadFinderRunner
+  def default_options
+    {
+      'concurrency' => 50,
+      'timeout' => 10,
+      'output' => '',
+      'headers' => [],
+      'silent' => true
+    }
+  end
+
   def run(target, options)
+    Logger.set_silent if options['silent']
     headers = options['headers'].each_with_object({}) do |header, hash|
       kv = header.split(': ')
       hash[kv[0]] = kv[1]
@@ -96,35 +107,49 @@ class DeadFinderRunner
 end
 
 def run_pipe(options)
+  Logger.set_silent if options['silent']
+
+  Logger.info 'Reading from STDIN'
   app = DeadFinderRunner.new
   while $stdin.gets
     target = $LAST_READ_LINE.chomp
+    Logger.target "Checking: #{target}"
     app.run target, options
   end
   gen_output(options)
 end
 
 def run_file(filename, options)
+  Logger.set_silent if options['silent']
+
+  Logger.info "Reading: #{filename}"
   app = DeadFinderRunner.new
   File.foreach(filename) do |line|
     target = line.chomp
+    Logger.target "Checking: #{target}"
     app.run target, options
   end
   gen_output(options)
 end
 
 def run_url(url, options)
+  Logger.set_silent if options['silent']
+
+  Logger.target "Checking: #{url}"
   app = DeadFinderRunner.new
   app.run url, options
   gen_output(options)
 end
 
 def run_sitemap(sitemap_url, options)
+  Logger.set_silent if options['silent']
+  Logger.info "Parsing sitemap: #{sitemap_url}"
   app = DeadFinderRunner.new
   base_uri = URI(sitemap_url)
   sitemap = SitemapParser.new sitemap_url, { recurse: true }
   sitemap.to_a.each do |url|
     turl = generate_url url, base_uri
+    Logger.target "Checking: #{turl}"
     app.run turl, options
   end
   gen_output(options)
@@ -139,28 +164,25 @@ class DeadFinder < Thor
   class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
   class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write JSON result'
   class_option :headers, aliases: :H, default: [], type: :array, desc: 'Custom HTTP headers to send with request'
+  class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
 
   desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
   def pipe
-    Logger.info 'Pipe mode'
     run_pipe options
   end
 
   desc 'file <FILE>', 'Scan the URLs from File. (e.g deadfinder file urls.txt)'
   def file(filename)
-    Logger.info 'File mode'
     run_file filename, options
   end
 
   desc 'url <URL>', 'Scan the Single URL.'
   def url(url)
-    Logger.info 'Single URL mode'
     run_url url, options
   end
 
   desc 'sitemap <SITEMAP-URL>', 'Scan the URLs from sitemap.'
   def sitemap(sitemap)
-    Logger.info 'Sitemap mode'
     run_sitemap sitemap, options
   end
 

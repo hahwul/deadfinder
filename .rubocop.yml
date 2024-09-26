@@ -5,5 +5,43 @@ AllCops:
     - 'bin/*'
     - '*.gemspec'
     - 'Gemfile*'
+  SuggestExtensions: false
+
 Style/MutableConstant:
   Enabled: false
+
+Style/Documentation:
+  Exclude:
+    - 'lib/deadfinder.rb'
+    - 'lib/deadfinder/logger.rb'
+    - 'lib/deadfinder/utils.rb'
+
+Metrics/AbcSize:
+  Exclude:
+    - 'lib/deadfinder.rb'
+    - 'lib/deadfinder/utils.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'lib/deadfinder.rb'
+
+Metrics/MethodLength:
+  Exclude:
+    - 'lib/deadfinder.rb'
+    - 'lib/deadfinder/utils.rb'
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - 'lib/deadfinder.rb'
+
+Lint/SuppressedException:
+  Exclude:
+    - 'lib/deadfinder.rb'
+
+Security/Open:
+  Exclude:
+    - 'lib/deadfinder.rb'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/utils_spec.rb'

@@ -2,7 +2,7 @@
 
 Dead link (broken link) means a link within a web page that cannot be connected. These links can have a negative impact to SEO and Security. This tool makes it easy to identify and modify.
 
-![](https://user-images.githubusercontent.com/13212227/192243070-0c960680-ae08-4f30-8cf9-0844eca7c5ea.png)
+![](https://github.com/user-attachments/assets/92129de9-90c6-41e0-a424-883fe30858f6)
 
 ## Installation
 ### Install with Gem
@@ -34,7 +34,7 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@1.3.5
+  uses: hahwul/deadfinder@1.3.6
   id: broken-link
   with:
     command: sitemap
@@ -49,7 +49,7 @@ steps:
 require 'deadfinder'
 
 app = DeadFinderRunner.new
-options = {}
+options = app.default_options
 options['concurrency'] = 30
 
 app.run('https://www.hahwul.com/2022/09/30/deadfinder/', options)
@@ -67,12 +67,14 @@ Commands:
   deadfinder version                # Show version.
 
 Options:
-  c, [--concurrency=N]          # Number of concurrncy
-                                # Default: 20
-  t, [--timeout=N]              # Timeout in seconds
-                                # Default: 10
-  o, [--output=OUTPUT]          # File to write JSON result
-  H, [--headers=one two three]  # Custom HTTP headers to send with request
+  -c, [--concurrency=N]                           # Number of concurrency
+                                                  # Default: 50
+  -t, [--timeout=N]                               # Timeout in seconds
+                                                  # Default: 10
+  -o, [--output=OUTPUT]                           # File to write JSON result
+  -H, [--headers=one two three]                   # Custom HTTP headers to send with request
+  -s, [--silent], [--no-silent], [--skip-silent]  # Silent mode
+                                                  # Default: false
 ```
 
 ## Modes
