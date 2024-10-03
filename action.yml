@@ -64,6 +64,14 @@ inputs:
     description: 'Custom HTTP headers to send with request, separated by commas'
     required: false
     default: ''
+  verbose:
+    description: 'Verbose mode'
+    required: false
+    default: 'false'
+  include30x:
+    description: 'Include 30x status code'
+    required: false
+    default: 'false'
 outputs:
   output: 
     description: 'JSON Result'
@@ -77,3 +85,5 @@ runs:
     - ${{ inputs.concurrency }}
     - ${{ inputs.silent }}
     - ${{ inputs.headers }}
+    - ${{ inputs.verbose }}
+    - ${{ inputs.include30x }}

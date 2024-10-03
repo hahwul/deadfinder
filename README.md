@@ -43,6 +43,7 @@ steps:
     # concurrency: 50
     # silent: false
     # headers: "X-API-Key: 123444"
+    # include30x: false
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
@@ -71,14 +72,15 @@ Commands:
   deadfinder version                # Show version.
 
 Options:
-  -c, [--concurrency=N]                           # Number of concurrency
-                                                  # Default: 50
-  -t, [--timeout=N]                               # Timeout in seconds
-                                                  # Default: 10
-  -o, [--output=OUTPUT]                           # File to write JSON result
-  -H, [--headers=one two three]                   # Custom HTTP headers to send with request
-  -s, [--silent], [--no-silent], [--skip-silent]  # Silent mode
-                                                  # Default: false
+  r, [--include30x], [--no-include30x]  # Include 30x redirections
+  c, [--concurrency=N]                  # Number of concurrency
+                                        # Default: 50
+  t, [--timeout=N]                      # Timeout in seconds
+                                        # Default: 10
+  o, [--output=OUTPUT]                  # File to write JSON result
+  H, [--headers=one two three]          # Custom HTTP headers to send with request
+  s, [--silent], [--no-silent]          # Silent mode
+  v, [--verbose], [--no-verbose]        # Verbose mode
 ```
 
 ## Modes
