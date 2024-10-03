@@ -4,12 +4,66 @@ branding:
   icon: 'link'
   color: 'purple'
 inputs:
-  command: 
-    description: 'command for scan (url/sitemap/file)'
+  command:
+    description: 'The command to run (file, url, sitemap)'
     required: true
   target:
-    description: 'target for command'
+    description: 'The target for the command'
     required: true
+  timeout:
+    description: 'Timeout in seconds'
+    required: false
+    default: ''
+  concurrency:
+    description: 'Number of concurrency'
+    required: false
+    default: ''
+  silent:
+    description: 'Silent mode'
+    required: false
+    default: 'false'
+inputs:
+  command:
+    description: 'The command to run (file, url, sitemap)'
+    required: true
+  target:
+    description: 'The target for the command'
+    required: true
+  timeout:
+    description: 'Timeout in seconds'
+    required: false
+    default: ''
+  concurrency:
+    description: 'Number of concurrency'
+    required: false
+    default: ''
+  silent:
+    description: 'Silent mode'
+    required: false
+    default: 'false'
+inputs:
+  command:
+    description: 'The command to run (file, url, sitemap)'
+    required: true
+  target:
+    description: 'The target for the command'
+    required: true
+  timeout:
+    description: 'Timeout in seconds'
+    required: false
+    default: ''
+  concurrency:
+    description: 'Number of concurrency'
+    required: false
+    default: ''
+  silent:
+    description: 'Silent mode'
+    required: false
+    default: 'false'
+  headers:
+    description: 'Custom HTTP headers to send with request, separated by commas'
+    required: false
+    default: ''
 outputs:
   output: 
     description: 'JSON Result'
@@ -19,3 +73,7 @@ runs:
   args:
     - ${{ inputs.command }}
     - ${{ inputs.target }}
+    - ${{ inputs.timeout }}
+    - ${{ inputs.concurrency }}
+    - ${{ inputs.silent }}
+    - ${{ inputs.headers }}
