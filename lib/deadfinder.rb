@@ -9,7 +9,6 @@ require 'deadfinder/logger'
 require 'deadfinder/version'
 require 'concurrent-edge'
 require 'sitemap-parser'
-require 'set'
 require 'json'
 
 Channel = Concurrent::Channel
