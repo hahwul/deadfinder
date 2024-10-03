@@ -43,5 +43,6 @@ Security/Open:
     - 'lib/deadfinder.rb'
 
 Metrics/BlockLength:
+  Max: 50
   Exclude:
     - 'spec/utils_spec.rb'

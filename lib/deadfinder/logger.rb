@@ -36,4 +36,8 @@ class Logger
   def self.found(text)
     puts "  ✘ #{text}".colorize(:red) unless silent?
   end
+
+  def self.verbose(text)
+    puts '  ➜ '.colorize(:yellow) + text.to_s.colorize(:light_yellow) unless silent?
+  end
 end
