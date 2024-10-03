@@ -9,7 +9,6 @@ require 'deadfinder/logger'
 require 'deadfinder/version'
 require 'concurrent-edge'
 require 'sitemap-parser'
-require 'set'
 require 'json'
 
 Channel = Concurrent::Channel
@@ -24,7 +23,9 @@ class DeadFinderRunner
       'timeout' => 10,
       'output' => '',
       'headers' => [],
-      'silent' => true
+      'silent' => true,
+      'verbose' => false,
+      'include30x' => false
     }
   end
 
@@ -77,14 +78,26 @@ class DeadFinderRunner
         CacheSet[j] = true
         begin
           CacheQue[j] = true
-          URI.open(j, read_timeout: options['timeout'])
-        rescue StandardError => e
-          if e.to_s.include? '404 Not Found'
-            Logger.found "[#{e}] #{j}"
+          uri = URI.parse(j)
+
+          # Create HTTP request with timeout and headers
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = (uri.scheme == 'https')
+          http.read_timeout = options['timeout'].to_i if options['timeout']
+
+          request = Net::HTTP::Get.new(uri.request_uri)
+          response = http.request(request)
+          status_code = response.code.to_i
+          Logger.verbose "Status Code: #{status_code} for #{j}" if options['verbose']
+
+          if status_code >= 400 || (status_code >= 300 && options['include30x'])
+            Logger.found "[#{status_code} #{response.message}] #{j}"
             CacheQue[j] = false
             Output[target] ||= []
             Output[target] << j
           end
+        rescue StandardError => e
+          Logger.verbose "[#{e}] #{j}" if options['verbose']
         end
       end
       results << j
@@ -160,11 +173,13 @@ def gen_output(options)
 end
 
 class DeadFinder < Thor
+  class_option :include30x, aliases: :r, default: false, type: :boolean, desc: 'Include 30x redirections'
   class_option :concurrency, aliases: :c, default: 50, type: :numeric, desc: 'Number of concurrency'
   class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
   class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write JSON result'
   class_option :headers, aliases: :H, default: [], type: :array, desc: 'Custom HTTP headers to send with request'
   class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
+  class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
 
   desc 'pipe', 'Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)'
   def pipe
