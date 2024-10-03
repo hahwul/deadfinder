@@ -37,8 +37,12 @@ steps:
   uses: hahwul/deadfinder@1.3.6
   id: broken-link
   with:
-    command: sitemap
+    command: sitemap # url / file / sitemap
     target: https://www.hahwul.com/sitemap.xml
+    # timeout: 10
+    # concurrency: 50
+    # silent: false
+    # headers: "X-API-Key: 123444"
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
