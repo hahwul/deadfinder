@@ -34,7 +34,7 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@1.4.0
+  uses: hahwul/deadfinder@1.4.1
   id: broken-link
   with:
     command: sitemap # url / file / sitemap

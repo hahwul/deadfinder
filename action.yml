@@ -1,83 +1,46 @@
-name: 'DeadFinder Action'
-description: 'Find dead-links (broken links)'
+---
+name: DeadFinder Action
+description: Find dead-links (broken links)
 branding:
-  icon: 'link'
-  color: 'purple'
+  icon: link
+  color: purple
 inputs:
   command:
-    description: 'The command to run (file, url, sitemap)'
+    description: The command to run (file, url, sitemap)
     required: true
   target:
-    description: 'The target for the command'
+    description: The target for the command
     required: true
   timeout:
-    description: 'Timeout in seconds'
+    description: Timeout in seconds
     required: false
     default: ''
   concurrency:
-    description: 'Number of concurrency'
+    description: Number of concurrency
     required: false
     default: ''
   silent:
-    description: 'Silent mode'
-    required: false
-    default: 'false'
-inputs:
-  command:
-    description: 'The command to run (file, url, sitemap)'
-    required: true
-  target:
-    description: 'The target for the command'
-    required: true
-  timeout:
-    description: 'Timeout in seconds'
-    required: false
-    default: ''
-  concurrency:
-    description: 'Number of concurrency'
-    required: false
-    default: ''
-  silent:
-    description: 'Silent mode'
-    required: false
-    default: 'false'
-inputs:
-  command:
-    description: 'The command to run (file, url, sitemap)'
-    required: true
-  target:
-    description: 'The target for the command'
-    required: true
-  timeout:
-    description: 'Timeout in seconds'
-    required: false
-    default: ''
-  concurrency:
-    description: 'Number of concurrency'
-    required: false
-    default: ''
-  silent:
-    description: 'Silent mode'
+    description: Silent mode
     required: false
     default: 'false'
   headers:
-    description: 'Custom HTTP headers to send with request, separated by commas'
+    description: Custom HTTP headers to send with request, separated by commas
     required: false
     default: ''
   verbose:
-    description: 'Verbose mode'
+    description: Verbose mode
     required: false
     default: 'false'
   include30x:
-    description: 'Include 30x status code'
+    description: Include 30x status code
     required: false
     default: 'false'
 outputs:
-  output: 
-    description: 'JSON Result'
+  output:
+    description: JSON Result
 runs:
-  using: 'docker'
-  image: 'github-action/Dockerfile'
+  using: docker
+  image: github-action/Dockerfile
   args:
     - ${{ inputs.command }}
     - ${{ inputs.target }}
