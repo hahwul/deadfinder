@@ -22,14 +22,23 @@ cmd="$df $1 $2 -o /output.json"
 
 # Add headers if provided
 if [ -n "$6" ]; then
-  IFS=',' read -r -a headers_array <<< "$6"
-  for header in "${headers_array[@]}"; do
-    cmd="$cmd -H \"$header\""
+  IFS=',' headers="$6"
+  for header in $headers; do
+    if [ -n "$header" ]; then
+      cmd="$cmd -H \"$header\""
+    fi
   done
 fi
 
 # Execute the command
-eval $cmd
+eval "$cmd"
+echo "Command executed: $cmd"
+
+# Check if the output file exists
+if [ ! -f /output.json ]; then
+  echo "Error: /output.json not found"
+  exit 1
+fi
 
 # Read the output and set it as a GitHub Action output
 out=$(cat /output.json)
