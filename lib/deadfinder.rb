@@ -12,9 +12,9 @@ require 'sitemap-parser'
 require 'json'
 
 Channel = Concurrent::Channel
-CacheSet = Concurrent::Map.new
-CacheQue = Concurrent::Map.new
-Output = {}
+CACHE_SET = Concurrent::Map.new
+CACHE_QUE = Concurrent::Map.new
+OUTPUT = {}
 
 class DeadFinderRunner
   def default_options
@@ -72,12 +72,12 @@ class DeadFinderRunner
 
   def worker(_id, jobs, results, target, options)
     jobs.each do |j|
-      if CacheSet[j]
-        Logger.found "[404 Not Found] #{j}" unless CacheQue[j]
+      if CACHE_SET[j]
+        Logger.found "[404 Not Found] #{j}" unless CACHE_QUE[j]
       else
-        CacheSet[j] = true
+        CACHE_SET[j] = true
         begin
-          CacheQue[j] = true
+          CACHE_QUE[j] = true
           uri = URI.parse(j)
 
           # Create HTTP request with timeout and headers
@@ -92,7 +92,7 @@ class DeadFinderRunner
 
           if status_code >= 400 || (status_code >= 300 && options['include30x'])
             Logger.found "[#{status_code} #{response.message}] #{j}"
-            CacheQue[j] = false
+            CACHE_QUE[j] = false
             Output[target] ||= []
             Output[target] << j
           end
