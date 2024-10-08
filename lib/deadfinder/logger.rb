@@ -9,6 +9,10 @@ class Logger
     @silent = true
   end
 
+  def self.unset_silent
+    @silent = false
+  end
+
   def self.silent?
     @silent
   end

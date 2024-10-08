@@ -12,9 +12,9 @@ require 'sitemap-parser'
 require 'json'
 
 Channel = Concurrent::Channel
-CacheSet = Concurrent::Map.new
-CacheQue = Concurrent::Map.new
-Output = Concurrent::Map.new
+CACHE_SET = Concurrent::Map.new
+CACHE_QUE = Concurrent::Map.new
+OUTPUT = {}
 
 class DeadFinderRunner
   def default_options
@@ -72,12 +72,12 @@ class DeadFinderRunner
 
   def worker(_id, jobs, results, target, options)
     jobs.each do |j|
-      if CacheSet[j]
-        Logger.found "[404 Not Found] #{j}" unless CacheQue[j]
+      if CACHE_SET[j]
+        Logger.found "[404 Not Found] #{j}" unless CACHE_QUE[j]
       else
-        CacheSet[j] = true
+        CACHE_SET[j] = true
         begin
-          CacheQue[j] = true
+          CACHE_QUE[j] = true
           uri = URI.parse(j)
 
           # Create HTTP request with timeout and headers
@@ -92,9 +92,9 @@ class DeadFinderRunner
 
           if status_code >= 400 || (status_code >= 300 && options['include30x'])
             Logger.found "[#{status_code} #{response.message}] #{j}"
-            CacheQue[j] = false
-            Output[target] ||= []
-            Output[target] << j
+            CACHE_QUE[j] = false
+            OUTPUT[target] ||= []
+            OUTPUT[target] << j
           end
         rescue StandardError => e
           Logger.verbose "[#{e}] #{j}" if options['verbose']
@@ -169,7 +169,8 @@ def run_sitemap(sitemap_url, options)
 end
 
 def gen_output(options)
-  File.write(options['output'], Output.to_json) unless options['output'].empty?
+  output_data = OUTPUT.to_h
+  File.write(options['output'], JSON.pretty_generate(output_data)) unless options['output'].empty?
 end
 
 class DeadFinder < Thor

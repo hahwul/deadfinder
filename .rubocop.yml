@@ -45,4 +45,4 @@ Security/Open:
 Metrics/BlockLength:
   Max: 50
   Exclude:
-    - 'spec/utils_spec.rb'
+    - 'spec/**/*'
