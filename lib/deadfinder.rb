@@ -93,8 +93,8 @@ class DeadFinderRunner
           if status_code >= 400 || (status_code >= 300 && options['include30x'])
             Logger.found "[#{status_code} #{response.message}] #{j}"
             CACHE_QUE[j] = false
-            Output[target] ||= []
-            Output[target] << j
+            OUTPUT[target] ||= []
+            OUTPUT[target] << j
           end
         rescue StandardError => e
           Logger.verbose "[#{e}] #{j}" if options['verbose']
@@ -169,7 +169,7 @@ def run_sitemap(sitemap_url, options)
 end
 
 def gen_output(options)
-  output_data = Output.to_h
+  output_data = OUTPUT.to_h
   File.write(options['output'], JSON.pretty_generate(output_data)) unless options['output'].empty?
 end
 
