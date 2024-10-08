@@ -14,7 +14,7 @@ require 'json'
 Channel = Concurrent::Channel
 CacheSet = Concurrent::Map.new
 CacheQue = Concurrent::Map.new
-Output = Concurrent::Map.new
+Output = {}
 
 class DeadFinderRunner
   def default_options
@@ -169,7 +169,8 @@ def run_sitemap(sitemap_url, options)
 end
 
 def gen_output(options)
-  File.write(options['output'], Output.to_json) unless options['output'].empty?
+  output_data = Output.to_h
+  File.write(options['output'], JSON.pretty_generate(output_data)) unless options['output'].empty?
 end
 
 class DeadFinder < Thor
