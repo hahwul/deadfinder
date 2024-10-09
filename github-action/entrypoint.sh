@@ -42,4 +42,6 @@ fi
 
 # Read the output and set it as a GitHub Action output
 out=$(cat /output.json)
-echo "output=$out" >> $GITHUB_OUTPUT
+encoded_output=$(echo "$out" | jq -c . | tr -d '^J')
+
+echo "output=$encoded_output" >> $GITHUB_OUTPUT
