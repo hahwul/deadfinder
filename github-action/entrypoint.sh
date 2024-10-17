@@ -9,6 +9,8 @@
 # %7 : worker headers
 # $8 : verbose
 # $9 : include30x
+# $10 : user-agent
+# $11 : proxy
 # -------------
 
 export df=/usr/local/bundle/gems/deadfinder-*/bin/deadfinder
@@ -20,6 +22,8 @@ cmd="$df $1 $2 -o /output.json"
 [ "$5" = "true" ] && cmd="$cmd --silent"
 [ "$8" = "true" ] && cmd="$cmd --verbose"
 [ "$9" = "true" ] && cmd="$cmd --include30x"
+[ -n "$10" ] && cmd="$cmd --user-agent=$10"
+[ -n "$11" ] && cmd="$cmd --proxy=$11"
 
 # Add headers if provided
 if [ -n "$6" ]; then
