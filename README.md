@@ -34,7 +34,7 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@1.4.4
+  uses: hahwul/deadfinder@1.5.0
   # or uses: hahwul/deadfinder@latest
   id: broken-link
   with:
@@ -44,7 +44,10 @@ steps:
     # concurrency: 50
     # silent: false
     # headers: "X-API-Key: 123444"
+    # worker_headers: "User-Agent: Deadfinder Bot"
     # include30x: false
+    # user_agent: "Apple"
+    # proxy: "http://localhost:8070"
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
@@ -79,7 +82,11 @@ Options:
   t, [--timeout=N]                      # Timeout in seconds
                                         # Default: 10
   o, [--output=OUTPUT]                  # File to write JSON result
-  H, [--headers=one two three]          # Custom HTTP headers to send with request
+  H, [--headers=one two three]          # Custom HTTP headers to send with initial request
+      [--worker-headers=one two three]  # Custom HTTP headers to send with worker requests
+      [--user-agent=USER_AGENT]         # User-Agent string to use for requests
+                                        # Default: Mozilla/5.0 (compatible; DeadFinder/1.5.0;)
+  p, [--proxy=PROXY]                    # Proxy server to use for requests
   s, [--silent], [--no-silent]          # Silent mode
   v, [--verbose], [--no-verbose]        # Verbose mode
 ```

@@ -1,5 +1,5 @@
 # Use the deadfinder base image from GitHub Container Registry
-FROM ghcr.io/hahwul/deadfinder:1.4.4
+FROM ghcr.io/hahwul/deadfinder:1.5.0
 
 # Install jq for JSON processing
 RUN apt-get update && apt-get install -y jq
