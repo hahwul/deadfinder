@@ -34,7 +34,7 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@1.4.4
+  uses: hahwul/deadfinder@1.5.0
   # or uses: hahwul/deadfinder@latest
   id: broken-link
   with:
@@ -44,6 +44,7 @@ steps:
     # concurrency: 50
     # silent: false
     # headers: "X-API-Key: 123444"
+    # worker_headers: "User-Agent: Deadfinder Bot"
     # include30x: false
 
 - name: Output Handling
