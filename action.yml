@@ -48,5 +48,6 @@ runs:
     - ${{ inputs.concurrency }}
     - ${{ inputs.silent }}
     - ${{ inputs.headers }}
+    - ${{ inputs.worker_headers}}
     - ${{ inputs.verbose }}
     - ${{ inputs.include30x }}

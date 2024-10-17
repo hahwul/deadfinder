@@ -23,6 +23,7 @@ class DeadFinderRunner
       'timeout' => 10,
       'output' => '',
       'headers' => [],
+      'worker_headers' => [],
       'silent' => true,
       'verbose' => false,
       'include30x' => false
@@ -86,6 +87,13 @@ class DeadFinderRunner
           http.read_timeout = options['timeout'].to_i if options['timeout']
 
           request = Net::HTTP::Get.new(uri.request_uri)
+
+          # Add worker headers if provided
+          options['worker_headers']&.each do |header|
+            key, value = header.split(':', 2)
+            request[key.strip] = value.strip
+          end
+
           response = http.request(request)
           status_code = response.code.to_i
           Logger.verbose "Status Code: #{status_code} for #{j}" if options['verbose']
@@ -178,7 +186,9 @@ class DeadFinder < Thor
   class_option :concurrency, aliases: :c, default: 50, type: :numeric, desc: 'Number of concurrency'
   class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
   class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write JSON result'
-  class_option :headers, aliases: :H, default: [], type: :array, desc: 'Custom HTTP headers to send with request'
+  class_option :headers, aliases: :H, default: [], type: :array,
+                         desc: 'Custom HTTP headers to send with initial request'
+  class_option :worker_headers, default: [], type: :array, desc: 'Custom HTTP headers to send with worker requests'
   class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
   class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
 

@@ -6,8 +6,9 @@
 # $4 : concurrency
 # $5 : silent
 # $6 : headers
-# $7 : verbose
-# $8 : include30x
+# %7 : worker headers
+# $8 : verbose
+# $9 : include30x
 # -------------
 
 export df=/usr/local/bundle/gems/deadfinder-*/bin/deadfinder
@@ -17,8 +18,8 @@ cmd="$df $1 $2 -o /output.json"
 [ -n "$3" ] && cmd="$cmd --timeout=$3"
 [ -n "$4" ] && cmd="$cmd --concurrency=$4"
 [ "$5" = "true" ] && cmd="$cmd --silent"
-[ "$7" = "true" ] && cmd="$cmd --verbose"
-[ "$8" = "true" ] && cmd="$cmd --include30x"
+[ "$8" = "true" ] && cmd="$cmd --verbose"
+[ "$9" = "true" ] && cmd="$cmd --include30x"
 
 # Add headers if provided
 if [ -n "$6" ]; then
@@ -26,6 +27,16 @@ if [ -n "$6" ]; then
   for header in $headers; do
     if [ -n "$header" ]; then
       cmd="$cmd -H \"$header\""
+    fi
+  done
+fi
+
+# Add worker headers if provided
+if [ -n "$7" ]; then
+  IFS=',' headers="$7"
+  for header in $headers; do
+    if [ -n "$header" ]; then
+      cmd="$cmd --worker-headers \"$header\""
     fi
   done
 fi
