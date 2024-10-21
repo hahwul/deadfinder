@@ -53,6 +53,8 @@ steps:
   run: echo '${{ steps.broken-link.outputs.output }}'
 ```
 
+If you have found a Dead Link and want to automatically add it as an issue, please refer to the "[Automating Dead Link Detection](https://www.hahwul.com/2024/10/20/automating-dead-link-detection/)" article.
+
 ### Ruby Code
 ```ruby
 require 'deadfinder'
