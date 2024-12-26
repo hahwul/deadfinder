@@ -135,7 +135,7 @@ We welcome contributions from everyone! If you have an idea for an improvement o
 - **Make your changes.**
 - **Commit your changes** with a clear commit message.
 - **Push** to the branch.
-- **Submit a Pull Request (PR)** to our `dev` branch.
+- **Submit a Pull Request (PR)** to our `main` branch.
 
 We'll review your PR as soon as possible. Thank you for contributing to our project!
 
