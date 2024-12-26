@@ -4,44 +4,51 @@ require 'colorize'
 
 class Logger
   @silent = false
+  @mutex = Mutex.new
 
   def self.set_silent
-    @silent = true
+    @mutex.synchronize { @silent = true }
   end
 
   def self.unset_silent
-    @silent = false
+    @mutex.synchronize { @silent = false }
   end
 
   def self.silent?
-    @silent
+    @mutex.synchronize { @silent }
+  end
+
+  def self.log(prefix, text, color)
+    return if silent?
+
+    puts prefix.colorize(color) + text.to_s.colorize(:"light_#{color}")
   end
 
   def self.info(text)
-    puts 'ℹ '.colorize(:blue) + text.to_s.colorize(:light_blue) unless silent?
+    log('ℹ ', text, :blue)
   end
 
   def self.error(text)
-    puts '⚠︎ '.colorize(:red) + text.to_s unless silent?
+    log('⚠︎ ', text, :red)
   end
 
   def self.target(text)
-    puts '► '.colorize(:green) + text.to_s.colorize(:light_green) unless silent?
+    log('► ', text, :green)
   end
 
   def self.sub_info(text)
-    puts '  ● '.colorize(:blue) + text.to_s.colorize(:light_blue) unless silent?
+    log('  ● ', text, :blue)
   end
 
   def self.sub_done(text)
-    puts '  ✓ '.colorize(:blue) + text.to_s.colorize(:light_blue) unless silent?
+    log('  ✓ ', text, :blue)
   end
 
   def self.found(text)
-    puts "  ✘ #{text}".colorize(:red) unless silent?
+    log('  ✘ ', text, :red)
   end
 
   def self.verbose(text)
-    puts '  ➜ '.colorize(:yellow) + text.to_s.colorize(:light_yellow) unless silent?
+    log('  ➜ ', text, :yellow)
   end
 end
