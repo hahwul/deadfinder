@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'uri'
-require_relative '../lib/deadfinder/utils'
+require_relative '../../lib/deadfinder/utils'
 
 RSpec.describe 'Utils' do
   describe '#generate_url' do

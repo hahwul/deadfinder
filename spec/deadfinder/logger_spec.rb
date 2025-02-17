@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative '../lib/deadfinder/logger'
+require_relative '../../lib/deadfinder/logger'
 require 'stringio'
 
 RSpec.describe Logger do
