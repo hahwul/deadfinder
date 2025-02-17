@@ -34,7 +34,7 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@1.6.0
+  uses: hahwul/deadfinder@1.6.1
   # or uses: hahwul/deadfinder@latest
   id: broken-link
   with:
@@ -88,7 +88,7 @@ Options:
   H, [--headers=one two three]          # Custom HTTP headers to send with initial request
       [--worker-headers=one two three]  # Custom HTTP headers to send with worker requests
       [--user-agent=USER_AGENT]         # User-Agent string to use for requests
-                                        # Default: Mozilla/5.0 (compatible; DeadFinder/1.6.0;)
+                                        # Default: Mozilla/5.0 (compatible; DeadFinder/1.6.1;)
   p, [--proxy=PROXY]                    # Proxy server to use for requests
   s, [--silent], [--no-silent]          # Silent mode
   v, [--verbose], [--no-verbose]        # Verbose mode
