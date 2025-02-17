@@ -59,12 +59,12 @@ If you have found a Dead Link and want to automatically add it as an issue, plea
 ```ruby
 require 'deadfinder'
 
-app = DeadFinderRunner.new
-options = app.default_options
+runner = DeadFinder::Runner.new
+options = runner.default_options
 options['concurrency'] = 30
 
-result = app.run('https://www.hahwul.com/2022/09/30/deadfinder/', options)
-puts result
+runner.run('https://www.hahwul.com/cullinan/csrf/', options)
+puts DeadFinder.output
 ```
 
 ## Usage
