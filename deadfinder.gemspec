@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.authors     = ['hahwul']
   s.email       = 'hahwul@gmail.com'
   s.files       = ['lib/deadfinder.rb']
-  s.homepage    = 'https://www.hahwul.com'
+  s.homepage    = 'https://www.hahwul.com/projects/deadfinder/'
   s.license = 'MIT'
   s.executables << 'deadfinder'
   s.files = ['lib/deadfinder.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/version.rb']
