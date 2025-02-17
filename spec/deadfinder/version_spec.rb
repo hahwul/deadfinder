@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'uri'
-require_relative '../lib/deadfinder/version'
+require_relative '../../lib/deadfinder/version'
 
 RSpec.describe 'Version' do
   describe 'VERSION' do

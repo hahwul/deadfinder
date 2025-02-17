@@ -10,6 +10,8 @@ require 'deadfinder/version'
 require 'concurrent-edge'
 require 'sitemap-parser'
 require 'json'
+require 'yaml'
+require 'csv'
 
 Channel = Concurrent::Channel
 CACHE_SET = Concurrent::Map.new
@@ -22,6 +24,7 @@ class DeadFinderRunner
       'concurrency' => 50,
       'timeout' => 10,
       'output' => '',
+      'output_format' => 'json',
       'headers' => [],
       'worker_headers' => [],
       'silent' => true,
@@ -188,19 +191,40 @@ def run_sitemap(sitemap_url, options)
 end
 
 def gen_output(options)
+  return if options['output'].empty?
+
   output_data = OUTPUT.to_h
-  File.write(options['output'], JSON.pretty_generate(output_data)) unless options['output'].empty?
+  format = options['output_format'].to_s.downcase
+
+  content = case format
+            when 'yaml', 'yml'
+              output_data.to_yaml
+            when 'csv'
+              CSV.generate do |csv|
+                csv << ['target', 'url']
+                output_data.each do |target, urls|
+                  Array(urls).each do |url|
+                    csv << [target, url]
+                  end
+                end
+              end
+            else
+              JSON.pretty_generate(output_data)
+            end
+
+  File.write(options['output'], content)
 end
 
 class DeadFinder < Thor
   class_option :include30x, aliases: :r, default: false, type: :boolean, desc: 'Include 30x redirections'
   class_option :concurrency, aliases: :c, default: 50, type: :numeric, desc: 'Number of concurrency'
   class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
-  class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write JSON result'
+  class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write result (e.g., json, yaml, csv)'
+  class_option :output_format, aliases: :f, default: 'json', type: :string, desc: 'Output format'
   class_option :headers, aliases: :H, default: [], type: :array,
                          desc: 'Custom HTTP headers to send with initial request'
   class_option :worker_headers, default: [], type: :array, desc: 'Custom HTTP headers to send with worker requests'
-  class_option :user_agent, default: 'Mozilla/5.0 (compatible; DeadFinder/1.5.1;)', type: :string,
+  class_option :user_agent, default: 'Mozilla/5.0 (compatible; DeadFinder/1.6.0;)', type: :string,
                             desc: 'User-Agent string to use for requests'
   class_option :proxy, aliases: :p, default: '', type: :string, desc: 'Proxy server to use for requests'
   class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'

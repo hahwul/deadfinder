@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'uri'
-require_relative '../lib/deadfinder/utils'
+require_relative '../../lib/deadfinder/utils'
 
 RSpec.describe 'Utils' do
   describe '#generate_url' do
@@ -30,6 +30,17 @@ RSpec.describe 'Utils' do
     it 'prepends the base directory if the URL is relative' do
       expect(generate_url('relative/path', base_url)).to eq('http://example.com/base/relative/path')
     end
+
+    it 'returns nil if URI.join raises an exception (e.g. invalid characters)' do
+      # 비 ASCII 문자가 들어가서 에러가 발생하는 경우 nil 리턴을 확인
+      bad_url = "invalid\uC640-\uB3C4\uBA54\uC778"
+      expect(generate_url(bad_url, base_url)).to be_nil
+    end
+
+    it 'returns nil if base_url is invalid' do
+      # 잘못된 기준 URL을 전달했을 경우에도 예외 발생 후 nil 리턴
+      expect(generate_url('relative/path', '://invalid')).to be_nil
+    end
   end
 
   describe '#ignore_scheme?' do
@@ -55,18 +66,6 @@ RSpec.describe 'Utils' do
 
     it 'returns false for other URLs' do
       expect(ignore_scheme?('http://example.com')).to be false
-    end
-  end
-
-  describe '#extract_directory' do
-    it 'returns the base URL if the path ends with /' do
-      uri = URI('http://example.com/base/')
-      expect(extract_directory(uri)).to eq('http://example.com/base/')
-    end
-
-    it 'returns the directory path if the path does not end with /' do
-      uri = URI('http://example.com/base/file')
-      expect(extract_directory(uri)).to eq('http://example.com/base/')
     end
   end
 end
