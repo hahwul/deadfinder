@@ -22,4 +22,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'set', '~> 1.1.0', '>= 1.1.0'
   s.add_runtime_dependency 'sitemap-parser', '~> 0.5.0', '>= 0.5.0'
   s.add_runtime_dependency 'thor', '~> 1.2.0', '>= 1.2.0'
+
+  s.add_development_dependency 'rspec'
 end
