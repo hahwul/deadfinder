@@ -1,4 +1,15 @@
-# DeadFinder
+<div align="center">
+  <picture>
+    <img alt="DeadFinder Logo" src="https://github.com/user-attachments/assets/1523d0be-31dd-4031-ac97-5feda474a6e9" width="500px;">
+  </picture>
+  <p>Find dead-links (broken links)</p>
+</div>
+
+<p align="center">
+  <a href="#contributions-welcome"><img src="https://img.shields.io/badge/CONTRIBUTIONS-WELCOME-000000?style=flat-square"></a>
+  <a href="https://rubygems.org/gems/deadfinder"><img src="https://img.shields.io/gem/v/deadfinder?style=flat-square&color=black"></a>
+  <a href="https://formulae.brew.sh/formula/deadfinder"><img src="https://img.shields.io/homebrew/v/deadfinder?style=flat-square&color=black"></a>
+</p>
 
 Dead link (broken link) means a link within a web page that cannot be connected. These links can have a negative impact to SEO and Security. This tool makes it easy to identify and modify.
 
