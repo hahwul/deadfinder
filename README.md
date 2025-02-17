@@ -67,6 +67,8 @@ runner.run('https://www.hahwul.com/cullinan/csrf/', options)
 puts DeadFinder.output
 ```
 
+For more examples and detailed usage, please refer to the [examples](./examples) directory in the repository.
+
 ## Usage
 ```
 Commands:
