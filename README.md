@@ -63,11 +63,13 @@ runner = DeadFinder::Runner.new
 options = runner.default_options
 options['concurrency'] = 30
 
-runner.run('https://www.hahwul.com/cullinan/csrf/', options)
+DeadFinder.run_url('https://www.hahwul.com/cullinan/csrf/', options)
 puts DeadFinder.output
+
+# {"https://www.hahwul.com/cullinan/csrf/" => ["https://www.hahwul.com/tag/cullinan/"]}
 ```
 
-For more examples and detailed usage, please refer to the [examples](./examples) directory in the repository.
+For various examples and detailed usage, including sitemap, file, and other modes, please refer to the [examples](./examples) directory in the repository.
 
 ## Usage
 ```

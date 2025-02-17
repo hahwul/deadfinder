@@ -6,5 +6,5 @@ runner = DeadFinder::Runner.new
 options = runner.default_options
 options['concurrency'] = 30
 
-DeadFinder.run_url('https://www.hahwul.com/cullinan/csrf/', options)
+DeadFinder.run_sitemap('https://dalfox.hahwul.com/sitemap.xml', options)
 puts DeadFinder.output
