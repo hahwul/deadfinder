@@ -83,7 +83,8 @@ Options:
                                         # Default: 50
   t, [--timeout=N]                      # Timeout in seconds
                                         # Default: 10
-  o, [--output=OUTPUT]                  # File to write JSON result
+  o, [--output=OUTPUT]                  # File to write result (e.g., json, yaml, csv)
+  f, [--output-format=OUTPUT_FORMAT]    # Output format
   H, [--headers=one two three]          # Custom HTTP headers to send with initial request
       [--worker-headers=one two three]  # Custom HTTP headers to send with worker requests
       [--user-agent=USER_AGENT]         # User-Agent string to use for requests
