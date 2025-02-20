@@ -70,6 +70,9 @@ GEM
       unicode-display_width (>= 2.4.0, < 4.0)
     rubocop-ast (1.38.0)
       parser (>= 3.3.1.0)
+    rubocop-rspec (3.5.0)
+      lint_roller (~> 1.1)
+      rubocop (~> 1.72, >= 1.72.1)
     ruby-progressbar (1.13.0)
     set (1.1.1)
     sitemap-parser (0.5.6)
@@ -108,6 +111,7 @@ DEPENDENCIES
   open-uri (>= 0.4.0)
   rspec
   rubocop
+  rubocop-rspec
   set
   sitemap-parser
   thor
