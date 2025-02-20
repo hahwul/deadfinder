@@ -42,7 +42,7 @@ module DeadFinder
 
     desc 'version', 'Show version.'
     def version
-      Logger.info "deadfinder #{VERSION}"
+      Logger.info "deadfinder #{DeadFinder::VERSION}"
     end
   end
 end

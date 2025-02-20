@@ -6,7 +6,6 @@ require 'open-uri'
 require 'nokogiri'
 require 'deadfinder/utils'
 require 'deadfinder/logger'
-require 'deadfinder/version'
 require 'deadfinder/runner'
 require 'deadfinder/cli'
 require 'concurrent-edge'
@@ -16,6 +15,7 @@ require 'yaml'
 require 'csv'
 
 module DeadFinder
+  VERSION = '1.6.1'
   Channel = Concurrent::Channel
   CACHE_SET = Concurrent::Map.new
   CACHE_QUE = Concurrent::Map.new
