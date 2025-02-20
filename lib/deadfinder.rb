@@ -30,35 +30,15 @@ module DeadFinder
   end
 
   def self.run_pipe(options)
-    Logger.set_silent if options['silent']
-    Logger.info 'Reading from STDIN'
-    app = Runner.new
-    while $stdin.gets
-      target = $LAST_READ_LINE.chomp
-      Logger.target "Checking: #{target}"
-      app.run target, options
-    end
-    gen_output(options)
+    run_with_input(options) { $stdin.gets&.chomp }
   end
 
   def self.run_file(filename, options)
-    Logger.set_silent if options['silent']
-    Logger.info "Reading: #{filename}"
-    app = Runner.new
-    File.foreach(filename) do |line|
-      target = line.chomp
-      Logger.target "Checking: #{target}"
-      app.run target, options
-    end
-    gen_output(options)
+    run_with_input(options) { File.foreach(filename).map(&:chomp) }
   end
 
   def self.run_url(url, options)
-    Logger.set_silent if options['silent']
-    Logger.target "Checking: #{url}"
-    app = Runner.new
-    app.run url, options
-    gen_output(options)
+    run_with_target(url, options)
   end
 
   def self.run_sitemap(sitemap_url, options)
@@ -66,13 +46,27 @@ module DeadFinder
     Logger.info "Parsing sitemap: #{sitemap_url}"
     app = Runner.new
     base_uri = URI(sitemap_url)
-    sitemap = SitemapParser.new sitemap_url, { recurse: true }
+    sitemap = SitemapParser.new(sitemap_url, recurse: true)
     sitemap.to_a.each do |url|
       turl = generate_url(url, base_uri)
-      Logger.target "Checking: #{turl}"
-      app.run turl, options
+      run_with_target(turl, options, app)
     end
     gen_output(options)
+  end
+
+  def self.run_with_input(options)
+    Logger.set_silent if options['silent']
+    Logger.info 'Reading input'
+    app = Runner.new
+    Array(yield).each do |target|
+      run_with_target(target, options, app)
+    end
+    gen_output(options)
+  end
+
+  def self.run_with_target(target, options, app = Runner.new)
+    Logger.target "Checking: #{target}"
+    app.run(target, options)
   end
 
   def self.gen_output(options)
@@ -85,16 +79,20 @@ module DeadFinder
               when 'yaml', 'yml'
                 output_data.to_yaml
               when 'csv'
-                CSV.generate do |csv|
-                  csv << %w[target url]
-                  output_data.each do |target, urls|
-                    Array(urls).each { |url| csv << [target, url] }
-                  end
-                end
+                generate_csv(output_data)
               else
                 JSON.pretty_generate(output_data)
               end
 
     File.write(options['output'], content)
+  end
+
+  def self.generate_csv(output_data)
+    CSV.generate do |csv|
+      csv << %w[target url]
+      output_data.each do |target, urls|
+        Array(urls).each { |url| csv << [target, url] }
+      end
+    end
   end
 end
