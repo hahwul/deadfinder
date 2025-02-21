@@ -1,4 +1,5 @@
-plugins: rubocop-rspec
+Plugins:
+  - rubocop-rspec
 
 AllCops:
   NewCops: enable
