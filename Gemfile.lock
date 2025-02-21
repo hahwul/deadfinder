@@ -107,7 +107,7 @@ DEPENDENCIES
   nokogiri
   open-uri (>= 0.4.0)
   rspec
-  rubocop
+  rubocop (= 1.72.2)
   set
   sitemap-parser
   thor
