@@ -110,6 +110,7 @@ DEPENDENCIES
   nokogiri
   open-uri (>= 0.4.0)
   rspec
+  rubocop (~> 1.0)
   rubocop-rspec
   set
   sitemap-parser

@@ -4,7 +4,7 @@ require 'spec_helper'
 require 'deadfinder/cli'
 
 RSpec.describe DeadFinder::CLI do
-  let(:cli) { DeadFinder::CLI.new }
+  let(:cli) { described_class.new }
 
   describe '#pipe' do
     it 'runs the pipe command' do

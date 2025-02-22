@@ -12,6 +12,8 @@ gem 'rspec'
 gem 'yaml'
 gem 'csv'
 gem 'logger'
+gem 'rubocop', '~> 1.0', require: false
+gem 'rubocop-rspec', require: false
 
 group :test do
   gem 'webmock', '~> 3.14'

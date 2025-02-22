@@ -1,4 +1,5 @@
-plugins: rubocop-rspec
+plugins:
+  - rubocop-rspec
 
 AllCops:
   NewCops: enable
@@ -52,3 +53,36 @@ Metrics/BlockLength:
   Max: 50
   Exclude:
     - 'spec/**/*'
+
+Gemspec/AddRuntimeDependency:
+  Enabled: true
+
+Gemspec/DeprecatedAttributeAssignment:
+  Enabled: true
+
+Gemspec/DevelopmentDependencies:
+  Enabled: true
+
+RSpec/MessageSpies:
+  Enabled: false
+
+RSpec/ExpectOutput:
+  Enabled: false
+
+RSpec/InstanceVariable:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Max: 30
+
+RSpec/MultipleExpectations:
+  Max: 15
+
+RSpec/DescribeClass:
+  Enabled: false
