@@ -6,7 +6,7 @@ AllCops:
     - '*.gemspec'
     - 'Gemfile*'
     - 'lib/deadfinder/runner.rb'
-    - example/**/*
+    - examples/**/*
   SuggestExtensions: false
 
 Style/MutableConstant:
