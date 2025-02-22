@@ -5,7 +5,7 @@ require:
   - rubocop-rspec
 
 AllCops:
-  NewCops: enable
+  NewCops: disable
   Exclude:
     - '.git/**/*'
     - 'bin/*'
