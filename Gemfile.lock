@@ -17,19 +17,34 @@ GEM
     diff-lcs (1.6.0)
     ethon (0.16.0)
       ffi (>= 1.15.0)
+    ffi (1.17.1-aarch64-linux-gnu)
+    ffi (1.17.1-aarch64-linux-musl)
+    ffi (1.17.1-arm-linux-gnu)
+    ffi (1.17.1-arm-linux-musl)
     ffi (1.17.1-arm64-darwin)
     ffi (1.17.1-x86_64-darwin)
     ffi (1.17.1-x86_64-linux-gnu)
+    ffi (1.17.1-x86_64-linux-musl)
     hashdiff (1.1.2)
     json (2.10.1)
     language_server-protocol (3.17.0.4)
     lint_roller (1.1.0)
     logger (1.6.6)
+    nokogiri (1.18.3-aarch64-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.18.3-aarch64-linux-musl)
+      racc (~> 1.4)
+    nokogiri (1.18.3-arm-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.18.3-arm-linux-musl)
+      racc (~> 1.4)
     nokogiri (1.18.3-arm64-darwin)
       racc (~> 1.4)
     nokogiri (1.18.3-x86_64-darwin)
       racc (~> 1.4)
     nokogiri (1.18.3-x86_64-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.18.3-x86_64-linux-musl)
       racc (~> 1.4)
     open-uri (0.5.0)
       stringio
@@ -70,9 +85,6 @@ GEM
       unicode-display_width (>= 2.4.0, < 4.0)
     rubocop-ast (1.38.0)
       parser (>= 3.3.1.0)
-    rubocop-rspec (3.5.0)
-      lint_roller (~> 1.1)
-      rubocop (~> 1.72, >= 1.72.1)
     ruby-progressbar (1.13.0)
     set (1.1.1)
     sitemap-parser (0.5.6)
@@ -95,11 +107,14 @@ GEM
     yaml (0.4.0)
 
 PLATFORMS
-  arm64-darwin-22
-  arm64-darwin-23
-  arm64-darwin-24
-  x86_64-darwin-21
-  x86_64-linux
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm-linux-gnu
+  arm-linux-musl
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux-gnu
+  x86_64-linux-musl
 
 DEPENDENCIES
   colorize
@@ -110,8 +125,7 @@ DEPENDENCIES
   nokogiri
   open-uri (>= 0.4.0)
   rspec
-  rubocop (~> 1.0)
-  rubocop-rspec
+  rubocop (= 1.72.2)
   set
   sitemap-parser
   thor
@@ -119,4 +133,4 @@ DEPENDENCIES
   yaml
 
 BUNDLED WITH
-   2.5.16
+   2.6.3

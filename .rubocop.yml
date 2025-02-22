@@ -1,8 +1,5 @@
-plugins:
-  - rubocop-rspec
-
 AllCops:
-  NewCops: disable
+  NewCops: enable
   Exclude:
     - '.git/**/*'
     - 'bin/*'
