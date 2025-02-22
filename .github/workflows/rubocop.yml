@@ -11,6 +11,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'  # Not needed with a `.ruby-version` or `.tool-versions`
-          bundler-cache: true  # runs 'bundle install' and caches installed gems automaticallyz
+          bundler-cache: false  # runs 'bundle install' and caches installed gems automaticallyz
       - name: Test
         run: bundle exec rubocop --plugin rubocop-rspec
