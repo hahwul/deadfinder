@@ -5,6 +5,8 @@ AllCops:
     - 'bin/*'
     - '*.gemspec'
     - 'Gemfile*'
+    - 'lib/deadfinder/runner.rb'
+    - examples/**/*
   SuggestExtensions: false
 
 Style/MutableConstant:
@@ -20,27 +22,30 @@ Metrics/AbcSize:
   Exclude:
     - 'lib/deadfinder.rb'
     - 'lib/deadfinder/utils.rb'
+    - 'lib/deadfinder/runner.rb'
 
 Metrics/CyclomaticComplexity:
   Exclude:
     - 'lib/deadfinder.rb'
+    - 'lib/deadfinder/runner.rb'
 
 Metrics/MethodLength:
-  Exclude:
-    - 'lib/deadfinder.rb'
-    - 'lib/deadfinder/utils.rb'
+  Max: 50
 
 Metrics/PerceivedComplexity:
   Exclude:
     - 'lib/deadfinder.rb'
+    - 'lib/deadfinder/runner.rb'
 
 Lint/SuppressedException:
   Exclude:
     - 'lib/deadfinder.rb'
+    - 'lib/deadfinder/runner.rb'
 
 Security/Open:
   Exclude:
     - 'lib/deadfinder.rb'
+    - 'lib/deadfinder/runner.rb'
 
 Metrics/BlockLength:
   Max: 50

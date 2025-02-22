@@ -1,43 +1,43 @@
 ---
-name: DeadFinder Action
-description: Find dead-links (broken links)
+name: DeadFinder
+description: A GitHub Action to find and report dead (broken) links in files, URLs, or sitemaps.
 branding:
   icon: link
-  color: purple
+  color: red
 inputs:
   command:
-    description: The command to run (file, url, sitemap)
+    description: The type of command to execute (options: file, url, sitemap)
     required: true
   target:
-    description: The target for the command
+    description: The target resource for the command (e.g., file path, URL, or sitemap URL)
     required: true
   timeout:
-    description: Timeout in seconds
+    description: The maximum time to wait for each request, in seconds
     required: false
     default: ''
   concurrency:
-    description: Number of concurrency
+    description: The number of concurrent requests to make
     required: false
     default: ''
   silent:
-    description: Silent mode
+    description: Enable silent mode to suppress output
     required: false
     default: 'false'
   headers:
-    description: Custom HTTP headers to send with request, separated by commas
+    description: Custom HTTP headers to include in requests, separated by commas
     required: false
     default: ''
   verbose:
-    description: Verbose mode
+    description: Enable verbose mode for detailed logging
     required: false
     default: 'false'
   include30x:
-    description: Include 30x status code
+    description: Include HTTP 30x status codes in the results
     required: false
     default: 'false'
 outputs:
   output:
-    description: JSON Result
+    description: JSON formatted result of the dead-link check
 runs:
   using: docker
   image: github-action/Dockerfile
