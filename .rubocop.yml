@@ -53,16 +53,7 @@ Metrics/BlockLength:
   Max: 50
   Exclude:
     - 'spec/**/*'
-
-Gemspec/AddRuntimeDependency:
-  Enabled: true
-
-Gemspec/DeprecatedAttributeAssignment:
-  Enabled: true
-
-Gemspec/DevelopmentDependencies:
-  Enabled: true
-
+    
 RSpec/MessageSpies:
   Enabled: false
 
@@ -86,7 +77,7 @@ RSpec/MultipleExpectations:
 
 RSpec/DescribeClass:
   Enabled: false
-  
+
 Gemspec/AddRuntimeDependency: # new in 1.65
   Enabled: true
 Gemspec/DeprecatedAttributeAssignment: # new in 1.30
