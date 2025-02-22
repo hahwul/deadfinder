@@ -12,5 +12,8 @@ gem 'rspec'
 gem 'yaml'
 gem 'csv'
 gem 'logger'
-gem 'rubocop', '1.72.2'
-gem 'webmock', '~> 3.14'
+
+group :test do
+  gem 'webmock', '~> 3.14'
+  gem 'rubocop-rspec'
+end
