@@ -10,7 +10,8 @@ AllCops:
     - '*.gemspec'
     - 'Gemfile*'
     - 'lib/deadfinder/runner.rb'
-    - examples/**/*
+    - 'examples/**/*'
+    - 'vendor/bundle/**/*'  # Add this line to exclude vendor/bundle directory
   SuggestExtensions: false
 
 Style/MutableConstant:
