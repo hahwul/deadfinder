@@ -21,4 +21,5 @@ group :development, :test do
   gem 'rake'
   gem 'simplecov'
   gem 'simplecov-cobertura'
+  gem 'panolint'
 end

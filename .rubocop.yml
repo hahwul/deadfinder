@@ -1,3 +1,7 @@
+plugins:
+  - rubocop-rake
+  - rubocop-rspec
+
 AllCops:
   NewCops: enable
   Exclude:
