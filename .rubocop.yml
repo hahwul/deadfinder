@@ -68,6 +68,9 @@ RSpec/ExampleLength:
 
 RSpec/MultipleExpectations:
   Max: 5
-  
+
 RSpec/ExpectOutput:
   Enabled: false
+
+Layout/LineLength:
+  Max: 200
