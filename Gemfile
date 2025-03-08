@@ -14,7 +14,7 @@ gem 'csv'
 gem 'logger'
 
 group :development, :test do
-  gem 'rubocop', '1.72.2'
+  gem 'rubocop'
   gem 'rubocop-rspec'
   gem 'rubocop-rake'
   gem 'webmock', '~> 3.14'
