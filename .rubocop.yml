@@ -1,3 +1,7 @@
+require:
+  - rubocop-rake
+  - rubocop-rspec
+
 AllCops:
   NewCops: enable
   Exclude:
@@ -6,7 +10,8 @@ AllCops:
     - '*.gemspec'
     - 'Gemfile*'
     - 'lib/deadfinder/runner.rb'
-    - examples/**/*
+    - 'examples/**/*'
+    - 'vendor/bundle/**/*'  # Add this line to exclude vendor/bundle directory
   SuggestExtensions: false
 
 Style/MutableConstant:
@@ -51,3 +56,21 @@ Metrics/BlockLength:
   Max: 50
   Exclude:
     - 'spec/**/*'
+
+FactoryBot/CreateList:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 10
+
+RSpec/ExampleLength:
+  Max: 30
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/ExpectOutput:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 200
