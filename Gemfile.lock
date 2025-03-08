@@ -15,6 +15,7 @@ GEM
     csv (3.3.2)
     date (3.4.1)
     diff-lcs (1.6.0)
+    docile (1.4.1)
     ethon (0.16.0)
       ffi (>= 1.15.0)
     ffi (1.17.1-aarch64-linux-gnu)
@@ -57,6 +58,7 @@ GEM
     public_suffix (6.0.1)
     racc (1.8.1)
     rainbow (3.1.1)
+    rake (13.2.1)
     regexp_parser (2.10.0)
     rexml (3.4.1)
     rspec (3.13.0)
@@ -90,6 +92,15 @@ GEM
       rubocop (~> 1.72, >= 1.72.1)
     ruby-progressbar (1.13.0)
     set (1.1.1)
+    simplecov (0.22.0)
+      docile (~> 1.1)
+      simplecov-html (~> 0.11)
+      simplecov_json_formatter (~> 0.1)
+    simplecov-cobertura (2.1.0)
+      rexml
+      simplecov (~> 0.19)
+    simplecov-html (0.13.1)
+    simplecov_json_formatter (0.1.4)
     sitemap-parser (0.5.6)
       nokogiri (~> 1.6)
       typhoeus (>= 0.6, < 2.0)
@@ -127,10 +138,13 @@ DEPENDENCIES
   logger
   nokogiri
   open-uri (>= 0.4.0)
+  rake
   rspec
   rubocop (= 1.72.2)
   rubocop-rspec
   set
+  simplecov
+  simplecov-cobertura
   sitemap-parser
   thor
   webmock (~> 3.14)
