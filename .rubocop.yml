@@ -1,4 +1,4 @@
-plugins:
+require:
   - rubocop-rake
   - rubocop-rspec
 
