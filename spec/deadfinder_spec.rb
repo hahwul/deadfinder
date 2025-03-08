@@ -6,7 +6,7 @@ require 'yaml'
 require 'csv'
 require_relative '../lib/deadfinder'
 
-RSpec.describe 'DeadFinder Functions' do
+RSpec.describe 'DeadFinder' do
   describe '#gen_output' do
     let(:tempfile) { Tempfile.new('deadfinder_output') }
     let(:options) do

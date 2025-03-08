@@ -4,13 +4,10 @@ require_relative '../../lib/deadfinder/logger'
 require 'stringio'
 
 RSpec.describe Logger do
-  before do
-    @original_stdout = $stdout
-    $stdout = StringIO.new
-  end
+  let(:original_stdout) { $stdout }
 
   after do
-    $stdout = @original_stdout
+    $stdout = original_stdout
   end
 
   def strip_ansi_codes(str)
@@ -40,70 +37,60 @@ RSpec.describe Logger do
 
   describe '.info' do
     it 'prints info message when not in silent mode' do
-      described_class.info('Test info')
-      expect(strip_ansi_codes($stdout.string)).to include('ℹ Test info')
+      expect { described_class.info('Test info') }.to output(/ℹ Test info/).to_stdout
     end
 
     it 'does not print info message when in silent mode' do
       described_class.set_silent
-      described_class.info('Test info')
-      expect($stdout.string).to be_empty
+      expect { described_class.info('Test info') }.not_to output.to_stdout
     end
   end
 
   describe '.error' do
     it 'prints error message when not in silent mode' do
       described_class.unset_silent
-      described_class.error('Test error')
-      expect(strip_ansi_codes($stdout.string)).to include('⚠︎ Test error')
+      expect { described_class.error('Test error') }.to output(/⚠︎ Test error/).to_stdout
     end
 
     it 'does not print error message when in silent mode' do
       described_class.set_silent
-      described_class.error('Test error')
-      expect($stdout.string).to be_empty
+      expect { described_class.error('Test error') }.not_to output.to_stdout
     end
   end
 
   describe '.target' do
     it 'prints target message when not in silent mode' do
       described_class.unset_silent
-      described_class.target('Test target')
-      expect(strip_ansi_codes($stdout.string)).to include('► Test target')
+      expect { described_class.target('Test target') }.to output(/► Test target/).to_stdout
     end
 
     it 'does not print target message when in silent mode' do
       described_class.set_silent
-      described_class.target('Test target')
-      expect($stdout.string).to be_empty
+      expect { described_class.target('Test target') }.not_to output.to_stdout
     end
   end
 
   describe '.sub_info' do
     it 'prints sub_info message when not in silent mode' do
       described_class.unset_silent
-      described_class.sub_info('Test sub_info')
-      expect(strip_ansi_codes($stdout.string)).to include('  ● Test sub_info')
+      expect { described_class.sub_info('Test sub_info') }.to output(/  ● Test sub_info/).to_stdout
     end
 
     it 'does not print sub_info message when in silent mode' do
       described_class.set_silent
-      described_class.sub_info('Test sub_info')
-      expect($stdout.string).to be_empty
+      expect { described_class.sub_info('Test sub_info') }.not_to output.to_stdout
     end
   end
 
   describe '.sub_done' do
     it 'prints sub_done message when not in silent mode' do
       described_class.unset_silent
-      described_class.sub_done('Test sub_done')
-      expect(strip_ansi_codes($stdout.string)).to include('  ✓ Test sub_done')
+      expect { described_class.sub_done('Test sub_done') }.to output(/  ✓ Test sub_done/).to_stdout
     end
 
     it 'does not print sub_done message when in silent mode' do
       described_class.set_silent
-      described_class.sub_done('Test sub_done')
-      expect($stdout.string).to be_empty
+      expect { described_class.sub_done('Test sub_done') }.not_to output.to_stdout
     end
   end
 end

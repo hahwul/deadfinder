@@ -59,3 +59,15 @@ Metrics/BlockLength:
 
 FactoryBot/CreateList:
   Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 10
+
+RSpec/ExampleLength:
+  Max: 30
+
+RSpec/MultipleExpectations:
+  Max: 5
+  
+RSpec/ExpectOutput:
+  Enabled: false
