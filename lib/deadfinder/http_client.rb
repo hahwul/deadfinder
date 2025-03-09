@@ -7,7 +7,12 @@ module DeadFinder
   # HTTP client module
   module HttpClient
     def self.create(uri, options)
-      proxy_uri = URI.parse(options['proxy']) if options['proxy'] && !options['proxy'].empty?
+      begin
+        proxy_uri = URI.parse(options['proxy']) if options['proxy'] && !options['proxy'].empty?
+      rescue URI::InvalidURIError => e
+        DeadFinder::Logger.error "Invalid proxy URI: #{options['proxy']} - #{e.message}"
+        proxy_uri = nil # or handle the error as appropriate
+      end
       http = if proxy_uri
                Net::HTTP.new(uri.host, uri.port,
                              proxy_uri.host, proxy_uri.port,
