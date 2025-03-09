@@ -50,6 +50,30 @@ RSpec.describe DeadFinder::Runner do
         expect(DeadFinder.output[target]).not_to include('http://example.com/valid')
       end
     end
+
+    context 'with invalid match option' do
+      before do
+        options['match'] = '[' # Invalid regex pattern
+        allow(Logger).to receive(:error)
+      end
+
+      it 'logs an error for invalid match pattern' do
+        runner.run(target, options)
+        expect(Logger).to have_received(:error).with(/Invalid match pattern/)
+      end
+    end
+
+    context 'with invalid ignore option' do
+      before do
+        options['ignore'] = '[' # Invalid regex pattern
+        allow(Logger).to receive(:error)
+      end
+
+      it 'logs an error for invalid ignore pattern' do
+        runner.run(target, options)
+        expect(Logger).to have_received(:error).with(/Invalid match pattern/)
+      end
+    end
   end
 
   describe '#worker' do
