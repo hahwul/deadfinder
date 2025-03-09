@@ -41,14 +41,22 @@ module DeadFinder
       links = extract_links(page)
 
       if options['match'] != ''
-        links.each do |type, urls|
-          links[type] = urls.select { |url| DeadFinder::UrlPatternMatcher.match?(url, options['match']) }
+        begin
+          links.each do |type, urls|
+        links[type] = urls.select { |url| DeadFinder::UrlPatternMatcher.match?(url, options['match']) }
+          end
+        rescue RegexpError => e
+          Logger.error "Invalid match pattern: #{e.message}"
         end
       end
 
       if options['ignore'] != ''
-        links.each do |type, urls|
-          links[type] = urls.reject { |url| DeadFinder::UrlPatternMatcher.ignore?(url, options['ignore']) }
+        begin
+          links.each do |type, urls|
+            links[type] = urls.reject { |url| DeadFinder::UrlPatternMatcher.ignore?(url, options['ignore']) }
+          end
+        rescue RegexpError => e
+          Logger.error "Invalid match pattern: #{e.message}"
         end
       end
 
