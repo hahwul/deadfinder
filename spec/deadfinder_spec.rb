@@ -7,6 +7,12 @@ require 'csv'
 require_relative '../lib/deadfinder'
 
 RSpec.describe 'DeadFinder' do
+  describe '#version' do
+    it 'returns the version number' do
+      expect(DeadFinder::VERSION).not_to be_nil
+    end
+  end
+
   describe '#gen_output' do
     let(:tempfile) { Tempfile.new('deadfinder_output') }
     let(:options) do
