@@ -87,7 +87,7 @@ puts DeadFinder.output
 # {"https://www.hahwul.com/cullinan/csrf/" => ["https://www.hahwul.com/tag/cullinan/"]}
 ```
 
-For various examples and detailed usage, including sitemap, file, and other modes, please refer to the [examples](./examples) directory in the repository.
+For various examples and detailed usage, including sitemap, file, and other modes, please refer to the [rubydoc](https://rubydoc.info/gems/deadfinder/DeadFinder) and [examples](./examples) directory in the repository.
 
 ## Usage
 ```
