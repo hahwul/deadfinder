@@ -18,6 +18,8 @@ module DeadFinder
                               desc: 'User-Agent string to use for requests'
     class_option :proxy, aliases: :p, default: '', type: :string, desc: 'Proxy server to use for requests'
     class_option :proxy_auth, default: '', type: :string, desc: 'Proxy server authentication credentials'
+    class_option :match, aliases: :m, default: '', type: :string, desc: 'Match the URL with the given pattern'
+    class_option :ignore, aliases: :i, default: '', type: :string, desc: 'Ignore the URL with the given pattern'
     class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
     class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
 

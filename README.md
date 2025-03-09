@@ -108,6 +108,8 @@ Options:
                                         # Default: Mozilla/5.0 (compatible; DeadFinder/1.6.1;)
   p, [--proxy=PROXY]                    # Proxy server to use for requests
      [--proxy-auth=PROXY_AUTH]          # Proxy server authentication credentials
+  m, [--match=MATCH]                    # Match the URL with the given pattern
+  i, [--ignore=IGNORE]                  # Ignore the URL with the given pattern
   s, [--silent], [--no-silent]          # Silent mode
   v, [--verbose], [--no-verbose]        # Verbose mode
 ```
