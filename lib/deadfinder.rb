@@ -8,14 +8,15 @@ require 'deadfinder/utils'
 require 'deadfinder/logger'
 require 'deadfinder/runner'
 require 'deadfinder/cli'
+require 'deadfinder/const'
 require 'concurrent-edge'
 require 'sitemap-parser'
 require 'json'
 require 'yaml'
 require 'csv'
 
+
 module DeadFinder
-  VERSION = '1.6.1'
   Channel = Concurrent::Channel
   CACHE_SET = Concurrent::Map.new
   CACHE_QUE = Concurrent::Map.new

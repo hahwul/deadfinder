@@ -1,7 +1,7 @@
-require_relative 'lib/deadfinder/version'
+require_relative 'lib/deadfinder/const'
 Gem::Specification.new do |s|
   s.name = 'deadfinder'
-  s.version     = VERSION
+  s.version     = DeadFinder::VERSION
   s.summary     = 'Find dead-links (broken links)'
   s.description = 'Find dead-links (broken links). Dead link (broken link) means a link within a web page that cannot be connected. These links can have a negative impact to SEO and Security. This tool makes it easy to identify and modify.'
   s.authors     = ['hahwul']
@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://www.hahwul.com/projects/deadfinder/'
   s.license = 'MIT'
   s.executables << 'deadfinder'
-  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/version.rb', 'lib/deadfinder/runner.rb', 'lib/deadfinder/cli.rb']
+  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/runner.rb', 'lib/deadfinder/cli.rb']
   s.metadata['rubygems_mfa_required'] = 'true'
   s.metadata['source_code_uri'] = 'https://github.com/hahwul/deadfinder'
   s.required_ruby_version = '>= 3.3.0'
