@@ -15,7 +15,6 @@ require 'json'
 require 'yaml'
 require 'csv'
 
-
 module DeadFinder
   Channel = Concurrent::Channel
   CACHE_SET = Concurrent::Map.new
