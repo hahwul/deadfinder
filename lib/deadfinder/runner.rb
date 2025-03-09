@@ -7,6 +7,7 @@ require 'net/http'
 require 'openssl'
 require 'deadfinder/logger'
 require 'deadfinder/http_client'
+require 'deadfinder/url_pattern_matcher'
 
 module DeadFinder
   # Runner class for executing the main logic
@@ -21,7 +22,11 @@ module DeadFinder
         'worker_headers' => [],
         'silent' => true,
         'verbose' => false,
-        'include30x' => false
+        'include30x' => false,
+        'proxy' => '',
+        'proxy_auth' => '',
+        'match' => '',
+        'ignore' => '',
       }
     end
 
@@ -34,6 +39,26 @@ module DeadFinder
       end
       page = Nokogiri::HTML(URI.open(target, headers))
       links = extract_links(page)
+
+      if options['match'] != ''
+        begin
+          links.each do |type, urls|
+        links[type] = urls.select { |url| DeadFinder::UrlPatternMatcher.match?(url, options['match']) }
+          end
+        rescue RegexpError => e
+          Logger.error "Invalid match pattern: #{e.message}"
+        end
+      end
+
+      if options['ignore'] != ''
+        begin
+          links.each do |type, urls|
+            links[type] = urls.reject { |url| DeadFinder::UrlPatternMatcher.ignore?(url, options['ignore']) }
+          end
+        rescue RegexpError => e
+          Logger.error "Invalid match pattern: #{e.message}"
+        end
+      end
 
       total_links_count = links.values.flatten.length
       link_info = links.map { |type, urls| "#{type}:#{urls.length}" if urls.length.positive? }
