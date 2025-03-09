@@ -18,16 +18,22 @@ Dead link (broken link) means a link within a web page that cannot be connected.
 
 ## Installation
 ### Install with Gem
+#### CLI
 ```bash
 gem install deadfinder
-
 # https://rubygems.org/gems/deadfinder
+```
+
+#### Gemfile
+
+```ruby
+gem 'deadfinder'
+# and `bundle install`
 ```
 
 ### Install with Homebrew
 ```bash
 brew install deadfinder
-
 # https://formulae.brew.sh/formula/deadfinder
 ```
 
