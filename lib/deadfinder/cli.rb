@@ -17,6 +17,7 @@ module DeadFinder
     class_option :user_agent, default: 'Mozilla/5.0 (compatible; DeadFinder/1.6.1;)', type: :string,
                               desc: 'User-Agent string to use for requests'
     class_option :proxy, aliases: :p, default: '', type: :string, desc: 'Proxy server to use for requests'
+    class_option :proxy_auth, default: '', type: :string, desc: 'Proxy server authentication credentials'
     class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
     class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
 
