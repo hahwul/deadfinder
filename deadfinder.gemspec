@@ -1,4 +1,4 @@
-require_relative 'lib/deadfinder/const'
+require_relative 'lib/deadfinder/version'
 Gem::Specification.new do |s|
   s.name = 'deadfinder'
   s.version     = DeadFinder::VERSION
