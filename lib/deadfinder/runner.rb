@@ -6,6 +6,7 @@ require 'open-uri'
 require 'net/http'
 require 'openssl'
 require 'deadfinder/logger'
+require 'deadfinder/http_client'
 
 module DeadFinder
   # Runner class for executing the main logic
@@ -70,17 +71,7 @@ module DeadFinder
           begin
             CACHE_QUE[j] = true
             uri = URI.parse(j)
-            proxy_uri = URI.parse(options['proxy']) if options['proxy'] && !options['proxy'].empty?
-            http = if proxy_uri
-                     Net::HTTP.new(uri.host, uri.port,
-                                   proxy_uri.host, proxy_uri.port,
-                                   proxy_uri.user, proxy_uri.password)
-                   else
-                     Net::HTTP.new(uri.host, uri.port)
-                   end
-            http.use_ssl = (uri.scheme == 'https')
-            http.read_timeout = options['timeout'].to_i if options['timeout']
-            http.verify_mode = OpenSSL::SSL::VERIFY_NONE if http.use_ssl?
+            http = HttpClient.create(uri, options)
 
             request = Net::HTTP::Get.new(uri.request_uri)
             request['User-Agent'] = options['user_agent']

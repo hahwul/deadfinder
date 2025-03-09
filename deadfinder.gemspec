@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://www.hahwul.com/projects/deadfinder/'
   s.license = 'MIT'
   s.executables << 'deadfinder'
-  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/runner.rb', 'lib/deadfinder/cli.rb']
+  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/runner.rb', 'lib/deadfinder/cli.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/version.rb', 'lib/deadfinder/http_client.rb']
   s.metadata['rubygems_mfa_required'] = 'true'
   s.metadata['source_code_uri'] = 'https://github.com/hahwul/deadfinder'
   s.required_ruby_version = '>= 3.3.0'
