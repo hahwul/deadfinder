@@ -45,10 +45,10 @@ class Logger
   end
 
   def self.found(text)
-    log('  ✘ ', text, :red)
+    log('    ✘ ', text, :red)
   end
 
   def self.verbose(text)
-    log('  ➜ ', text, :yellow)
+    log('    ➜ ', text, :yellow)
   end
 end
