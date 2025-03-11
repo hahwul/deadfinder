@@ -12,17 +12,17 @@ RSpec.describe DeadFinder::Logger do
 
   describe '.apply_options' do
     it 'sets silent mode when options has silent' do
-      expect(described_class).to have_received(:set_silent)
+      expect(described_class).to receive(:set_silent)
       described_class.apply_options('silent' => true)
     end
 
     it 'sets verbose mode when options has verbose' do
-      expect(described_class).to have_received(:set_verbose)
+      expect(described_class).to receive(:set_verbose)
       described_class.apply_options('verbose' => true)
     end
 
     it 'sets debug mode when options has debug' do
-      expect(described_class).to have_received(:set_debug)
+      expect(described_class).to receive(:set_debug)
       described_class.apply_options('debug' => true)
     end
   end
