@@ -89,4 +89,40 @@ RSpec.describe Logger do
       expect { described_class.sub_complete('Test sub_complete') }.not_to output.to_stdout
     end
   end
+
+  describe '.found' do
+    it 'prints found message when not in silent mode' do
+      described_class.unset_silent
+      expect { described_class.found('Test found') }.to output("\e[0;31;49m  ├── \e[0m\e[0;31;49m✘ \e[0mTest found\n").to_stdout
+    end
+
+    it 'does not print found message when in silent mode' do
+      described_class.set_silent
+      expect { described_class.found('Test found') }.not_to output.to_stdout
+    end
+  end
+
+  describe '.verbose' do
+    it 'prints verbose message when not in silent mode' do
+      described_class.unset_silent
+      expect { described_class.verbose('Test verbose') }.to output("\e[0;33;49m  ├── \e[0m\e[0;33;49m➜ \e[0mTest verbose\n").to_stdout
+    end
+
+    it 'does not print verbose message when in silent mode' do
+      described_class.set_silent
+      expect { described_class.verbose('Test verbose') }.not_to output.to_stdout
+    end
+  end
+
+  describe '.verbose_ok' do
+    it 'prints verbose_ok message when not in silent mode' do
+      described_class.unset_silent
+      expect { described_class.verbose_ok('Test verbose_ok') }.to output("\e[0;32;49m  ├── \e[0m\e[0;32;49m✓ \e[0mTest verbose_ok\n").to_stdout
+    end
+
+    it 'does not print verbose_ok message when in silent mode' do
+      described_class.set_silent
+      expect { described_class.verbose_ok('Test verbose_ok') }.not_to output.to_stdout
+    end
+  end
 end
