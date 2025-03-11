@@ -23,6 +23,7 @@ module DeadFinder
         'silent' => true,
         'verbose' => false,
         'include30x' => false,
+        'include50x' => false,
         'proxy' => '',
         'proxy_auth' => '',
         'match' => '',
@@ -109,7 +110,7 @@ module DeadFinder
             response = http.request(request)
             status_code = response.code.to_i
 
-            if status_code >= 400 || (status_code >= 300 && options['include30x'])
+            if status_code >= 400 || (status_code >= 300 && options['include30x']) || (status_code >= 500 && options['include50x'])
               DeadFinder::Logger.found "[#{status_code}] #{j}"
               CACHE_QUE[j] = false
               DeadFinder.output[target] ||= []

@@ -7,6 +7,7 @@ module DeadFinder
   # CLI class for handling command-line interactions
   class CLI < Thor
     class_option :include30x, aliases: :r, default: false, type: :boolean, desc: 'Include 30x redirections'
+    class_option :include50x, aliases: :e, default: false, type: :boolean, desc: 'Include 50x errors'
     class_option :concurrency, aliases: :c, default: 50, type: :numeric, desc: 'Number of concurrency'
     class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
     class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write result (e.g., json, yaml, csv)'

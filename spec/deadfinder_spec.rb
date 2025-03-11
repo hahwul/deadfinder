@@ -102,7 +102,8 @@ RSpec.describe 'DeadFinder' do
         'worker_headers' => [],
         'silent' => true,
         'verbose' => false,
-        'include30x' => false
+        'include30x' => false,
+        'include50x' => false
       )
     end
   end

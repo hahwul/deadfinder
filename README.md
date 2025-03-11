@@ -101,6 +101,7 @@ Commands:
 
 Options:
   r, [--include30x], [--no-include30x]  # Include 30x redirections
+  e, [--include50x], [--no-include50x]  # Include 50x errors
   c, [--concurrency=N]                  # Number of concurrency
                                         # Default: 50
   t, [--timeout=N]                      # Timeout in seconds
@@ -110,10 +111,8 @@ Options:
                                         # Default: json
   H, [--headers=one two three]          # Custom HTTP headers to send with initial request
      [--worker-headers=one two three]   # Custom HTTP headers to send with worker requests
-     [--user-agent=USER_AGENT]          # User-Agent string to use for requests
-                                        # Default: Mozilla/5.0 (compatible; DeadFinder/1.6.1;)
-  p, [--proxy=PROXY]                    # Proxy server to use for requests
-     [--proxy-auth=PROXY_AUTH]          # Proxy server authentication credentials
+     [--user-agent=USER_AGENT]          # User-Agent string to use for requests                                                                                                                      # Default: Mozilla/5.0 (compatible; DeadFinder/1.6.1;)
+  p, [--proxy=PROXY]                    # Proxy server to use for requests                                                                                        [--proxy-auth=PROXY_AUTH]          # Proxy server authentication credentials
   m, [--match=MATCH]                    # Match the URL with the given pattern
   i, [--ignore=IGNORE]                  # Ignore the URL with the given pattern
   s, [--silent], [--no-silent]          # Silent mode
