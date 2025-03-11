@@ -63,7 +63,7 @@ module DeadFinder
       total_links_count = links.values.flatten.length
       link_info = links.map { |type, urls| "#{type}:#{urls.length}" if urls.length.positive? }
                        .compact.join(' / ')
-      Logger.sub_info "Found #{total_links_count} URLs, currently checking them. [#{link_info}]" unless link_info.empty?
+      Logger.sub_info "Discovered #{total_links_count} URLs, currently checking them. [#{link_info}]" unless link_info.empty?
 
       jobs = Channel.new(buffer: :buffered, capacity: 1000)
       results = Channel.new(buffer: :buffered, capacity: 1000)
