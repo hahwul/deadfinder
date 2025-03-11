@@ -11,7 +11,7 @@ RSpec.describe DeadFinder::CLI do
     allow(DeadFinder).to receive(:run_file)
     allow(DeadFinder).to receive(:run_url)
     allow(DeadFinder).to receive(:run_sitemap)
-    allow(Logger).to receive(:info)
+    allow(DeadFinder::Logger).to receive(:info)
   end
 
   describe '#pipe' do
@@ -45,7 +45,7 @@ RSpec.describe DeadFinder::CLI do
   describe '#version' do
     it 'displays the version' do
       cli.invoke(:version)
-      expect(Logger).to have_received(:info).with("deadfinder #{DeadFinder::VERSION}")
+      expect(DeadFinder::Logger).to have_received(:info).with("deadfinder #{DeadFinder::VERSION}")
     end
   end
 end

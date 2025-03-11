@@ -54,24 +54,24 @@ RSpec.describe DeadFinder::Runner do
     context 'with invalid match option' do
       before do
         options['match'] = '[' # Invalid regex pattern
-        allow(Logger).to receive(:error)
+        allow(DeadFinder::Logger).to receive(:error)
       end
 
       it 'logs an error for invalid match pattern' do
         runner.run(target, options)
-        expect(Logger).to have_received(:error).with(/Invalid match pattern/)
+        expect(DeadFinder::Logger).to have_received(:error).with(/Invalid match pattern/)
       end
     end
 
     context 'with invalid ignore option' do
       before do
         options['ignore'] = '[' # Invalid regex pattern
-        allow(Logger).to receive(:error)
+        allow(DeadFinder::Logger).to receive(:error)
       end
 
       it 'logs an error for invalid ignore pattern' do
         runner.run(target, options)
-        expect(Logger).to have_received(:error).with(/Invalid match pattern/)
+        expect(DeadFinder::Logger).to have_received(:error).with(/Invalid match pattern/)
       end
     end
   end

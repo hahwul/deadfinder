@@ -38,15 +38,16 @@ module DeadFinder
   end
 
   def self.run_url(url, options)
+    DeadFinder::Logger.apply_options(options)
     run_with_target(url, options)
   end
 
   def self.run_sitemap(sitemap_url, options)
-    Logger.set_silent if options['silent']
+    DeadFinder::Logger.apply_options(options)
     app = Runner.new
     base_uri = URI(sitemap_url)
     sitemap = SitemapParser.new(sitemap_url, recurse: true)
-    Logger.info "Found #{sitemap.to_a.size} URLs from #{sitemap_url}"
+    DeadFinder::Logger.info "Found #{sitemap.to_a.size} URLs from #{sitemap_url}"
     sitemap.to_a.each do |url|
       turl = generate_url(url, base_uri)
       run_with_target(turl, options, app)
@@ -55,8 +56,8 @@ module DeadFinder
   end
 
   def self.run_with_input(options)
-    Logger.set_silent if options['silent']
-    Logger.info 'Reading input'
+    DeadFinder::Logger.apply_options(options)
+    DeadFinder::Logger.info 'Reading input'
     app = Runner.new
     Array(yield).each do |target|
       run_with_target(target, options, app)
@@ -65,7 +66,7 @@ module DeadFinder
   end
 
   def self.run_with_target(target, options, app = Runner.new)
-    Logger.target "Fetching #{target}"
+    DeadFinder::Logger.target "Fetching #{target}"
     app.run(target, options)
   end
 
