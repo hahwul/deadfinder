@@ -92,6 +92,7 @@ RSpec.describe 'DeadFinder' do
     it 'provides a default options hash with expected keys' do
       runner = DeadFinder::Runner.new
       defaults = runner.default_options
+      DeadFinder::Logger.apply_options(defaults)
       expect(defaults).to include(
         'concurrency' => 50,
         'timeout' => 10,
