@@ -118,6 +118,7 @@ Options:
   i, [--ignore=IGNORE]                  # Ignore the URL with the given pattern
   s, [--silent], [--no-silent]          # Silent mode
   v, [--verbose], [--no-verbose]        # Verbose mode
+     [--debug], [--no-debug]            # Debug mode
 ```
 
 ## Modes
