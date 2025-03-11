@@ -88,7 +88,9 @@ module DeadFinder
 
     def worker(_id, jobs, results, target, options)
       jobs.each do |j|
-        if !CACHE_SET[j]
+        if CACHE_SET[j]
+          next # Skip if already cached
+        else
           CACHE_SET[j] = true
           begin
             CACHE_QUE[j] = true
