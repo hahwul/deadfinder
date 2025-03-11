@@ -21,7 +21,18 @@ class Logger
   def self.log(prefix, text, color)
     return if silent?
 
-    puts prefix.colorize(color) + text.to_s.colorize(:"light_#{color}")
+    puts prefix.colorize(color) + text.to_s
+  end
+
+  def self.sub_log(prefix, is_end, text, color)
+    return if silent?
+
+    indent = is_end ? '  └── ' : '  ├── '
+    puts indent.colorize(color) + prefix.colorize(color) + text.to_s
+  end
+
+  def self.debug(text)
+    log('✓ ', text, :green)
   end
 
   def self.info(text)
@@ -40,15 +51,19 @@ class Logger
     log('  ● ', text, :blue)
   end
 
-  def self.sub_done(text)
-    log('  ✓ ', text, :blue)
+  def self.sub_complete(text)
+    sub_log('● ', true, text, :blue)
   end
 
   def self.found(text)
-    log('  ✘ ', text, :red)
+    sub_log('✘ ', false, text, :red)
   end
 
   def self.verbose(text)
-    log('  ➜ ', text, :yellow)
+    sub_log('➜ ', false, text, :yellow)
+  end
+
+  def self.verbose_ok(text)
+    sub_log('✓ ', false, text, :green)
   end
 end

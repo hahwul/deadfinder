@@ -63,8 +63,7 @@ module DeadFinder
       total_links_count = links.values.flatten.length
       link_info = links.map { |type, urls| "#{type}:#{urls.length}" if urls.length.positive? }
                        .compact.join(' / ')
-      Logger.sub_info "Found #{total_links_count} URLs. [#{link_info}]" unless link_info.empty?
-      Logger.sub_info 'Checking'
+      Logger.sub_info "Discovered #{total_links_count} URLs, currently checking them. [#{link_info}]" unless link_info.empty?
 
       jobs = Channel.new(buffer: :buffered, capacity: 1000)
       results = Channel.new(buffer: :buffered, capacity: 1000)
@@ -82,7 +81,7 @@ module DeadFinder
       jobs.close
 
       (1..jobs_size).each { ~results }
-      Logger.sub_done 'Done'
+      Logger.sub_complete 'Task completed'
     rescue StandardError => e
       Logger.error "[#{e}] #{target}"
     end
@@ -90,7 +89,7 @@ module DeadFinder
     def worker(_id, jobs, results, target, options)
       jobs.each do |j|
         if CACHE_SET[j]
-          Logger.found "[404 Not Found] #{j}" unless CACHE_QUE[j]
+          # Skip if already cached
         else
           CACHE_SET[j] = true
           begin
@@ -107,13 +106,14 @@ module DeadFinder
 
             response = http.request(request)
             status_code = response.code.to_i
-            Logger.verbose "Status Code: #{status_code} for #{j}" if options['verbose']
 
             if status_code >= 400 || (status_code >= 300 && options['include30x'])
-              Logger.found "[#{status_code} #{response.message}] #{j}"
+              Logger.found "[#{status_code}] #{j}"
               CACHE_QUE[j] = false
               DeadFinder.output[target] ||= []
               DeadFinder.output[target] << j
+            else
+              Logger.verbose_ok "[#{status_code}] #{j}" if options['verbose']
             end
           rescue StandardError => e
             Logger.verbose "[#{e}] #{j}" if options['verbose']
