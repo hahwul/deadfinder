@@ -3,11 +3,28 @@
 require_relative '../../lib/deadfinder/logger'
 require 'stringio'
 
-RSpec.describe Logger do
+RSpec.describe DeadFinder::Logger do
   let(:original_stdout) { $stdout }
 
   after do
     $stdout = original_stdout
+  end
+
+  describe '.apply_options' do
+    it 'sets silent mode when options has silent' do
+      expect(described_class).to have_received(:set_silent)
+      described_class.apply_options('silent' => true)
+    end
+
+    it 'sets verbose mode when options has verbose' do
+      expect(described_class).to have_received(:set_verbose)
+      described_class.apply_options('verbose' => true)
+    end
+
+    it 'sets debug mode when options has debug' do
+      expect(described_class).to have_received(:set_debug)
+      described_class.apply_options('debug' => true)
+    end
   end
 
   describe '.silent?' do
@@ -28,6 +45,48 @@ RSpec.describe Logger do
       described_class.set_silent
       described_class.unset_silent
       expect(described_class.silent?).to be false
+    end
+  end
+
+  describe '.verbose?' do
+    it 'returns false by default' do
+      expect(described_class.verbose?).to be false
+    end
+  end
+
+  describe '.set_verbose' do
+    it 'sets the verbose mode to true' do
+      described_class.set_verbose
+      expect(described_class.verbose?).to be true
+    end
+  end
+
+  describe '.unset_verbose' do
+    it 'sets the verbose mode to false' do
+      described_class.set_verbose
+      described_class.unset_verbose
+      expect(described_class.verbose?).to be false
+    end
+  end
+
+  describe '.debug?' do
+    it 'returns false by default' do
+      expect(described_class.debug?).to be false
+    end
+  end
+
+  describe '.set_debug' do
+    it 'sets the debug mode to true' do
+      described_class.set_debug
+      expect(described_class.debug?).to be true
+    end
+  end
+
+  describe '.unset_debug' do
+    it 'sets the debug mode to false' do
+      described_class.set_debug
+      described_class.unset_debug
+      expect(described_class.debug?).to be false
     end
   end
 
@@ -105,6 +164,7 @@ RSpec.describe Logger do
   describe '.verbose' do
     it 'prints verbose message when not in silent mode' do
       described_class.unset_silent
+      described_class.set_verbose
       expect { described_class.verbose('Test verbose') }.to output("\e[0;33;49m  ├── \e[0m\e[0;33;49m➜ \e[0mTest verbose\n").to_stdout
     end
 
@@ -117,6 +177,7 @@ RSpec.describe Logger do
   describe '.verbose_ok' do
     it 'prints verbose_ok message when not in silent mode' do
       described_class.unset_silent
+      described_class.set_verbose
       expect { described_class.verbose_ok('Test verbose_ok') }.to output("\e[0;32;49m  ├── \e[0m\e[0;32;49m✓ \e[0mTest verbose_ok\n").to_stdout
     end
 

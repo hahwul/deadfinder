@@ -22,6 +22,7 @@ module DeadFinder
     class_option :ignore, aliases: :i, default: '', type: :string, desc: 'Ignore the URL with the given pattern'
     class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
     class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
+    class_option :debug, default: false, type: :boolean, desc: 'Debug mode'
 
     desc 'pipe', 'Scan the URLs from STDIN. (e.g., cat urls.txt | deadfinder pipe)'
     def pipe
@@ -45,7 +46,7 @@ module DeadFinder
 
     desc 'version', 'Show version.'
     def version
-      Logger.info "deadfinder #{DeadFinder::VERSION}"
+      DeadFinder::Logger.info "deadfinder #{DeadFinder::VERSION}"
     end
   end
 end
