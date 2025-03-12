@@ -66,6 +66,9 @@ steps:
     # include30x: false
     # user_agent: "Apple"
     # proxy: "http://localhost:8070"
+    # proxy_auth: "id:pw"
+    # match: 
+    # ignore: 
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
