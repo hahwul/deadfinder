@@ -11,6 +11,9 @@
 # $9 : include30x
 # $10 : user-agent
 # $11 : proxy
+# $12 : proxy_auth
+# $13 : match
+# $14 : ignore
 # -------------
 
 export df=/usr/local/bundle/gems/deadfinder-*/bin/deadfinder
@@ -24,6 +27,9 @@ cmd="$df $1 $2 -o /output.json"
 [ "$9" = "true" ] && cmd="$cmd --include30x"
 [ -n "$10" ] && cmd="$cmd --user-agent=$10"
 [ -n "$11" ] && cmd="$cmd --proxy=$11"
+[ -n "$12" ] && cmd="$cmd --proxy-auth=$12"
+[ -n "$13" ] && cmd="$cmd --match=$13"
+[ -n "$14" ] && cmd="$cmd --ignore=$14"
 
 # Add headers if provided
 if [ -n "$6" ]; then

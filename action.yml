@@ -35,6 +35,26 @@ inputs:
     description: Include HTTP 30x status codes in the results
     required: false
     default: 'false'
+  user_agent:
+    description: User-Agent string to use for requests
+    required: false
+    default: ''
+  proxy:
+    description: Proxy server to use for requests
+    required: false
+    default: ''
+  proxy_auth:
+    description: Proxy server authentication credentials
+    required: false
+    default: ''
+  match:
+    description: Match the URL with the given pattern
+    required: false
+    default: ''
+  ignore:
+    description: Ignore the URL with the given pattern
+    required: false
+    default: ''
 outputs:
   output:
     description: JSON formatted result of the dead-link check
@@ -53,3 +73,6 @@ runs:
     - ${{ inputs.include30x }}
     - ${{ inputs.user_agent }}
     - ${{ inputs.proxy }}
+    - ${{ inputs.proxy_auth }}
+    - ${{ inputs.match }}
+    - ${{ inputs.ignore }}
