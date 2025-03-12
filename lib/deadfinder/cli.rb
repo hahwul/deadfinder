@@ -25,6 +25,10 @@ module DeadFinder
     class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
     class_option :debug, default: false, type: :boolean, desc: 'Debug mode'
 
+    def self.exit_on_failure?
+      true
+    end
+
     desc 'pipe', 'Scan the URLs from STDIN. (e.g., cat urls.txt | deadfinder pipe)'
     def pipe
       DeadFinder.run_pipe options

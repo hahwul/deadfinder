@@ -15,6 +15,12 @@ RSpec.describe DeadFinder::CLI do
     allow(DeadFinder::Logger).to receive(:error)
   end
 
+  describe '.exit_on_failure?' do
+    it 'returns true' do
+      expect(described_class.exit_on_failure?).to be true
+    end
+  end
+
   describe '#pipe' do
     it 'runs the pipe command' do
       cli.invoke(:pipe)
