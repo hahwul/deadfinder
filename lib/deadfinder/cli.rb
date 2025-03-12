@@ -15,7 +15,7 @@ module DeadFinder
     class_option :headers, aliases: :H, default: [], type: :array,
                            desc: 'Custom HTTP headers to send with initial request'
     class_option :worker_headers, default: [], type: :array, desc: 'Custom HTTP headers to send with worker requests'
-    class_option :user_agent, default: 'Mozilla/5.0 (compatible; DeadFinder/1.6.1;)', type: :string,
+    class_option :user_agent, default: 'Mozilla/5.0 (compatible; DeadFinder/1.7.0;)', type: :string,
                               desc: 'User-Agent string to use for requests'
     class_option :proxy, aliases: :p, default: '', type: :string, desc: 'Proxy server to use for requests'
     class_option :proxy_auth, default: '', type: :string, desc: 'Proxy server authentication credentials'
@@ -24,6 +24,10 @@ module DeadFinder
     class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
     class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
     class_option :debug, default: false, type: :boolean, desc: 'Debug mode'
+
+    def self.exit_on_failure?
+      true
+    end
 
     desc 'pipe', 'Scan the URLs from STDIN. (e.g., cat urls.txt | deadfinder pipe)'
     def pipe
