@@ -47,6 +47,10 @@ module DeadFinder
 
     desc 'completion <SHELL>', 'Generate completion script for shell.'
     def completion(shell)
+      unless %w[bash zsh fish].include?(shell)
+        DeadFinder::Logger.error "Unsupported shell: #{shell}"
+        return
+      end
       case shell
       when 'bash'
         puts DeadFinder::Completion.bash
@@ -54,8 +58,6 @@ module DeadFinder
         puts DeadFinder::Completion.zsh
       when 'fish'
         puts DeadFinder::Completion.fish
-      else
-        DeadFinder::Logger.error "Unsupported shell: #{shell}"
       end
     end
 
