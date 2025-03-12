@@ -5,7 +5,6 @@ module DeadFinder
   module Completion
     def self.bash
       <<~BASH
-        # bash completion for deadfinder
         _deadfinder_completions()
         {
           local cur prev opts
@@ -22,7 +21,6 @@ module DeadFinder
 
     def self.zsh
       <<~ZSH
-        # zsh completion for deadfinder
         #compdef deadfinder
 
         _arguments \\
@@ -46,7 +44,6 @@ module DeadFinder
 
     def self.fish
       <<~FISH
-        # fish completion for deadfinder
         complete -c deadfinder -l include30x -d 'Include 30x redirections'
         complete -c deadfinder -l concurrency -d 'Number of concurrency' -a '(seq 1 100)'
         complete -c deadfinder -l timeout -d 'Timeout in seconds' -a '(seq 1 60)'
