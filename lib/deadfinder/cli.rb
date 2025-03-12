@@ -2,6 +2,7 @@
 
 require 'thor'
 require 'deadfinder'
+require 'deadfinder/completion'
 
 module DeadFinder
   # CLI class for handling command-line interactions
@@ -42,6 +43,22 @@ module DeadFinder
     desc 'sitemap <SITEMAP-URL>', 'Scan the URLs from sitemap.'
     def sitemap(sitemap)
       DeadFinder.run_sitemap sitemap, options
+    end
+
+    desc 'completion <SHELL>', 'Generate completion script for shell.'
+    def completion(shell)
+      unless %w[bash zsh fish].include?(shell)
+        DeadFinder::Logger.error "Unsupported shell: #{shell}"
+        return
+      end
+      case shell
+      when 'bash'
+        puts DeadFinder::Completion.bash
+      when 'zsh'
+        puts DeadFinder::Completion.zsh
+      when 'fish'
+        puts DeadFinder::Completion.fish
+      end
     end
 
     desc 'version', 'Show version.'

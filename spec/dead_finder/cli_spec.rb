@@ -12,6 +12,7 @@ RSpec.describe DeadFinder::CLI do
     allow(DeadFinder).to receive(:run_url)
     allow(DeadFinder).to receive(:run_sitemap)
     allow(DeadFinder::Logger).to receive(:info)
+    allow(DeadFinder::Logger).to receive(:error)
   end
 
   describe '#pipe' do
@@ -46,6 +47,25 @@ RSpec.describe DeadFinder::CLI do
     it 'displays the version' do
       cli.invoke(:version)
       expect(DeadFinder::Logger).to have_received(:info).with("deadfinder #{DeadFinder::VERSION}")
+    end
+  end
+
+  describe '#completion' do
+    it 'generates completion script for bash' do
+      expect { cli.invoke(:completion, ['bash']) }.to output(/complete -F/).to_stdout
+    end
+
+    it 'generates completion script for zsh' do
+      expect { cli.invoke(:completion, ['zsh']) }.to output(/#compdef/).to_stdout
+    end
+
+    it 'generates completion script for fish' do
+      expect { cli.invoke(:completion, ['fish']) }.to output(/complete -c/).to_stdout
+    end
+
+    it 'shows an error for unsupported shell' do
+      cli.invoke(:completion, ['unsupported_shell'])
+      expect(DeadFinder::Logger).to have_received(:error).with('Unsupported shell: unsupported_shell')
     end
   end
 end
