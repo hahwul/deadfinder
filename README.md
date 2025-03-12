@@ -92,9 +92,10 @@ For various examples and detailed usage, including sitemap, file, and other mode
 ## Usage
 ```
 Commands:
-  deadfinder file <FILE>            # Scan the URLs from File. (e.g deadfinder file urls.txt)
+  deadfinder completion <SHELL>     # Generate completion script for shell.
+  deadfinder file <FILE>            # Scan the URLs from File. (e.g., deadfinder file urls.txt)
   deadfinder help [COMMAND]         # Describe available commands or one specific command
-  deadfinder pipe                   # Scan the URLs from STDIN. (e.g cat urls.txt | deadfinder pipe)
+  deadfinder pipe                   # Scan the URLs from STDIN. (e.g., cat urls.txt | deadfinder pipe)
   deadfinder sitemap <SITEMAP-URL>  # Scan the URLs from sitemap.
   deadfinder url <URL>              # Scan the Single URL.
   deadfinder version                # Show version.
