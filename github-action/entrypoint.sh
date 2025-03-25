@@ -6,7 +6,7 @@
 # $4 : concurrency
 # $5 : silent
 # $6 : headers
-# %7 : worker headers
+# $7 : worker headers
 # $8 : verbose
 # $9 : include30x
 # $10 : user-agent
@@ -25,11 +25,11 @@ cmd="$df $1 $2 -o /output.json"
 [ "$5" = "true" ] && cmd="$cmd --silent"
 [ "$8" = "true" ] && cmd="$cmd --verbose"
 [ "$9" = "true" ] && cmd="$cmd --include30x"
-[ -n "$10" ] && cmd="$cmd --user-agent=$10"
-[ -n "$11" ] && cmd="$cmd --proxy=$11"
-[ -n "$12" ] && cmd="$cmd --proxy-auth=$12"
-[ -n "$13" ] && cmd="$cmd --match=$13"
-[ -n "$14" ] && cmd="$cmd --ignore=$14"
+[ -n "${10}" ] && cmd="$cmd --user-agent=${10}"
+[ -n "${11}" ] && cmd="$cmd --proxy=${11}"
+[ -n "${12}" ] && cmd="$cmd --proxy-auth=${12}"
+[ -n "${13}" ] && cmd="$cmd --match=${13}"
+[ -n "${14}" ] && cmd="$cmd --ignore=${14}"
 
 # Add headers if provided
 if [ -n "$6" ]; then
