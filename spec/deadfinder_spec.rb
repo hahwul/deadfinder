@@ -106,4 +106,14 @@ RSpec.describe 'DeadFinder' do
       )
     end
   end
+
+  describe 'run_url' do
+    let(:url) { 'https://www.hahwul.com' }
+    let(:options) { { 'output' => '', 'output_format' => 'json' } }
+
+    it 'calls run_with_target with the URL' do
+      expect(DeadFinder).to receive(:run_with_target).with(url, options)
+      DeadFinder.run_url(url, options)
+    end
+  end
 end
