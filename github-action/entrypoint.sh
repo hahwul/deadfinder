@@ -18,6 +18,9 @@
 
 export df=/usr/local/bundle/gems/deadfinder-*/bin/deadfinder
 
+# For Test
+echo "Args: [$1] [$2] [$3] [$4] [$5] [$6] [$7] [$8] [$9] [$10] [$11] [$12] [$13] [$14]"
+
 # Construct the command with additional options
 cmd="$df $1 $2 -o /output.json"
 [ -n "$3" ] && cmd="$cmd --timeout=$3"
