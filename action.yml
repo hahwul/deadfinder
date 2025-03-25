@@ -6,7 +6,7 @@ branding:
   color: red
 inputs:
   command:
-    description: The type of command to execute (options: file, url, sitemap)
+    description: The type of command to execute (e.g.,file, url, sitemap)
     required: true
   target:
     description: The target resource for the command (e.g., file path, URL, or sitemap URL)
