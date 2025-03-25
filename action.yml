@@ -1,5 +1,5 @@
 ---
-name: DeadFinder
+name: DeadFinder Action
 description: A GitHub Action to find and report dead (broken) links in files, URLs, or sitemaps.
 branding:
   icon: link
