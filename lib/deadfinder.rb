@@ -40,6 +40,7 @@ module DeadFinder
   def self.run_url(url, options)
     DeadFinder::Logger.apply_options(options)
     run_with_target(url, options)
+    gen_output(options)
   end
 
   def self.run_sitemap(sitemap_url, options)
