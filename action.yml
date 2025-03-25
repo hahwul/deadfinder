@@ -14,6 +14,7 @@ inputs:
   timeout:
     description: The maximum time to wait for each request, in seconds
     required: false
+    default: ''
   concurrency:
     description: The number of concurrent requests to make
     required: false
@@ -25,6 +26,7 @@ inputs:
   headers:
     description: Custom HTTP headers to include in requests, separated by commas
     required: false
+    default: ''
   verbose:
     description: Enable verbose mode for detailed logging
     required: false
@@ -36,23 +38,23 @@ inputs:
   user_agent:
     description: User-Agent string to use for requests
     required: false
-    default: 'deadfinder-default-placeholder-xyz123'
+    default: ''
   proxy:
     description: Proxy server to use for requests
     required: false
-    default: 'deadfinder-default-placeholder-xyz123'
+    default: ''
   proxy_auth:
     description: Proxy server authentication credentials
     required: false
-    default: 'deadfinder-default-placeholder-xyz123'
+    default: ''
   match:
     description: Match the URL with the given pattern
     required: false
-    default: 'deadfinder-default-placeholder-xyz123'
+    default: ''
   ignore:
     description: Ignore the URL with the given pattern
     required: false
-    default: 'deadfinder-default-placeholder-xyz123'
+    default: ''
 outputs:
   output:
     description: JSON formatted result of the dead-link check

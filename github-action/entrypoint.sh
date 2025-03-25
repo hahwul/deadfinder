@@ -6,7 +6,7 @@
 # $4 : concurrency
 # $5 : silent
 # $6 : headers
-# %7 : worker headers
+# $7 : worker headers
 # $8 : verbose
 # $9 : include30x
 # $10 : user-agent
@@ -18,19 +18,6 @@
 
 export df=/usr/local/bundle/gems/deadfinder-*/bin/deadfinder
 
-# Default placeholder
-DEFAULT_PLACEHOLDER="deadfinder-default-placeholder-xyz123"
-
-# Change the default placeholder to empty string
-[ "$10" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "" "$11" "$12" "$13" "$14"
-[ "$11" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "" "$12" "$13" "$14"
-[ "$12" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "$11" "" "$13" "$14"
-[ "$13" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "$11" "$12" "" "$14"
-[ "$14" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "$11" "$12" "$13" ""
-
-# For Test
-echo "Args: [$1] [$2] [$3] [$4] [$5] [$6] [$7] [$8] [$9] [$10] [$11] [$12] [$13] [$14]"
-
 # Construct the command with additional options
 cmd="$df $1 $2 -o /output.json"
 [ -n "$3" ] && cmd="$cmd --timeout=$3"
@@ -38,11 +25,11 @@ cmd="$df $1 $2 -o /output.json"
 [ "$5" = "true" ] && cmd="$cmd --silent"
 [ "$8" = "true" ] && cmd="$cmd --verbose"
 [ "$9" = "true" ] && cmd="$cmd --include30x"
-[ -n "$10" ] && cmd="$cmd --user-agent=$10"
-[ -n "$11" ] && cmd="$cmd --proxy=$11"
-[ -n "$12" ] && cmd="$cmd --proxy-auth=$12"
-[ -n "$13" ] && cmd="$cmd --match=$13"
-[ -n "$14" ] && cmd="$cmd --ignore=$14"
+[ -n "${10}" ] && cmd="$cmd --user-agent=${10}"
+[ -n "${11}" ] && cmd="$cmd --proxy=${11}"
+[ -n "${12}" ] && cmd="$cmd --proxy-auth=${12}"
+[ -n "${13}" ] && cmd="$cmd --match=${13}"
+[ -n "${14}" ] && cmd="$cmd --ignore=${14}"
 
 # Add headers if provided
 if [ -n "$6" ]; then
