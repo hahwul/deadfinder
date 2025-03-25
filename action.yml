@@ -36,18 +36,23 @@ inputs:
   user_agent:
     description: User-Agent string to use for requests
     required: false
+    default: 'deadfinder-default-placeholder-xyz123'
   proxy:
     description: Proxy server to use for requests
     required: false
+    default: 'deadfinder-default-placeholder-xyz123'
   proxy_auth:
     description: Proxy server authentication credentials
     required: false
+    default: 'deadfinder-default-placeholder-xyz123'
   match:
     description: Match the URL with the given pattern
     required: false
+    default: 'deadfinder-default-placeholder-xyz123'
   ignore:
     description: Ignore the URL with the given pattern
     required: false
+    default: 'deadfinder-default-placeholder-xyz123'
 outputs:
   output:
     description: JSON formatted result of the dead-link check

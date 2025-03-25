@@ -18,6 +18,16 @@
 
 export df=/usr/local/bundle/gems/deadfinder-*/bin/deadfinder
 
+# Default placeholder
+DEFAULT_PLACEHOLDER="deadfinder-default-placeholder-xyz123"
+
+# Change the default placeholder to empty string
+[ "$10" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "" "$11" "$12" "$13" "$14"
+[ "$11" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "" "$12" "$13" "$14"
+[ "$12" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "$11" "" "$13" "$14"
+[ "$13" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "$11" "$12" "" "$14"
+[ "$14" = "$DEFAULT_PLACEHOLDER" ] && set -- "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "$10" "$11" "$12" "$13" ""
+
 # For Test
 echo "Args: [$1] [$2] [$3] [$4] [$5] [$6] [$7] [$8] [$9] [$10] [$11] [$12] [$13] [$14]"
 
