@@ -9,6 +9,7 @@ module DeadFinder
   class CLI < Thor
     class_option :include30x, aliases: :r, default: false, type: :boolean, desc: 'Include 30x redirections'
     class_option :concurrency, aliases: :c, default: 50, type: :numeric, desc: 'Number of concurrency'
+    class_option :limit, default: 0, type: :numeric, desc: 'Maximum number of URLs to check (0 for no limit)'
     class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
     class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write result (e.g., json, yaml, csv)'
     class_option :output_format, aliases: :f, default: 'json', type: :string, desc: 'Output format'

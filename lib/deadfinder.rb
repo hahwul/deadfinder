@@ -49,9 +49,17 @@ module DeadFinder
     base_uri = URI(sitemap_url)
     sitemap = SitemapParser.new(sitemap_url, recurse: true)
     DeadFinder::Logger.info "Found #{sitemap.to_a.size} URLs from #{sitemap_url}"
+    processed_urls = 0
+    limit = options['limit'].to_i
+
     sitemap.to_a.each do |url|
+      if limit > 0 && processed_urls >= limit
+        DeadFinder::Logger.info "Reached URL limit (#{limit}), stopping sitemap processing."
+        break
+      end
       turl = generate_url(url, base_uri)
       run_with_target(turl, options, app)
+      processed_urls += 1
     end
     gen_output(options)
   end
@@ -60,8 +68,16 @@ module DeadFinder
     DeadFinder::Logger.apply_options(options)
     DeadFinder::Logger.info 'Reading input'
     app = Runner.new
+    processed_urls = 0
+    limit = options['limit'].to_i
+
     Array(yield).each do |target|
+      if limit > 0 && processed_urls >= limit
+        DeadFinder::Logger.info "Reached URL limit (#{limit}), stopping."
+        break
+      end
       run_with_target(target, options, app)
+      processed_urls += 1
     end
     gen_output(options)
   end
