@@ -30,7 +30,21 @@ module DeadFinder
   end
 
   def self.run_pipe(options)
-    run_with_input(options) { $stdin.gets&.chomp }
+    DeadFinder::Logger.apply_options(options)
+    DeadFinder::Logger.info 'Reading input from STDIN'
+    app = Runner.new
+    processed_urls = 0
+    limit = options['limit'].to_i
+
+    while (target = $stdin.gets&.chomp)
+      if limit.positive? && processed_urls >= limit
+        DeadFinder::Logger.info "Reached URL limit (#{limit}), stopping."
+        break
+      end
+      run_with_target(target, options, app)
+      processed_urls += 1
+    end
+    gen_output(options)
   end
 
   def self.run_file(filename, options)
@@ -66,13 +80,14 @@ module DeadFinder
 
   def self.run_with_input(options)
     DeadFinder::Logger.apply_options(options)
-    DeadFinder::Logger.info 'Reading input'
+    DeadFinder::Logger.info "Reading input from file: #{filename}"
     app = Runner.new
     processed_urls = 0
     limit = options['limit'].to_i
 
-    Array(yield).each do |target|
-      if limit > 0 && processed_urls >= limit
+    targets = yield # This will be the array of lines from File.foreach
+    targets.each do |target|
+      if limit.positive? && processed_urls >= limit
         DeadFinder::Logger.info "Reached URL limit (#{limit}), stopping."
         break
       end
