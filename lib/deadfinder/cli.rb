@@ -24,6 +24,7 @@ module DeadFinder
     class_option :silent, aliases: :s, default: false, type: :boolean, desc: 'Silent mode'
     class_option :verbose, aliases: :v, default: false, type: :boolean, desc: 'Verbose mode'
     class_option :debug, default: false, type: :boolean, desc: 'Debug mode'
+    class_option :limit, default: 0, type: :numeric, desc: 'Limit the number of URLs to scan'
 
     def self.exit_on_failure?
       true
