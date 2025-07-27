@@ -48,8 +48,10 @@ module DeadFinder
     app = Runner.new
     base_uri = URI(sitemap_url)
     sitemap = SitemapParser.new(sitemap_url, recurse: true)
-    DeadFinder::Logger.info "Found #{sitemap.to_a.size} URLs from #{sitemap_url}"
-    sitemap.to_a.each do |url|
+    urls = sitemap.to_a
+    urls = urls.first(options['limit']) if options['limit'].positive?
+    DeadFinder::Logger.info "Found #{urls.size} URLs from #{sitemap_url}"
+    urls.each do |url|
       turl = generate_url(url, base_uri)
       run_with_target(turl, options, app)
     end
@@ -60,7 +62,9 @@ module DeadFinder
     DeadFinder::Logger.apply_options(options)
     DeadFinder::Logger.info 'Reading input'
     app = Runner.new
-    Array(yield).each do |target|
+    targets = Array(yield)
+    targets = targets.first(options['limit']) if options['limit'].positive?
+    targets.each do |target|
       run_with_target(target, options, app)
     end
     gen_output(options)
