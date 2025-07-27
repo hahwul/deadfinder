@@ -29,6 +29,7 @@ RSpec.describe DeadFinder::CLI do
 
     context 'with --limit option' do
       let(:options) { { limit: 1 } }
+
       it 'runs the pipe command with a limit' do
         cli.invoke(:pipe, [], options)
         expect(DeadFinder).to have_received(:run_pipe).with(hash_including(options))
@@ -44,6 +45,7 @@ RSpec.describe DeadFinder::CLI do
 
     context 'with --limit option' do
       let(:options) { { limit: 1 } }
+
       it 'runs the file command with a limit' do
         cli.invoke(:file, ['urls.txt'], options)
         expect(DeadFinder).to have_received(:run_file).with('urls.txt', hash_including(options))
@@ -66,6 +68,7 @@ RSpec.describe DeadFinder::CLI do
 
     context 'with --limit option' do
       let(:options) { { limit: 1 } }
+
       it 'runs the sitemap command with a limit' do
         cli.invoke(:sitemap, ['http://example.com/sitemap.xml'], options)
         expect(DeadFinder).to have_received(:run_sitemap).with('http://example.com/sitemap.xml', hash_including(options))
