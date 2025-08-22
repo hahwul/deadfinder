@@ -67,8 +67,8 @@ steps:
     # user_agent: "Apple"
     # proxy: "http://localhost:8070"
     # proxy_auth: "id:pw"
-    # match: 
-    # ignore: 
+    # match:
+    # ignore:
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
@@ -144,17 +144,37 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```shell
 deadfinder sitemap https://www.hahwul.com/sitemap.xml \
   -o output.json
-  
+
 cat output.json | jq
 ```
 
 ```json
 {
-  "Origin URL": [
-    "DeadLink URL",
-    "DeadLink URL",
-    "DeadLink URL"
-  ]
+  "dead_links": {
+    "Target URL": [
+      "DeadLink URL 1",
+      "DeadLink URL 2",
+      "DeadLink URL 3",
+      "DeadLink URL 4",
+      "DeadLink URL 5",
+      "DeadLink URL 6",
+      "DeadLink URL 7",
+    ]
+  },
+  "coverage": {
+    "targets": {
+      "Target URL": {
+        "total_tested": 14,
+        "dead_links": 7,
+        "coverage_percentage": 50.0
+      }
+    },
+    "summary": {
+      "total_tested": 14,
+      "total_dead": 7,
+      "overall_coverage_percentage": 50.0
+    }
+  }
 }
 ```
 
