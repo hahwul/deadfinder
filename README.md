@@ -150,6 +150,18 @@ cat output.json | jq
 
 ```json
 {
+  "Target URL": [
+    "DeadLink URL",
+    "DeadLink URL",
+    "DeadLink URL"
+  ]
+}
+```
+
+With `--coverage` flag
+
+```json
+{
   "dead_links": {
     "Target URL": [
       "DeadLink URL 1",
