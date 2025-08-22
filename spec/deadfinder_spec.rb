@@ -156,7 +156,7 @@ RSpec.describe 'DeadFinder' do
     describe '#gen_output with coverage' do
       let(:tempfile) { Tempfile.new('deadfinder_coverage_output') }
       let(:options) do
-        { 'output' => tempfile.path, 'output_format' => 'json' }
+        { 'output' => tempfile.path, 'output_format' => 'json', 'coverage' => true }
       end
       let(:dummy_data) do
         { 'http://example.com' => ['http://example.com/dead1'] }
@@ -172,7 +172,7 @@ RSpec.describe 'DeadFinder' do
         DeadFinder.coverage_data.merge!(dummy_coverage)
       end
 
-      it 'includes coverage data when available' do
+      it 'includes coverage data when coverage flag is enabled' do
         DeadFinder.gen_output(options)
         content = File.read(tempfile.path)
         parsed = JSON.parse(content)
@@ -185,7 +185,18 @@ RSpec.describe 'DeadFinder' do
         expect(parsed['coverage']['targets']['http://example.com']['coverage_percentage']).to eq(20.0)
       end
 
-      it 'generates CSV with coverage information' do
+      it 'does not include coverage data when coverage flag is disabled' do
+        options['coverage'] = false
+        DeadFinder.gen_output(options)
+        content = File.read(tempfile.path)
+        parsed = JSON.parse(content)
+
+        expect(parsed).not_to have_key('dead_links')
+        expect(parsed).not_to have_key('coverage')
+        expect(parsed).to eq(dummy_data)
+      end
+
+      it 'generates CSV with coverage information when coverage flag is enabled' do
         options['output_format'] = 'csv'
         DeadFinder.gen_output(options)
         content = File.read(tempfile.path)
@@ -198,6 +209,19 @@ RSpec.describe 'DeadFinder' do
         expect(csv).to include(%w[target total_tested dead_links coverage_percentage])
         expect(csv).to include(['http://example.com', '5', '1', '20.0%'])
         expect(csv).to include(['Overall Summary'])
+      end
+
+      it 'generates CSV without coverage information when coverage flag is disabled' do
+        options['output_format'] = 'csv'
+        options['coverage'] = false
+        DeadFinder.gen_output(options)
+        content = File.read(tempfile.path)
+        csv = CSV.parse(content)
+
+        # Should have only the original data without coverage section
+        expect(csv).to include(%w[target url])
+        expect(csv).to include(['http://example.com', 'http://example.com/dead1'])
+        expect(csv).not_to include(['Coverage Report'])
       end
     end
   end

@@ -85,7 +85,7 @@ module DeadFinder
       (1..jobs_size).each { ~results }
       
       # Log coverage summary if tracking was enabled
-      if DeadFinder.coverage_data[target] && DeadFinder.coverage_data[target][:total] > 0
+      if options['coverage'] && DeadFinder.coverage_data[target] && DeadFinder.coverage_data[target][:total] > 0
         total = DeadFinder.coverage_data[target][:total]
         dead = DeadFinder.coverage_data[target][:dead]
         percentage = ((dead.to_f / total) * 100).round(2)
@@ -103,9 +103,11 @@ module DeadFinder
           # Skip if already cached
         else
           CACHE_SET[j] = true
-          # Track total URLs tested for coverage calculation
-          DeadFinder.coverage_data[target] ||= { total: 0, dead: 0 }
-          DeadFinder.coverage_data[target][:total] += 1
+          # Track total URLs tested for coverage calculation (only if coverage flag is enabled)
+          if options['coverage']
+            DeadFinder.coverage_data[target] ||= { total: 0, dead: 0 }
+            DeadFinder.coverage_data[target][:total] += 1
+          end
           
           begin
             CACHE_QUE[j] = true
@@ -127,15 +129,15 @@ module DeadFinder
               CACHE_QUE[j] = false
               DeadFinder.output[target] ||= []
               DeadFinder.output[target] << j
-              # Track dead URLs for coverage calculation
-              DeadFinder.coverage_data[target][:dead] += 1
+              # Track dead URLs for coverage calculation (only if coverage flag is enabled)
+              DeadFinder.coverage_data[target][:dead] += 1 if options['coverage']
             else
               DeadFinder::Logger.verbose_ok "[#{status_code}] #{j}" if options['verbose']
             end
           rescue StandardError => e
             DeadFinder::Logger.verbose "[#{e}] #{j}" if options['verbose']
-            # Consider errored URLs as dead for coverage calculation
-            DeadFinder.coverage_data[target][:dead] += 1
+            # Consider errored URLs as dead for coverage calculation (only if coverage flag is enabled)
+            DeadFinder.coverage_data[target][:dead] += 1 if options['coverage']
           end
         end
         results << j

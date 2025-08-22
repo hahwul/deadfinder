@@ -123,6 +123,7 @@ Options:
   s, [--silent], [--no-silent]          # Silent mode
   v, [--verbose], [--no-verbose]        # Verbose mode
      [--debug], [--no-debug]            # Debug mode
+     [--coverage], [--no-coverage]      # Enable coverage tracking and reporting
 ```
 
 ## Modes
@@ -158,7 +159,11 @@ cat output.json | jq
 }
 ```
 
-With `--coverage` flag
+With `--coverage` flag:
+
+```bash
+deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
+```
 
 ```json
 {

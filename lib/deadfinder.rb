@@ -122,8 +122,8 @@ module DeadFinder
     output_data = DeadFinder.output.to_h
     format = options['output_format'].to_s.downcase
 
-    # Include coverage data only if coverage tracking was used and data exists
-    coverage_info = coverage_data.any? && coverage_data.values.any? { |v| v[:total].positive? } ? calculate_coverage : nil
+    # Include coverage data only if coverage flag is enabled and data exists
+    coverage_info = calculate_coverage if options['coverage'] && coverage_data.any? && coverage_data.values.any? { |v| v[:total].positive? }
 
     content = case format
               when 'yaml', 'yml'
