@@ -83,6 +83,15 @@ module DeadFinder
       jobs.close
 
       (1..jobs_size).each { ~results }
+      
+      # Log coverage summary if tracking was enabled
+      if DeadFinder.coverage_data[target] && DeadFinder.coverage_data[target][:total] > 0
+        total = DeadFinder.coverage_data[target][:total]
+        dead = DeadFinder.coverage_data[target][:dead]
+        percentage = ((dead.to_f / total) * 100).round(2)
+        DeadFinder::Logger.sub_info "Coverage: #{dead}/#{total} URLs are dead links (#{percentage}%)"
+      end
+      
       DeadFinder::Logger.sub_complete 'Task completed'
     rescue StandardError => e
       DeadFinder::Logger.error "[#{e}] #{target}"

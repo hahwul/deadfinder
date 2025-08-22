@@ -1,0 +1,23 @@
+{
+  "dead_links": {
+    "https://example.com": [
+      "https://example.com/broken-link-1",
+      "https://example.com/broken-link-2",
+      "https://example.com/broken-link-3"
+    ]
+  },
+  "coverage": {
+    "targets": {
+      "https://example.com": {
+        "total_tested": 10,
+        "dead_links": 3,
+        "coverage_percentage": 30.0
+      }
+    },
+    "summary": {
+      "total_tested": 10,
+      "total_dead": 3,
+      "overall_coverage_percentage": 30.0
+    }
+  }
+}

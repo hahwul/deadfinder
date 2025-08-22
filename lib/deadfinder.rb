@@ -88,24 +88,24 @@ module DeadFinder
     coverage_summary = {}
     total_all_tested = 0
     total_all_dead = 0
-    
+
     coverage_data.each do |target, data|
       total = data[:total]
       dead = data[:dead]
-      coverage_percentage = total > 0 ? ((dead.to_f / total) * 100).round(2) : 0.0
-      
+      coverage_percentage = total.positive? ? ((dead.to_f / total) * 100).round(2) : 0.0
+
       coverage_summary[target] = {
         total_tested: total,
         dead_links: dead,
         coverage_percentage: coverage_percentage
       }
-      
+
       total_all_tested += total
       total_all_dead += dead
     end
-    
-    overall_coverage = total_all_tested > 0 ? ((total_all_dead.to_f / total_all_tested) * 100).round(2) : 0.0
-    
+
+    overall_coverage = total_all_tested.positive? ? ((total_all_dead.to_f / total_all_tested) * 100).round(2) : 0.0
+
     {
       targets: coverage_summary,
       summary: {
@@ -123,7 +123,7 @@ module DeadFinder
     format = options['output_format'].to_s.downcase
 
     # Include coverage data only if coverage tracking was used and data exists
-    coverage_info = (coverage_data.any? && coverage_data.values.any? { |v| v[:total] > 0 }) ? calculate_coverage : nil
+    coverage_info = coverage_data.any? && coverage_data.values.any? { |v| v[:total].positive? } ? calculate_coverage : nil
 
     content = case format
               when 'yaml', 'yml'
@@ -145,7 +145,7 @@ module DeadFinder
       output_data.each do |target, urls|
         Array(urls).each { |url| csv << [target, url] }
       end
-      
+
       # Add coverage information as additional rows if available
       if coverage_info
         csv << [] # Empty row separator
@@ -156,7 +156,7 @@ module DeadFinder
         end
         csv << [] # Empty row separator
         csv << ['Overall Summary']
-        csv << ['total_tested', 'total_dead', 'overall_coverage_percentage']
+        csv << %w[total_tested total_dead overall_coverage_percentage]
         summary = coverage_info[:summary]
         csv << [summary[:total_tested], summary[:total_dead], "#{summary[:overall_coverage_percentage]}%"]
       end

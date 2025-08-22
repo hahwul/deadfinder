@@ -118,9 +118,9 @@ RSpec.describe 'DeadFinder' do
       it 'calculates coverage correctly for single target' do
         target = 'http://example.com'
         DeadFinder.coverage_data[target] = { total: 10, dead: 3 }
-        
+
         coverage = DeadFinder.calculate_coverage
-        
+
         expect(coverage[:targets][target][:total_tested]).to eq(10)
         expect(coverage[:targets][target][:dead_links]).to eq(3)
         expect(coverage[:targets][target][:coverage_percentage]).to eq(30.0)
@@ -132,9 +132,9 @@ RSpec.describe 'DeadFinder' do
       it 'calculates coverage correctly for multiple targets' do
         DeadFinder.coverage_data['http://example1.com'] = { total: 10, dead: 2 }
         DeadFinder.coverage_data['http://example2.com'] = { total: 20, dead: 5 }
-        
+
         coverage = DeadFinder.calculate_coverage
-        
+
         expect(coverage[:targets]['http://example1.com'][:coverage_percentage]).to eq(20.0)
         expect(coverage[:targets]['http://example2.com'][:coverage_percentage]).to eq(25.0)
         expect(coverage[:summary][:total_tested]).to eq(30)
@@ -145,9 +145,9 @@ RSpec.describe 'DeadFinder' do
       it 'handles zero total URLs correctly' do
         target = 'http://example.com'
         DeadFinder.coverage_data[target] = { total: 0, dead: 0 }
-        
+
         coverage = DeadFinder.calculate_coverage
-        
+
         expect(coverage[:targets][target][:coverage_percentage]).to eq(0.0)
         expect(coverage[:summary][:overall_coverage_percentage]).to eq(0.0)
       end
@@ -176,7 +176,7 @@ RSpec.describe 'DeadFinder' do
         DeadFinder.gen_output(options)
         content = File.read(tempfile.path)
         parsed = JSON.parse(content)
-        
+
         expect(parsed).to have_key('dead_links')
         expect(parsed).to have_key('coverage')
         expect(parsed['dead_links']).to eq(dummy_data)
@@ -190,12 +190,12 @@ RSpec.describe 'DeadFinder' do
         DeadFinder.gen_output(options)
         content = File.read(tempfile.path)
         csv = CSV.parse(content)
-        
+
         # Should have the original data plus coverage section
-        expect(csv).to include(['target', 'url'])
+        expect(csv).to include(%w[target url])
         expect(csv).to include(['http://example.com', 'http://example.com/dead1'])
         expect(csv).to include(['Coverage Report'])
-        expect(csv).to include(['target', 'total_tested', 'dead_links', 'coverage_percentage'])
+        expect(csv).to include(%w[target total_tested dead_links coverage_percentage])
         expect(csv).to include(['http://example.com', '5', '1', '20.0%'])
         expect(csv).to include(['Overall Summary'])
       end
