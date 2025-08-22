@@ -94,6 +94,10 @@ module DeadFinder
           # Skip if already cached
         else
           CACHE_SET[j] = true
+          # Track total URLs tested for coverage calculation
+          DeadFinder.coverage_data[target] ||= { total: 0, dead: 0 }
+          DeadFinder.coverage_data[target][:total] += 1
+          
           begin
             CACHE_QUE[j] = true
             uri = URI.parse(j)
@@ -114,11 +118,15 @@ module DeadFinder
               CACHE_QUE[j] = false
               DeadFinder.output[target] ||= []
               DeadFinder.output[target] << j
+              # Track dead URLs for coverage calculation
+              DeadFinder.coverage_data[target][:dead] += 1
             else
               DeadFinder::Logger.verbose_ok "[#{status_code}] #{j}" if options['verbose']
             end
           rescue StandardError => e
             DeadFinder::Logger.verbose "[#{e}] #{j}" if options['verbose']
+            # Consider errored URLs as dead for coverage calculation
+            DeadFinder.coverage_data[target][:dead] += 1
           end
         end
         results << j
