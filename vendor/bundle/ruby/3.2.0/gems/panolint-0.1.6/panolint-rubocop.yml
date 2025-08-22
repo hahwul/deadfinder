@@ -1,0 +1,185 @@
+# These are the default code conventions for Panorama Ruby projects.
+#
+# You can use this in your project's .rubocop.yml with the following at the top:
+#
+#     inherit_gem:
+#       panolint: panolint-rubocop.yml
+#
+# This allows you to selectively override settings in projects, for example, if
+# you're working on a Sinatra project, disabling the Rails cops is probably
+# something that you would want to do.
+require:
+  - rubocop-performance
+  - rubocop-rails
+  - rubocop-rspec
+
+AllCops:
+  Exclude:
+    - !ruby/regexp /vendor\/(?!panoramaed).*$/
+    - "db/schema.rb"
+    - "db/migrate/**/*"
+    - "node_modules/**/*"
+  NewCops: enable
+
+Gemspec/RequiredRubyVersion:
+  Enabled: false
+
+Layout/DotPosition:
+  EnforcedStyle: trailing
+
+Layout/LineContinuationSpacing:
+  EnforcedStyle: no_space
+
+Layout/LineLength:
+  Max: 80
+  IgnoreCopDirectives: true
+
+Lint/AmbiguousBlockAssociation:
+  Exclude:
+    - spec/**/*
+
+Lint/Debugger:
+  Severity: error
+
+Lint/DuplicateElsifCondition:
+  Enabled: true
+
+Lint/MixedRegexpCaptureTypes:
+  Enabled: true
+
+Lint/SuppressedException:
+  Enabled: false
+
+Lint/UnderscorePrefixedVariableName:
+  Enabled: false
+
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+    - bin/exports/spec/**/*
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: false
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+
+Metrics/PerceivedComplexity:
+  Max: 10
+
+Naming/BinaryOperatorParameterName:
+  Enabled: false
+
+Naming/FileName:
+  Exclude:
+    - .overcommit/Gemfile
+
+RSpec/ExpectChange:
+  Enabled: false
+
+RSpec/ImplicitSubject:
+  EnforcedStyle: single_statement_only
+
+RSpec/LetSetup:
+  Enabled: false
+
+RSpec/MessageSpies:
+  EnforcedStyle: receive
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/NamedSubject:
+  Enabled: false
+
+RSpec/NestedGroups:
+  Enabled: false
+
+Style/Alias:
+  Enabled: true
+  EnforcedStyle: prefer_alias_method
+
+Style/ArrayCoercion:
+  Enabled: true
+
+Style/CaseLikeIf:
+  Enabled: true
+
+Style/Documentation:
+  Enabled: false
+
+Style/DoubleNegation:
+  Enabled: false
+
+Style/EmptyElse:
+  EnforcedStyle: empty
+
+Style/FormatString:
+  EnforcedStyle: percent
+
+Style/GuardClause:
+  Enabled: false
+
+Style/HashAsLastArrayItem:
+  Enabled: true
+
+Style/MixinUsage:
+  Exclude:
+    - bin/**/*
+
+Style/MultilineBlockChain:
+  Enabled: false
+
+Style/RedundantFileExtensionInRequire:
+  Enabled: true
+
+Style/RedundantRegexpCharacterClass:
+  Enabled: true
+
+Style/RedundantRegexpEscape:
+  Enabled: true
+
+Style/RedundantReturn:
+  AllowMultipleReturnValues: true
+
+Style/SignalException:
+  EnforcedStyle: only_raise
+
+Style/SingleLineBlockParams:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/TrailingCommaInArguments:
+  Enabled: false
+
+Style/TrailingCommaInArrayLiteral:
+  Enabled: false
+
+Style/TrailingCommaInHashLiteral:
+  Enabled: false
+
+Rails/I18nLocaleTexts:
+  Enabled: false
+
+RSpec/HookArgument:
+  EnforcedStyle: each
+
+RSpec/NotToNot:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false

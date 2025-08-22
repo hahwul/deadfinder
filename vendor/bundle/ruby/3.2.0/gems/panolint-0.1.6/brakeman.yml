@@ -1,0 +1,13 @@
+---
+:ensure_latest: true # From brakeman --help: "Fail when Brakeman is outdated"
+:run_all_checks: true # "Run all default and optional checks"
+:branch_limit: -1 # "Limit depth of values in branches (-1 for no limit)"
+
+# The brakeman wiki says this option "enables deeper data flow analysis by
+# allowing Brakeman to inspect called methods and attempt to determine the
+# return value of the call."
+:interprocedural: true
+:additional_libs_path:
+# This ensures brakeman is run on all files, not just those in standard Rails
+# directories.
+- .
