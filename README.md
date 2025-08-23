@@ -67,8 +67,8 @@ steps:
     # user_agent: "Apple"
     # proxy: "http://localhost:8070"
     # proxy_auth: "id:pw"
-    # match: 
-    # ignore: 
+    # match:
+    # ignore:
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
@@ -104,25 +104,33 @@ Commands:
   deadfinder version                # Show version.
 
 Options:
-  r, [--include30x], [--no-include30x]  # Include 30x redirections
-  c, [--concurrency=N]                  # Number of concurrency
-                                        # Default: 50
-  t, [--timeout=N]                      # Timeout in seconds
-                                        # Default: 10
-  o, [--output=OUTPUT]                  # File to write result (e.g., json, yaml, csv)
-  f, [--output-format=OUTPUT_FORMAT]    # Output format
-                                        # Default: json
-  H, [--headers=one two three]          # Custom HTTP headers to send with initial request
-     [--worker-headers=one two three]   # Custom HTTP headers to send with worker requests
-     [--user-agent=USER_AGENT]          # User-Agent string to use for requests
-                                        # Default: Mozilla/5.0 (compatible; DeadFinder/1.7.1;)
-  p, [--proxy=PROXY]                    # Proxy server to use for requests
-     [--proxy-auth=PROXY_AUTH]          # Proxy server authentication credentials
-  m, [--match=MATCH]                    # Match the URL with the given pattern
-  i, [--ignore=IGNORE]                  # Ignore the URL with the given pattern
-  s, [--silent], [--no-silent]          # Silent mode
-  v, [--verbose], [--no-verbose]        # Verbose mode
-     [--debug], [--no-debug]            # Debug mode
+  -r, [--include30x], [--no-include30x], [--skip-include30x]  # Include 30x redirections
+                                                              # Default: false
+  -c, [--concurrency=N]                                       # Number of concurrency
+                                                              # Default: 50
+  -t, [--timeout=N]                                           # Timeout in seconds
+                                                              # Default: 10
+  -o, [--output=OUTPUT]                                       # File to write result (e.g., json, yaml, csv)
+  -f, [--output-format=OUTPUT_FORMAT]                         # Output format
+                                                              # Default: json
+  -H, [--headers=one two three]                               # Custom HTTP headers to send with initial request
+      [--worker-headers=one two three]                        # Custom HTTP headers to send with worker requests
+      [--user-agent=USER_AGENT]                               # User-Agent string to use for requests
+                                                              # Default: Mozilla/5.0 (compatible; DeadFinder/1.7.1;)
+  -p, [--proxy=PROXY]                                         # Proxy server to use for requests
+      [--proxy-auth=PROXY_AUTH]                               # Proxy server authentication credentials
+  -m, [--match=MATCH]                                         # Match the URL with the given pattern
+  -i, [--ignore=IGNORE]                                       # Ignore the URL with the given pattern
+  -s, [--silent], [--no-silent], [--skip-silent]              # Silent mode
+                                                              # Default: false
+  -v, [--verbose], [--no-verbose], [--skip-verbose]           # Verbose mode
+                                                              # Default: false
+      [--debug], [--no-debug], [--skip-debug]                 # Debug mode
+                                                              # Default: false
+      [--limit=N]                                             # Limit the number of URLs to scan
+                                                              # Default: 0
+      [--coverage], [--no-coverage], [--skip-coverage]        # Enable coverage tracking and reporting
+                                                              # Default: false
 ```
 
 ## Modes
@@ -144,17 +152,53 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```shell
 deadfinder sitemap https://www.hahwul.com/sitemap.xml \
   -o output.json
-  
+
 cat output.json | jq
 ```
 
 ```json
 {
-  "Origin URL": [
+  "Target URL": [
     "DeadLink URL",
     "DeadLink URL",
     "DeadLink URL"
   ]
+}
+```
+
+With `--coverage` flag:
+
+```bash
+deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
+```
+
+```json
+{
+  "dead_links": {
+    "Target URL": [
+      "DeadLink URL 1",
+      "DeadLink URL 2",
+      "DeadLink URL 3",
+      "DeadLink URL 4",
+      "DeadLink URL 5",
+      "DeadLink URL 6",
+      "DeadLink URL 7",
+    ]
+  },
+  "coverage": {
+    "targets": {
+      "Target URL": {
+        "total_tested": 14,
+        "dead_links": 7,
+        "coverage_percentage": 50.0
+      }
+    },
+    "summary": {
+      "total_tested": 14,
+      "total_dead": 7,
+      "overall_coverage_percentage": 50.0
+    }
+  }
 }
 ```
 

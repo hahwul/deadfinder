@@ -6,5 +6,5 @@
 /pkg/
 /spec/reports/
 /tmp/
+/vendor/
 deadfinder*.gem
-/vendor/bundle/

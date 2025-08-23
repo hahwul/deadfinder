@@ -55,6 +55,10 @@ inputs:
     description: Ignore the URL with the given pattern
     required: false
     default: ''
+  coverage:
+    description: Enable coverage reporting to show dead link ratios
+    required: false
+    default: 'false'
 outputs:
   output:
     description: JSON formatted result of the dead-link check
@@ -76,3 +80,4 @@ runs:
     - ${{ inputs.proxy_auth }}
     - ${{ inputs.match }}
     - ${{ inputs.ignore }}
+    - ${{ inputs.coverage }}
