@@ -104,26 +104,33 @@ Commands:
   deadfinder version                # Show version.
 
 Options:
-  r, [--include30x], [--no-include30x]  # Include 30x redirections
-  c, [--concurrency=N]                  # Number of concurrency
-                                        # Default: 50
-  t, [--timeout=N]                      # Timeout in seconds
-                                        # Default: 10
-  o, [--output=OUTPUT]                  # File to write result (e.g., json, yaml, csv)
-  f, [--output-format=OUTPUT_FORMAT]    # Output format
-                                        # Default: json
-  H, [--headers=one two three]          # Custom HTTP headers to send with initial request
-     [--worker-headers=one two three]   # Custom HTTP headers to send with worker requests
-     [--user-agent=USER_AGENT]          # User-Agent string to use for requests
-                                        # Default: Mozilla/5.0 (compatible; DeadFinder/1.7.1;)
-  p, [--proxy=PROXY]                    # Proxy server to use for requests
-     [--proxy-auth=PROXY_AUTH]          # Proxy server authentication credentials
-  m, [--match=MATCH]                    # Match the URL with the given pattern
-  i, [--ignore=IGNORE]                  # Ignore the URL with the given pattern
-  s, [--silent], [--no-silent]          # Silent mode
-  v, [--verbose], [--no-verbose]        # Verbose mode
-     [--debug], [--no-debug]            # Debug mode
-     [--coverage], [--no-coverage]      # Enable coverage tracking and reporting
+  -r, [--include30x], [--no-include30x], [--skip-include30x]  # Include 30x redirections
+                                                              # Default: false
+  -c, [--concurrency=N]                                       # Number of concurrency
+                                                              # Default: 50
+  -t, [--timeout=N]                                           # Timeout in seconds
+                                                              # Default: 10
+  -o, [--output=OUTPUT]                                       # File to write result (e.g., json, yaml, csv)
+  -f, [--output-format=OUTPUT_FORMAT]                         # Output format
+                                                              # Default: json
+  -H, [--headers=one two three]                               # Custom HTTP headers to send with initial request
+      [--worker-headers=one two three]                        # Custom HTTP headers to send with worker requests
+      [--user-agent=USER_AGENT]                               # User-Agent string to use for requests
+                                                              # Default: Mozilla/5.0 (compatible; DeadFinder/1.7.1;)
+  -p, [--proxy=PROXY]                                         # Proxy server to use for requests
+      [--proxy-auth=PROXY_AUTH]                               # Proxy server authentication credentials
+  -m, [--match=MATCH]                                         # Match the URL with the given pattern
+  -i, [--ignore=IGNORE]                                       # Ignore the URL with the given pattern
+  -s, [--silent], [--no-silent], [--skip-silent]              # Silent mode
+                                                              # Default: false
+  -v, [--verbose], [--no-verbose], [--skip-verbose]           # Verbose mode
+                                                              # Default: false
+      [--debug], [--no-debug], [--skip-debug]                 # Debug mode
+                                                              # Default: false
+      [--limit=N]                                             # Limit the number of URLs to scan
+                                                              # Default: 0
+      [--coverage], [--no-coverage], [--skip-coverage]        # Enable coverage tracking and reporting
+                                                              # Default: false
 ```
 
 ## Modes
