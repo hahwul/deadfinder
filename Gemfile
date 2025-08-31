@@ -22,4 +22,5 @@ group :development, :test do
   gem 'simplecov'
   gem 'simplecov-cobertura'
   gem 'panolint'
+  gem 'cyclonedx-ruby'
 end
