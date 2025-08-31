@@ -202,6 +202,32 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
 }
 ```
 
+## SBOM (Software Bill of Materials)
+
+DeadFinder includes automatic SBOM generation using CycloneDX format. When releases are published, a `bom.xml` file is automatically generated and attached as a release asset.
+
+The SBOM includes:
+- All runtime and development dependencies  
+- Component versions and licenses
+- Package URLs (purl) for traceability
+- SHA-256 hashes for integrity verification
+
+### Manual SBOM Generation
+
+You can manually generate an SBOM for development purposes:
+
+```bash
+# Install dependencies
+bundle install
+
+# Generate SBOM
+bundle exec cyclonedx-ruby -p .
+
+# SBOM will be created as bom.xml
+```
+
+The generated SBOM follows the [CycloneDX 1.1 specification](https://cyclonedx.org/) and can be used with various security scanning and compliance tools.
+
 ## Contributions Welcome!
 
 We welcome contributions from everyone! If you have an idea for an improvement or want to report a bug:
