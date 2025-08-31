@@ -1,0 +1,41 @@
+name: Release
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  generate-sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Generate SBOM
+        run: |
+          bundle exec cyclonedx-ruby -p .
+          echo "Generated SBOM with $(grep -c '<component' bom.xml) components"
+
+      - name: Upload SBOM as release asset
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./bom.xml
+          asset_name: bom.xml
+          asset_content_type: application/xml
+
+      - name: Upload SBOM as artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: bom.xml

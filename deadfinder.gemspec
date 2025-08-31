@@ -24,4 +24,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'thor', '>= 1.2', '< 1.5'
 
   s.add_development_dependency 'rspec'
+  s.add_development_dependency 'cyclonedx-ruby'
 end
