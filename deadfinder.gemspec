@@ -24,6 +24,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'thor', '>= 1.2', '< 1.5'
   s.add_runtime_dependency 'chunky_png', '~> 1.4.0', '>= 1.4.0'
 
-  s.add_development_dependency 'rspec'
-  s.add_development_dependency 'cyclonedx-ruby'
+  s.add_development_dependency 'rspec', '~> 3.12'
+  s.add_development_dependency 'cyclonedx-ruby', '~> 1.4'
 end
