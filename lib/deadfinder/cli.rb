@@ -26,6 +26,7 @@ module DeadFinder
     class_option :debug, default: false, type: :boolean, desc: 'Debug mode'
     class_option :limit, default: 0, type: :numeric, desc: 'Limit the number of URLs to scan'
     class_option :coverage, default: false, type: :boolean, desc: 'Enable coverage tracking and reporting'
+    class_option :visualize, default: '', type: :string, desc: 'Generate a visualization of the scan results (e.g., report.png)'
 
     def self.exit_on_failure?
       true

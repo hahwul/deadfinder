@@ -7,6 +7,7 @@ require 'nokogiri'
 require 'deadfinder/utils'
 require 'deadfinder/logger'
 require 'deadfinder/runner'
+require 'deadfinder/visualizer'
 require 'deadfinder/cli'
 require 'deadfinder/version'
 require 'concurrent-edge'
@@ -117,26 +118,28 @@ module DeadFinder
   end
 
   def self.gen_output(options)
-    return if options['output'].empty?
-
     output_data = DeadFinder.output.to_h
     format = options['output_format'].to_s.downcase
-
     # Include coverage data only if coverage flag is enabled and data exists
     coverage_info = calculate_coverage if options['coverage'] && coverage_data.any? && coverage_data.values.any? { |v| v[:total].positive? }
 
-    content = case format
-              when 'yaml', 'yml'
-                output_with_coverage = coverage_info ? { 'dead_links' => output_data, 'coverage' => coverage_info } : output_data
-                output_with_coverage.to_yaml
-              when 'csv'
-                generate_csv(output_data, coverage_info)
-              else
-                output_with_coverage = coverage_info ? { 'dead_links' => output_data, 'coverage' => coverage_info } : output_data
-                JSON.pretty_generate(output_with_coverage)
-              end
+    unless options['output'].to_s.empty?
+      content = case format
+                when 'yaml', 'yml'
+                  output_with_coverage = coverage_info ? { 'dead_links' => output_data, 'coverage' => coverage_info } : output_data
+                  output_with_coverage.to_yaml
+                when 'csv'
+                  generate_csv(output_data, coverage_info)
+                else
+                  output_with_coverage = coverage_info ? { 'dead_links' => output_data, 'coverage' => coverage_info } : output_data
+                  JSON.pretty_generate(output_with_coverage)
+                end
+      File.write(options['output'], content)
+    end
 
-    File.write(options['output'], content)
+    if options['visualize'] && !options['visualize'].empty? && coverage_info
+      DeadFinder::Visualizer.generate(coverage_info, options['visualize'])
+    end
   end
 
   def self.generate_csv(output_data, coverage_info = nil)
