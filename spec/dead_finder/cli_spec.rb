@@ -2,6 +2,7 @@
 
 require 'spec_helper'
 require 'deadfinder/cli'
+require 'deadfinder/visualizer'
 
 RSpec.describe DeadFinder::CLI do
   let(:cli) { described_class.new }
@@ -57,6 +58,24 @@ RSpec.describe DeadFinder::CLI do
     it 'runs the url command with a URL' do
       cli.invoke(:url, ['http://example.com'])
       expect(DeadFinder).to have_received(:run_url).with('http://example.com', anything)
+    end
+
+    context 'with --visualize option' do
+      let(:options) { { 'visualize' => 'report.png', 'coverage' => true } }
+
+      before do
+        allow(DeadFinder::Visualizer).to receive(:generate)
+        allow(DeadFinder).to receive(:coverage_data).and_return({ 'http://example.com' => { total: 10, dead: 2 } })
+        allow(DeadFinder).to receive(:calculate_coverage).and_call_original
+        allow(DeadFinder).to receive(:gen_output).and_call_original
+      end
+
+      it 'calls the visualizer' do
+        allow(DeadFinder).to receive(:run_with_target)
+        cli.invoke(:url, ['http://example.com'], options)
+        DeadFinder.gen_output(options)
+        expect(DeadFinder::Visualizer).to have_received(:generate)
+      end
     end
   end
 

@@ -12,6 +12,7 @@ gem 'rspec'
 gem 'yaml'
 gem 'csv'
 gem 'logger'
+gem 'chunky_png', '~> 1.4'
 
 group :development, :test do
   gem 'rubocop'

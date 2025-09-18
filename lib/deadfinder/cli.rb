@@ -26,6 +26,7 @@ module DeadFinder
     class_option :debug, default: false, type: :boolean, desc: 'Debug mode'
     class_option :limit, default: 0, type: :numeric, desc: 'Limit the number of URLs to scan'
     class_option :coverage, default: false, type: :boolean, desc: 'Enable coverage tracking and reporting'
+    class_option :visualize, default: '', type: :string, desc: 'Generate a visualization of the scan results (e.g., report.png)'
 
     def self.exit_on_failure?
       true
@@ -33,22 +34,30 @@ module DeadFinder
 
     desc 'pipe', 'Scan the URLs from STDIN. (e.g., cat urls.txt | deadfinder pipe)'
     def pipe
-      DeadFinder.run_pipe options
+      opts = options.dup
+      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
+      DeadFinder.run_pipe opts
     end
 
     desc 'file <FILE>', 'Scan the URLs from File. (e.g., deadfinder file urls.txt)'
     def file(filename)
-      DeadFinder.run_file filename, options
+      opts = options.dup
+      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
+      DeadFinder.run_file filename, opts
     end
 
     desc 'url <URL>', 'Scan the Single URL.'
     def url(url)
-      DeadFinder.run_url url, options
+      opts = options.dup
+      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
+      DeadFinder.run_url url, opts
     end
 
     desc 'sitemap <SITEMAP-URL>', 'Scan the URLs from sitemap.'
     def sitemap(sitemap)
-      DeadFinder.run_sitemap sitemap, options
+      opts = options.dup
+      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
+      DeadFinder.run_sitemap sitemap, opts
     end
 
     desc 'completion <SHELL>', 'Generate completion script for shell.'

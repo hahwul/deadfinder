@@ -83,7 +83,7 @@ module DeadFinder
       jobs.close
 
       (1..jobs_size).each { ~results }
-      
+
       # Log coverage summary if tracking was enabled
       if options['coverage'] && DeadFinder.coverage_data[target] && DeadFinder.coverage_data[target][:total] > 0
         total = DeadFinder.coverage_data[target][:total]
@@ -91,7 +91,7 @@ module DeadFinder
         percentage = ((dead.to_f / total) * 100).round(2)
         DeadFinder::Logger.sub_info "Coverage: #{dead}/#{total} URLs are dead links (#{percentage}%)"
       end
-      
+
       DeadFinder::Logger.sub_complete 'Task completed'
     rescue StandardError => e
       DeadFinder::Logger.error "[#{e}] #{target}"
@@ -105,10 +105,10 @@ module DeadFinder
           CACHE_SET[j] = true
           # Track total URLs tested for coverage calculation (only if coverage flag is enabled)
           if options['coverage']
-            DeadFinder.coverage_data[target] ||= { total: 0, dead: 0 }
+            DeadFinder.coverage_data[target] ||= { total: 0, dead: 0, status_counts: Hash.new(0) }
             DeadFinder.coverage_data[target][:total] += 1
           end
-          
+
           begin
             CACHE_QUE[j] = true
             uri = URI.parse(j)
@@ -130,14 +130,22 @@ module DeadFinder
               DeadFinder.output[target] ||= []
               DeadFinder.output[target] << j
               # Track dead URLs for coverage calculation (only if coverage flag is enabled)
-              DeadFinder.coverage_data[target][:dead] += 1 if options['coverage']
+              if options['coverage']
+                DeadFinder.coverage_data[target][:dead] += 1
+                DeadFinder.coverage_data[target][:status_counts][status_code] += 1
+              end
             else
               DeadFinder::Logger.verbose_ok "[#{status_code}] #{j}" if options['verbose']
+              # Track status for successful URLs
+              DeadFinder.coverage_data[target][:status_counts][status_code] += 1 if options['coverage']
             end
           rescue StandardError => e
             DeadFinder::Logger.verbose "[#{e}] #{j}" if options['verbose']
             # Consider errored URLs as dead for coverage calculation (only if coverage flag is enabled)
-            DeadFinder.coverage_data[target][:dead] += 1 if options['coverage']
+            if options['coverage']
+              DeadFinder.coverage_data[target][:dead] += 1
+              DeadFinder.coverage_data[target][:status_counts]['error'] += 1
+            end
           end
         end
         results << j

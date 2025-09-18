@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://www.hahwul.com/projects/deadfinder/'
   s.license = 'MIT'
   s.executables << 'deadfinder'
-  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/runner.rb', 'lib/deadfinder/cli.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/version.rb', 'lib/deadfinder/http_client.rb', 'lib/deadfinder/url_pattern_matcher.rb', 'lib/deadfinder/completion.rb']
+  s.files = ['lib/deadfinder.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/runner.rb', 'lib/deadfinder/cli.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/version.rb', 'lib/deadfinder/http_client.rb', 'lib/deadfinder/url_pattern_matcher.rb', 'lib/deadfinder/completion.rb', 'lib/deadfinder/visualizer.rb']
   s.metadata['rubygems_mfa_required'] = 'true'
   s.metadata['source_code_uri'] = 'https://github.com/hahwul/deadfinder'
   s.required_ruby_version = '>= 3.3.0'
@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'set', '~> 1.1.0', '>= 1.1.0'
   s.add_runtime_dependency 'sitemap-parser', '~> 0.5.0', '>= 0.5.0'
   s.add_runtime_dependency 'thor', '>= 1.2', '< 1.5'
+  s.add_runtime_dependency 'chunky_png', '~> 1.4.0', '>= 1.4.0'
 
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'cyclonedx-ruby'

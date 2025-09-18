@@ -21,6 +21,7 @@ GEM
     benchmark (0.4.1)
     bigdecimal (3.2.3)
     brakeman (5.4.1)
+    chunky_png (1.4.0)
     colorize (1.1.0)
     concurrent-ruby (1.3.5)
     concurrent-ruby-edge (0.7.2)
@@ -40,7 +41,7 @@ GEM
     docile (1.4.1)
     domain_name (0.6.20240107)
     drb (2.2.3)
-    ethon (0.17.0)
+    ethon (0.15.0)
       ffi (>= 1.15.0)
     ffi (1.17.2-aarch64-linux-gnu)
     ffi (1.17.2-aarch64-linux-musl)
@@ -183,8 +184,8 @@ GEM
     thor (1.4.0)
     time (0.4.1)
       date
-    typhoeus (1.4.1)
-      ethon (>= 0.9.0)
+    typhoeus (1.5.0)
+      ethon (>= 0.9.0, < 0.16.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     unicode-display_width (3.2.0)
@@ -208,6 +209,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  chunky_png (~> 1.4)
   colorize
   concurrent-ruby-edge
   csv
@@ -231,4 +233,4 @@ DEPENDENCIES
   yaml
 
 BUNDLED WITH
-   2.6.3
+   2.7.2
