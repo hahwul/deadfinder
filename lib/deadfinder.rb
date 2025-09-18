@@ -89,20 +89,24 @@ module DeadFinder
     coverage_summary = {}
     total_all_tested = 0
     total_all_dead = 0
+    overall_status_counts = Hash.new(0)
 
     coverage_data.each do |target, data|
       total = data[:total]
       dead = data[:dead]
+      status_counts = data[:status_counts] || {}
       coverage_percentage = total.positive? ? ((dead.to_f / total) * 100).round(2) : 0.0
 
       coverage_summary[target] = {
         total_tested: total,
         dead_links: dead,
-        coverage_percentage: coverage_percentage
+        coverage_percentage: coverage_percentage,
+        status_counts: status_counts
       }
 
       total_all_tested += total
       total_all_dead += dead
+      status_counts.each { |code, count| overall_status_counts[code] += count }
     end
 
     overall_coverage = total_all_tested.positive? ? ((total_all_dead.to_f / total_all_tested) * 100).round(2) : 0.0
@@ -112,7 +116,8 @@ module DeadFinder
       summary: {
         total_tested: total_all_tested,
         total_dead: total_all_dead,
-        overall_coverage_percentage: overall_coverage
+        overall_coverage_percentage: overall_coverage,
+        overall_status_counts: overall_status_counts
       }
     }
   end
