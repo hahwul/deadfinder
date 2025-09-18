@@ -7,11 +7,11 @@ module DeadFinder
   module Visualizer
     def self.generate(data, output_path)
       # Extract summary data
-      summary = data.dig(:summary)
+      summary = data[:summary]
       return if summary.nil?
 
-      total_tested = summary.dig(:total_tested)
-      total_dead = summary.dig(:total_dead)
+      total_tested = summary[:total_tested]
+      total_dead = summary[:total_dead]
       return if total_tested.nil? || total_dead.nil?
 
       # Create a new image
@@ -25,7 +25,7 @@ module DeadFinder
       png.compose!(ChunkyPNG::Image.from_text("Dead Links Found: #{total_dead}", 20, color: ChunkyPNG::Color('red')), 20, 110)
 
       # Draw progress bar
-      if total_tested > 0
+      if total_tested.positive?
         percentage = (total_dead.to_f / total_tested)
         bar_width = (460 * percentage).to_i
         png.rect(20, 150, 480, 200, ChunkyPNG::Color('gray'))
@@ -34,7 +34,6 @@ module DeadFinder
 
       # Draw project info
       png.compose!(ChunkyPNG::Image.from_text('github.com/hahwul/deadfinder', 10, color: ChunkyPNG::Color::BLACK), 20, 270)
-
 
       # Save the image
       png.save(output_path, :fast_rgba)

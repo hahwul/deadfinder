@@ -137,9 +137,9 @@ module DeadFinder
       File.write(options['output'], content)
     end
 
-    if options['visualize'] && !options['visualize'].empty? && coverage_info
-      DeadFinder::Visualizer.generate(coverage_info, options['visualize'])
-    end
+    return unless options['visualize'] && !options['visualize'].empty? && coverage_info
+
+    DeadFinder::Visualizer.generate(coverage_info, options['visualize'])
   end
 
   def self.generate_csv(output_data, coverage_info = nil)
