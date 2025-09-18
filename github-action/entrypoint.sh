@@ -15,6 +15,7 @@
 # $13 : match
 # $14 : ignore
 # $15 : coverage
+# $16 : visualize
 # -------------
 
 export df=/usr/local/bundle/gems/deadfinder-*/bin/deadfinder
@@ -32,6 +33,7 @@ cmd="$df $1 $2 -o /output.json"
 [ -n "${13}" ] && cmd="$cmd --match=${13}"
 [ -n "${14}" ] && cmd="$cmd --ignore=${14}"
 [ "${15}" = "true" ] && cmd="$cmd --coverage"
+[ -n "${16}" ] && cmd="$cmd --visualize=${16}"
 
 # Add headers if provided
 if [ -n "$6" ]; then

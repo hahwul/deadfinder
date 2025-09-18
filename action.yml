@@ -14,51 +14,55 @@ inputs:
   timeout:
     description: The maximum time to wait for each request, in seconds
     required: false
-    default: ''
+    default: ""
   concurrency:
     description: The number of concurrent requests to make
     required: false
-    default: ''
+    default: ""
   silent:
     description: Enable silent mode to suppress output
     required: false
-    default: 'false'
+    default: "false"
   headers:
     description: Custom HTTP headers to include in requests, separated by commas
     required: false
-    default: ''
+    default: ""
   verbose:
     description: Enable verbose mode for detailed logging
     required: false
-    default: 'false'
+    default: "false"
   include30x:
     description: Include HTTP 30x status codes in the results
     required: false
-    default: 'false'
+    default: "false"
   user_agent:
     description: User-Agent string to use for requests
     required: false
-    default: ''
+    default: ""
   proxy:
     description: Proxy server to use for requests
     required: false
-    default: ''
+    default: ""
   proxy_auth:
     description: Proxy server authentication credentials
     required: false
-    default: ''
+    default: ""
   match:
     description: Match the URL with the given pattern
     required: false
-    default: ''
+    default: ""
   ignore:
     description: Ignore the URL with the given pattern
     required: false
-    default: ''
+    default: ""
   coverage:
     description: Enable coverage reporting to show dead link ratios
     required: false
-    default: 'false'
+    default: "false"
+  visualize:
+    description: Generate a visualization of the scan results (e.g., report.png)
+    required: false
+    default: ""
 outputs:
   output:
     description: JSON formatted result of the dead-link check
@@ -81,3 +85,4 @@ runs:
     - ${{ inputs.match }}
     - ${{ inputs.ignore }}
     - ${{ inputs.coverage }}
+    - ${{ inputs.visualize }}

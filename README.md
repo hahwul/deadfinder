@@ -67,8 +67,10 @@ steps:
     # user_agent: "Apple"
     # proxy: "http://localhost:8070"
     # proxy_auth: "id:pw"
-    # match:
-    # ignore:
+    # match:  false
+    # ignore: false
+    # coverage: true
+    # visualize: report.png
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
@@ -131,6 +133,7 @@ Options:
                                                               # Default: 0
       [--coverage], [--no-coverage], [--skip-coverage]        # Enable coverage tracking and reporting
                                                               # Default: false
+      [--visualize=VISUALIZE]                                 # Generate a visualization of the scan results (e.g., report.png)
 ```
 
 ## Modes
@@ -207,7 +210,7 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
 DeadFinder includes automatic SBOM generation using CycloneDX format. When releases are published, a `bom.xml` file is automatically generated and attached as a release asset.
 
 The SBOM includes:
-- All runtime and development dependencies  
+- All runtime and development dependencies
 - Component versions and licenses
 - Package URLs (purl) for traceability
 - SHA-256 hashes for integrity verification
