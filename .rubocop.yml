@@ -1,6 +1,9 @@
 require:
   - rubocop-rake
   - rubocop-rspec
+  - rubocop-capybara
+  - rubocop-factory_bot
+  - rubocop-performance
 
 AllCops:
   NewCops: enable
