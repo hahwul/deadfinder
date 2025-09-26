@@ -1,5 +1,12 @@
 FROM ruby:3.4.6-slim
 
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libcurl4-openssl-dev \
+    libxml2-dev \
+    libxslt-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir /app
 WORKDIR /app
 COPY . .
