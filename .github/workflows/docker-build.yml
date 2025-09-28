@@ -99,5 +99,6 @@ jobs:
           # Build the GitHub Action image using our test base
           docker build -t deadfinder-action-test:latest -f github-action/Dockerfile.test github-action/
           
-          # Test the GitHub Action entrypoint
+          # Test the GitHub Action entrypoint with proper arguments
+          # Arguments: command target timeout concurrency silent headers worker_headers verbose include30x user-agent proxy proxy_auth match ignore coverage visualize
           docker run --rm deadfinder-action-test:latest url https://example.com 1 50 true "" "" false false "" "" "" "" "" false "" || true
