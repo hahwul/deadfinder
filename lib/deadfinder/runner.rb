@@ -4,7 +4,29 @@ require 'concurrent-edge'
 require 'nokogiri'
 require 'open-uri'
 require 'net/http'
-require 'openssl'
+
+begin
+  require 'openssl'
+rescue LoadError => e
+  warn "Error loading OpenSSL: #{e.message}"
+  warn ''
+  warn 'This typically happens on macOS when Ruby was compiled against OpenSSL 1.1'
+  warn 'but your system has been upgraded to OpenSSL 3.x.'
+  warn ''
+  warn 'To fix this issue, try one of the following:'
+  warn '  1. Reinstall Ruby using the system OpenSSL:'
+  warn '     - With rbenv: rbenv install <version> --force'
+  warn '     - With rvm: rvm reinstall ruby-<version>'
+  warn '  2. Use Homebrew to install deadfinder (recommended for macOS):'
+  warn '     brew install deadfinder'
+  warn '  3. Install OpenSSL 1.1 via Homebrew:'
+  warn '     brew install openssl@1.1'
+  warn '  4. Use the Docker image:'
+  warn '     docker pull ghcr.io/hahwul/deadfinder:latest'
+  warn ''
+  raise
+end
+
 require 'deadfinder/logger'
 require 'deadfinder/http_client'
 require 'deadfinder/url_pattern_matcher'

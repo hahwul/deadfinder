@@ -231,6 +231,49 @@ bundle exec cyclonedx-ruby -p .
 
 The generated SBOM follows the [CycloneDX 1.1 specification](https://cyclonedx.org/) and can be used with various security scanning and compliance tools.
 
+## Troubleshooting
+
+### macOS OpenSSL Compatibility Issue
+
+If you encounter an error like this on macOS:
+
+```
+LoadError: dlopen(...openssl.bundle, 0x0009): Library not loaded: /opt/homebrew/opt/openssl@1.1/lib/libssl.1.1.dylib
+```
+
+This happens when your Ruby installation was compiled against OpenSSL 1.1, but your system now has OpenSSL 3.x (the current Homebrew default).
+
+**Solutions:**
+
+1. **Use Homebrew to install deadfinder (Recommended for macOS users):**
+   ```bash
+   brew install deadfinder
+   ```
+   This will install deadfinder with a properly configured Ruby and OpenSSL.
+
+2. **Reinstall Ruby using the current system OpenSSL:**
+   - With rbenv:
+     ```bash
+     rbenv install $(rbenv version | sed -e 's/ .*//')  --force
+     gem install deadfinder
+     ```
+   - With rvm:
+     ```bash
+     rvm reinstall ruby-$(rvm current | sed 's/@.*//')
+     gem install deadfinder
+     ```
+
+3. **Install OpenSSL 1.1 via Homebrew (temporary workaround):**
+   ```bash
+   brew install openssl@1.1
+   ```
+
+4. **Use the Docker image:**
+   ```bash
+   docker pull ghcr.io/hahwul/deadfinder:latest
+   docker run --rm ghcr.io/hahwul/deadfinder:latest deadfinder --help
+   ```
+
 ## Contributions Welcome!
 
 We welcome contributions from everyone! If you have an idea for an improvement or want to report a bug:
