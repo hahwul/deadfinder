@@ -263,12 +263,7 @@ This happens when your Ruby installation was compiled against OpenSSL 1.1, but y
      gem install deadfinder
      ```
 
-3. **Install OpenSSL 1.1 via Homebrew (temporary workaround):**
-   ```bash
-   brew install openssl@1.1
-   ```
-
-4. **Use the Docker image:**
+3. **Use the Docker image:**
    ```bash
    docker pull ghcr.io/hahwul/deadfinder:latest
    docker run --rm ghcr.io/hahwul/deadfinder:latest deadfinder --help

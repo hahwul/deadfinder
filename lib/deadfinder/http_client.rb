@@ -16,9 +16,7 @@ rescue LoadError => e
   warn '     - With rvm: rvm reinstall ruby-<version>'
   warn '  2. Use Homebrew to install deadfinder (recommended for macOS):'
   warn '     brew install deadfinder'
-  warn '  3. Install OpenSSL 1.1 via Homebrew:'
-  warn '     brew install openssl@1.1'
-  warn '  4. Use the Docker image:'
+  warn '  3. Use the Docker image:'
   warn '     docker pull ghcr.io/hahwul/deadfinder:latest'
   warn ''
   raise
