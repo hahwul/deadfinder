@@ -18,7 +18,8 @@ bottom_footnotes = true
 [extra]
 logo_text = "DeadFinder"
 logo_image_path = "images/logo.png"
-default_thumbnail = "images/preview.jpg"
+logo_image_padding = "15px"
+default_thumbnail = "images/prewview.jpg"
 twitter_site = "@hahwul"
 twitter_creator = "@hahwul"
 
