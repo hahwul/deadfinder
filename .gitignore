@@ -9,3 +9,6 @@
 /vendor/
 deadfinder*.gem
 bom.xml
+
+# Zola
+docs/public/*
