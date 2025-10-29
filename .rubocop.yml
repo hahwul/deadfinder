@@ -66,23 +66,5 @@ Metrics/BlockLength:
   Exclude:
     - "spec/**/*"
 
-FactoryBot/CreateList:
-  Enabled: false
-
-RSpec/MultipleMemoizedHelpers:
-  Max: 10
-
-RSpec/ExampleLength:
-  Max: 30
-
-RSpec/MultipleExpectations:
-  Max: 10
-
-RSpec/ExpectOutput:
-  Enabled: false
-
 Layout/LineLength:
   Max: 200
-
-RSpec/MessageSpies:
-  Enabled: false

@@ -34,30 +34,22 @@ module DeadFinder
 
     desc 'pipe', 'Scan the URLs from STDIN. (e.g., cat urls.txt | deadfinder pipe)'
     def pipe
-      opts = options.dup
-      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
-      DeadFinder.run_pipe opts
+      DeadFinder.run_pipe prepare_options
     end
 
     desc 'file <FILE>', 'Scan the URLs from File. (e.g., deadfinder file urls.txt)'
     def file(filename)
-      opts = options.dup
-      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
-      DeadFinder.run_file filename, opts
+      DeadFinder.run_file filename, prepare_options
     end
 
     desc 'url <URL>', 'Scan the Single URL.'
     def url(url)
-      opts = options.dup
-      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
-      DeadFinder.run_url url, opts
+      DeadFinder.run_url url, prepare_options
     end
 
     desc 'sitemap <SITEMAP-URL>', 'Scan the URLs from sitemap.'
     def sitemap(sitemap)
-      opts = options.dup
-      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
-      DeadFinder.run_sitemap sitemap, opts
+      DeadFinder.run_sitemap sitemap, prepare_options
     end
 
     desc 'completion <SHELL>', 'Generate completion script for shell.'
@@ -79,6 +71,14 @@ module DeadFinder
     desc 'version', 'Show version.'
     def version
       DeadFinder::Logger.info "deadfinder #{DeadFinder::VERSION}"
+    end
+
+    private
+
+    def prepare_options
+      opts = options.dup
+      opts['coverage'] = true if opts['visualize'] && !opts['visualize'].empty?
+      opts
     end
   end
 end
