@@ -11,6 +11,10 @@ cta_buttons = [
     { text = "View on GitHub", url = "https://github.com/hahwul/deadfinder", style = "secondary" },
 ]
 
+[extra.features_section]
+title = "Essential Features"
+description = "Discover Deadfinder's essential features for comprehensive attack surface detection and analysis."
+
 [[extra.features]]
 title = "Multiple Input Modes"
 desc = "Scan single URLs, multiple URLs from files, sitemaps, or pipe URLs from stdin for flexible dead link detection."
