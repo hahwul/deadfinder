@@ -16,9 +16,6 @@ highlight_code = true
 bottom_footnotes = true
 
 [extra]
-logo_text = "DeadFinder"
-logo_image_path = "images/logo.png"
-logo_image_padding = "15px"
 default_thumbnail = "images/prewview.jpg"
 twitter_site = "@hahwul"
 twitter_creator = "@hahwul"
@@ -33,3 +30,15 @@ nav = [
         { name = "Creator Blog", url = "https://www.hahwul.com", type = "url", icon = "fa-solid fa-fire-flame-curved" },
     ] },
 ]
+
+[extra.logo]
+text = "DeadFinder"                              # Text when no logo image
+image_path = "images/deadfinder-dark.png"             # Default logo image path
+image_padding = "10px"                      # Optional padding
+dark_image_path = "images/deadfinder-dark.png"   # Logo for dark theme (optional)
+light_image_path = "images/deadfinder-light.png" # Logo for light theme (optional)
+
+[extra.theme]
+colorset = "dark"      # Options: "dark" or "light"
+brightness = "darker"  # Options: "darker", "normal", "lighter"
+disable_toggle = false # Hides dark/light mode toggle
