@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.files = ['lib/deadfinder.rb', 'lib/deadfinder/logger.rb', 'lib/deadfinder/runner.rb', 'lib/deadfinder/cli.rb', 'lib/deadfinder/utils.rb', 'lib/deadfinder/version.rb', 'lib/deadfinder/http_client.rb', 'lib/deadfinder/url_pattern_matcher.rb', 'lib/deadfinder/completion.rb', 'lib/deadfinder/visualizer.rb']
   s.metadata['rubygems_mfa_required'] = 'true'
   s.metadata['source_code_uri'] = 'https://github.com/hahwul/deadfinder'
-  s.required_ruby_version = '>= 3.3.0'
+  s.required_ruby_version = ">= 3.3.0"
   s.add_runtime_dependency 'colorize', '~> 0.8.0', '>= 0.8.0'
   s.add_runtime_dependency 'concurrent-ruby-edge', '~> 0.6.0', '>= 0.6.0'
   s.add_runtime_dependency 'json', '>= 2.6', '< 2.11'
