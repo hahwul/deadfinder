@@ -1,0 +1,28 @@
+---
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version: ['3.3', '3.4', '4.0']
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+      - name: Run tests
+        run: bundle exec rspec
+      - name: Run linter
+        run: bundle exec rubocop
+      - name: Check CLI version
+        run: bundle exec ruby -I lib bin/deadfinder version
+      - name: Check CLI help
+        run: bundle exec ruby -I lib bin/deadfinder --help
