@@ -32,6 +32,21 @@ brew install deadfinder
 # https://formulae.brew.sh/formula/deadfinder
 ```
 
+## Install with Nix
+
+For NixOS users or those using Nix package manager:
+
+```bash
+# Run directly without installing
+nix run github:hahwul/deadfinder
+
+# Install to profile
+nix profile install github:hahwul/deadfinder
+
+# Development shell is also available
+nix develop github:hahwul/deadfinder
+```
+
 ## Docker Image
 
 DeadFinder is also available as a Docker image on GitHub Container Registry:

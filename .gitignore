@@ -10,5 +10,11 @@
 deadfinder*.gem
 bom.xml
 
+# Nix
+/.gem/
+result
+result-*
+.direnv/
+
 # Zola
 docs/public/*
