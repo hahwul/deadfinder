@@ -62,7 +62,7 @@ deadfinder url https://www.example.com -o results.json
 
 ### Different Output Formats
 
-DeadFinder supports JSON (default), YAML, and CSV output formats:
+DeadFinder supports JSON (default), YAML, CSV, and TOML output formats:
 
 ```bash
 # JSON format (default)
@@ -73,6 +73,9 @@ deadfinder url https://www.example.com -f yaml -o results.yaml
 
 # CSV format
 deadfinder url https://www.example.com -f csv -o results.csv
+
+# TOML format
+deadfinder url https://www.example.com -f toml -o results.toml
 ```
 
 ## Performance Options

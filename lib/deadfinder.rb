@@ -15,6 +15,7 @@ require 'sitemap-parser'
 require 'json'
 require 'yaml'
 require 'csv'
+require 'toml-rb'
 
 module DeadFinder
   Channel = Concurrent::Channel
@@ -135,6 +136,9 @@ module DeadFinder
                   output_with_coverage.to_yaml
                 when 'csv'
                   generate_csv(output_data, coverage_info)
+                when 'toml'
+                  output_with_coverage = coverage_info ? { 'dead_links' => output_data, 'coverage' => coverage_info } : output_data
+                  TomlRB.dump(output_with_coverage)
                 else
                   output_with_coverage = coverage_info ? { 'dead_links' => output_data, 'coverage' => coverage_info } : output_data
                   JSON.pretty_generate(output_with_coverage)

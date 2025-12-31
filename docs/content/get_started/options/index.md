@@ -32,7 +32,7 @@ These options are available for all scan commands (`url`, `file`, `sitemap`, `pi
 | Option | Alias | Type | Default | Description |
 |--------|-------|------|---------|-------------|
 | `--output` | `-o` | String | - | File path to write results |
-| `--output-format` | `-f` | String | json | Output format: json, yaml, or csv |
+| `--output-format` | `-f` | String | json | Output format: json, yaml, csv, or toml |
 | `--silent` | `-s` | Boolean | false | Suppress progress output |
 | `--verbose` | - | Boolean | false | Enable verbose output |
 | `--debug` | - | Boolean | false | Enable debug output |
