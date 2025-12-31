@@ -4,6 +4,7 @@ require 'tempfile'
 require 'json'
 require 'yaml'
 require 'csv'
+require 'toml-rb'
 require_relative '../lib/deadfinder'
 
 RSpec.describe 'DeadFinder' do
@@ -76,6 +77,17 @@ RSpec.describe 'DeadFinder' do
           ['http://example.com', 'http://example.com/page2']
         ]
         expect(rows).to match_array(expected)
+      end
+    end
+
+    context "when output_format is 'toml'" do
+      let(:output_format) { 'toml' }
+
+      it 'writes TOML formatted output' do
+        DeadFinder.gen_output(options)
+        content = File.read(tempfile.path)
+        parsed = TomlRB.parse(content)
+        expect(parsed).to eq(dummy_data)
       end
     end
 

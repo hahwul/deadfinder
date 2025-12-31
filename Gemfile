@@ -11,6 +11,7 @@ gem 'thor'
 gem 'rspec'
 gem 'yaml'
 gem 'csv'
+gem 'toml-rb'
 gem 'logger'
 gem 'chunky_png', '~> 1.4'
 

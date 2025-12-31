@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'sitemap-parser', '~> 0.5.0', '>= 0.5.0'
   s.add_runtime_dependency 'thor', '>= 1.2', '< 1.5'
   s.add_runtime_dependency 'chunky_png', '~> 1.4.0', '>= 1.4.0'
+  s.add_runtime_dependency 'toml-rb', '~> 3.0', '>= 3.0.0'
 
   s.add_development_dependency 'rspec', '~> 3.12'
   s.add_development_dependency 'cyclonedx-ruby', '~> 1.4'
