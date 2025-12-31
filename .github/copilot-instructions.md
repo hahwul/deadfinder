@@ -7,10 +7,10 @@ Always reference these instructions first and fallback to search or bash command
 ## Working Effectively
 
 ### Prerequisites and Setup
-- Install Ruby 3.2+ (officially requires 3.4+, but 3.2+ works):
+- Install Ruby 3.3+ (officially requires 4.0+, but 3.3+ works):
   - Check version: `ruby --version`
 - Install bundler for user if not available: `gem install bundler --user-install`
-- Add bundler to PATH: `export PATH="$HOME/.local/share/gem/ruby/3.2.0/bin:$PATH"`
+- Add bundler to PATH: `export PATH="$HOME/.local/share/gem/ruby/4.0.0/bin:$PATH"`
 
 ### Bootstrap and Dependencies  
 - Set up the repository:
@@ -21,7 +21,7 @@ Always reference these instructions first and fallback to search or bash command
 ### Building and Testing
 - Build: NOT APPLICABLE - This is a Ruby gem, no compilation required
 - Run tests: `bundle exec rspec`
-  - TIMING: Tests complete in ~0.12 seconds (85 tests). Set timeout to 1 minute for safety.
+  - TIMING: Tests complete in ~0.12 seconds (93 tests). Set timeout to 1 minute for safety.
 - Run linter: `bundle exec rubocop`  
   - TIMING: Linting takes ~5-10 seconds. Set timeout to 1 minute for safety.
 
