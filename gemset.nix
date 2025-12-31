@@ -14,7 +14,7 @@
     platforms = [ ];
     source = {
       remotes = [ "https://rubygems.org" ];
-      sha256 = "0shj8ay8s7xbcnq4drzf9gkv7qp9qwwvlgb5drr7c27h10m06rzc";
+      sha256 = "30b5237f0603f6662ab8d1fc2bd4a96142b806c6415d79e45ef5fdc6a0cfc837";
       type = "gem";
     };
     version = "1.1.0";
@@ -56,7 +56,7 @@
     platforms = [ ];
     source = {
       remotes = [ "https://rubygems.org" ];
-      sha256 = "0gggrgkcq839mamx7a8jbnp2h7x2ykfnbzmsmrdwrvmb5vz2f5c2";
+      sha256 = "0809805a035bc10f54162ca99f15ded49e428e0488bcfe1c08c821e18261a74d";
       type = "gem";
     };
     version = "0.15.0";
@@ -66,7 +66,7 @@
     platforms = [ ];
     source = {
       remotes = [ "https://rubygems.org" ];
-      sha256 = "0e9f39f7bb3934f77ad6feab49662be77e87eedcdeb2a3f5c0234c2938563d4c";
+      sha256 = "26f6b0dbd1101e6ffc09d3ca640b2a21840cc52731ad8a7ded9fb89e5fb0fc39";
       type = "gem";
     };
     version = "1.17.1";
@@ -79,7 +79,7 @@
       sha256 = "b10506aee4183f5cf49e0efc48073d7b75843ce3782c68dbeb763351c08fd505";
       type = "gem";
     };
-    version = "2.10.2";
+    version = "2.18.0";
   };
   mini_portile2 = {
     groups = [ "default" ];
