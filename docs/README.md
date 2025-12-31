@@ -103,7 +103,7 @@ template = "landing.html"
 
 [extra.hero]
 title = "Welcome!"
-badge = "v1.9.1"
+badge = "v1.10.0"
 description = "..."
 # ...
 +++

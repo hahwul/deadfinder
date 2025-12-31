@@ -12,7 +12,7 @@ Add the following step to your GitHub Actions workflow:
 ```yaml
 steps:
   - name: Run DeadFinder
-    uses: hahwul/deadfinder@1.9.1
+    uses: hahwul/deadfinder@1.10.0
     # or uses: hahwul/deadfinder@latest
     id: broken-link
     with:
@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run DeadFinder
-        uses: hahwul/deadfinder@1.9.1
+        uses: hahwul/deadfinder@1.10.0
         id: broken-link
         with:
           command: sitemap
@@ -104,7 +104,7 @@ jobs:
 
 ```yaml
 - name: Scan Homepage
-  uses: hahwul/deadfinder@1.9.1
+  uses: hahwul/deadfinder@1.10.0
   with:
     command: url
     target: https://www.example.com
@@ -114,7 +114,7 @@ jobs:
 
 ```yaml
 - name: Scan URL List
-  uses: hahwul/deadfinder@1.9.1
+  uses: hahwul/deadfinder@1.10.0
   with:
     command: file
     target: ./urls.txt
@@ -124,7 +124,7 @@ jobs:
 
 ```yaml
 - name: Scan Sitemap
-  uses: hahwul/deadfinder@1.9.1
+  uses: hahwul/deadfinder@1.10.0
   with:
     command: sitemap
     target: https://www.example.com/sitemap.xml
@@ -150,7 +150,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run DeadFinder
-        uses: hahwul/deadfinder@1.9.1
+        uses: hahwul/deadfinder@1.10.0
         id: broken-link
         with:
           command: sitemap
@@ -207,7 +207,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check Dead Links
-        uses: hahwul/deadfinder@1.9.1
+        uses: hahwul/deadfinder@1.10.0
         id: check
         with:
           command: file
@@ -256,7 +256,7 @@ jobs:
             url: https://docs.example.com/sitemap.xml
     steps:
       - name: Check ${{ matrix.site.name }}
-        uses: hahwul/deadfinder@1.9.1
+        uses: hahwul/deadfinder@1.10.0
         with:
           command: sitemap
           target: ${{ matrix.site.url }}
