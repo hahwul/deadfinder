@@ -10,8 +10,8 @@ module DeadFinder
     class_option :include30x, aliases: :r, default: false, type: :boolean, desc: 'Include 30x redirections'
     class_option :concurrency, aliases: :c, default: 50, type: :numeric, desc: 'Number of concurrency'
     class_option :timeout, aliases: :t, default: 10, type: :numeric, desc: 'Timeout in seconds'
-    class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write result (e.g., json, yaml, csv)'
-    class_option :output_format, aliases: :f, default: 'json', type: :string, desc: 'Output format'
+    class_option :output, aliases: :o, default: '', type: :string, desc: 'File to write result'
+    class_option :output_format, aliases: :f, default: 'json', type: :string, desc: 'Output format (e.g., json, yaml, toml, csv)'
     class_option :headers, aliases: :H, default: [], type: :array,
                            desc: 'Custom HTTP headers to send with initial request'
     class_option :worker_headers, default: [], type: :array, desc: 'Custom HTTP headers to send with worker requests'
