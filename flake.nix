@@ -23,7 +23,7 @@
         # Main deadfinder package
         deadfinder = pkgs.stdenv.mkDerivation {
           pname = "deadfinder";
-          version = "1.9.1";
+          version = "1.10.0";
           src = self;
 
           buildInputs = [ gems gems.wrappedRuby ];
@@ -33,14 +33,14 @@
 
           installPhase = ''
             runHook preInstall
-            
+
             mkdir -p $out/bin $out/lib
             cp -r lib/* $out/lib/
-            
+
             # Create wrapper that uses bundled gems
             makeWrapper ${gems.wrappedRuby}/bin/ruby $out/bin/deadfinder \
               --add-flags "-I$out/lib ${self}/bin/deadfinder"
-            
+
             runHook postInstall
           '';
 
@@ -83,7 +83,7 @@
             export GEM_HOME=$PWD/.gem
             export GEM_PATH=$GEM_HOME
             export PATH=$GEM_HOME/bin:$PATH
-            
+
             echo "🔍 DeadFinder development shell"
             echo ""
             echo "Quick start:"

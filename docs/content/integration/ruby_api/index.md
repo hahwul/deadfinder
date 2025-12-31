@@ -172,7 +172,7 @@ Default options include:
   'include30x' => false,
   'headers' => [],
   'worker_headers' => [],
-  'user_agent' => 'Mozilla/5.0 (compatible; DeadFinder/1.9.1;)',
+  'user_agent' => 'Mozilla/5.0 (compatible; DeadFinder/1.10.0;)',
   'proxy' => nil,
   'proxy_auth' => nil,
   'match' => nil,

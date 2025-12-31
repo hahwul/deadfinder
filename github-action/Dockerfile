@@ -1,5 +1,5 @@
 # Use the deadfinder base image from GitHub Container Registry
-ARG DEADFINDER_VERSION=1.9.1
+ARG DEADFINDER_VERSION=1.10.0
 FROM ghcr.io/hahwul/deadfinder:${DEADFINDER_VERSION}
 
 # Install jq for JSON processing

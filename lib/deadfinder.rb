@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'English'
+require 'deadfinder/version'
 require 'thor'
 require 'open-uri'
 require 'nokogiri'
@@ -9,7 +10,6 @@ require 'deadfinder/logger'
 require 'deadfinder/runner'
 require 'deadfinder/visualizer'
 require 'deadfinder/cli'
-require 'deadfinder/version'
 require 'concurrent-edge'
 require 'sitemap-parser'
 require 'json'

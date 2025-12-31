@@ -196,9 +196,9 @@ Should scan the URL successfully
 Crashes with error: ...
 
 ### Environment
-- Ruby 3.4.0
-- DeadFinder 1.9.1
-- macOS 14.0
+- Ruby 4.0.0
+- DeadFinder 1.10.0
+- macOS 26.2
 ```
 
 ## Feature Requests
@@ -280,7 +280,7 @@ end
 gem build deadfinder.gemspec
 
 # Install locally
-gem install deadfinder-1.9.1.gem
+gem install deadfinder-1.10.0.gem
 ```
 
 ## Project Structure
