@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        ruby = pkgs.ruby_3_3;
+        ruby = pkgs.ruby_4_0;
 
         # Bundle all gem dependencies
         gems = pkgs.bundlerEnv {
