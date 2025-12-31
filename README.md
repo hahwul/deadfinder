@@ -39,6 +39,19 @@ brew install deadfinder
 # https://formulae.brew.sh/formula/deadfinder
 ```
 
+### Install with Nix
+```bash
+# Run directly without installing
+nix run github:hahwul/deadfinder
+
+# Install to profile
+nix profile install github:hahwul/deadfinder
+
+# Or add to your flake.nix inputs
+# Development shell is also available:
+nix develop github:hahwul/deadfinder
+```
+
 ### Docker Image
 ```shell
 docker pull ghcr.io/hahwul/deadfinder:latest
