@@ -16,5 +16,6 @@
           - uses: wow-actions/contributors-list@v1
             with:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              round: true
+              round: false
               includeBots: false
+              svgPath: docs/static/images/CONTRIBUTORS.svg

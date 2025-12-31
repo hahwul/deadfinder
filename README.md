@@ -261,4 +261,4 @@ We'll review your PR as soon as possible. Thank you for contributing to our proj
 
 ### Contributors
 
-![](CONTRIBUTORS.svg)
+![](docs/static/images/CONTRIBUTORS.svg)
