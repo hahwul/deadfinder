@@ -127,7 +127,7 @@ Options:
                                                               # Default: 50
   -t, [--timeout=N]                                           # Timeout in seconds
                                                               # Default: 10
-  -o, [--output=OUTPUT]                                       # File to write result (e.g., json, yaml, csv)
+  -o, [--output=OUTPUT]                                       # File to write result (e.g., json, yaml, csv, toml)
   -f, [--output-format=OUTPUT_FORMAT]                         # Output format
                                                               # Default: json
   -H, [--headers=one two three]                               # Custom HTTP headers to send with initial request
