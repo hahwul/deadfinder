@@ -71,6 +71,16 @@
     };
     version = "1.4.0";
   };
+  citrus = {
+    groups = ["default"];
+    platforms = [];
+    source = {
+      remotes = ["https://rubygems.org"];
+      sha256 = "0l7nhk3gkm1hdchkzzhg2f70m47pc0afxfpl6mkiibc9qcpl3hjf";
+      type = "gem";
+    };
+    version = "3.0.2";
+  };
   colorize = {
     groups = ["default"];
     platforms = [];
@@ -760,6 +770,17 @@
       type = "gem";
     };
     version = "0.4.2";
+  };
+  toml-rb = {
+    dependencies = ["citrus" "racc"];
+    groups = ["default"];
+    platforms = [];
+    source = {
+      remotes = ["https://rubygems.org"];
+      sha256 = "0ijqv5c212n9hcnhk028i2cyyr1jdyjq6jzh3f406iwyak26wi8l";
+      type = "gem";
+    };
+    version = "4.1.0";
   };
   typhoeus = {
     dependencies = ["ethon"];
