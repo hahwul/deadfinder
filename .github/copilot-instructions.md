@@ -21,7 +21,7 @@ Always reference these instructions first and fallback to search or bash command
 ### Building and Testing
 - Build: NOT APPLICABLE - This is a Ruby gem, no compilation required
 - Run tests: `bundle exec rspec`
-  - TIMING: Tests complete in ~0.12 seconds (93 tests). Set timeout to 1 minute for safety.
+  - TIMING: Tests complete in ~0.5 seconds (108 tests). Set timeout to 1 minute for safety.
 - Run linter: `bundle exec rubocop`  
   - TIMING: Linting takes ~5-10 seconds. Set timeout to 1 minute for safety.
 
@@ -78,7 +78,8 @@ ALWAYS test functionality after making changes by running through these scenario
 │       ├── version.rb             # Version constant
 │       ├── http_client.rb         # HTTP client wrapper
 │       ├── url_pattern_matcher.rb # URL pattern matching
-│       └── completion.rb          # Shell completion
+│       ├── completion.rb          # Shell completion
+│       └── visualizer.rb          # Coverage visualization
 ├── spec/                          # RSpec test suite
 ├── examples/                      # Usage examples
 ├── github-action/                 # GitHub Action implementation
@@ -91,7 +92,7 @@ ALWAYS test functionality after making changes by running through these scenario
 ### Key Project Files
 - **CLI Entry Point**: `bin/deadfinder` - Thor-based command line interface
 - **Core Library**: `lib/deadfinder.rb` - Main module with scanning functions
-- **Test Suite**: `spec/` - RSpec tests (85 tests, all passing)
+- **Test Suite**: `spec/` - RSpec tests (108 tests, all passing)
 - **Examples**: `examples/` - Ruby usage examples for different modes
 - **GitHub Action**: `github-action/` - Docker-based GitHub Action
 
@@ -113,9 +114,13 @@ cat urls.txt | bundle exec ruby -I lib bin/deadfinder pipe
 bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.json -f json
 bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.yaml -f yaml
 bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.csv -f csv
+bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.toml -f toml
 
 # Advanced options
 bundle exec ruby -I lib bin/deadfinder url https://example.com --concurrency=30 --timeout=15 --silent
+
+# Coverage and visualization options
+bundle exec ruby -I lib bin/deadfinder url https://example.com --coverage --visualize=report.png
 ```
 
 ### Ruby API Usage Patterns
@@ -168,19 +173,27 @@ steps:
 - **JSON** (default): `{"origin_url": ["broken_link1", "broken_link2"]}`
 - **YAML**: YAML formatted output
 - **CSV**: Comma-separated values with target,url columns
+- **TOML**: TOML formatted output
 
 ### Common Options
 - `--concurrency=N` - Number of concurrent workers (default: 50)
 - `--timeout=N` - Request timeout in seconds (default: 10)  
 - `--silent` - Suppress output during scanning
 - `--verbose` - Verbose output with detailed information
+- `--debug` - Debug mode for troubleshooting
 - `--output=FILE` - Write results to file
-- `--output-format=FORMAT` - Output format (json, yaml, csv)
-- `--headers="Header: Value"` - Custom HTTP headers
+- `--output-format=FORMAT` - Output format (json, yaml, toml, csv)
+- `--headers="Header: Value"` - Custom HTTP headers to send with initial request
+- `--worker-headers="Header: Value"` - Custom HTTP headers to send with worker requests
 - `--match=PATTERN` - Only include URLs matching pattern
 - `--ignore=PATTERN` - Ignore URLs matching pattern
 - `--proxy=URL` - Use proxy server
+- `--proxy-auth=CREDENTIALS` - Proxy server authentication credentials
 - `--user-agent=STRING` - Custom User-Agent string
+- `--limit=N` - Limit the number of URLs to scan
+- `--include30x` - Include 30x redirections as dead links
+- `--coverage` - Enable coverage tracking and reporting
+- `--visualize=FILE` - Generate a visualization of the scan results (e.g., report.png)
 
 ### Network Considerations
 - Tool requires internet access for actual URL scanning
