@@ -182,7 +182,7 @@ GEM
       nokogiri (~> 1.6)
       typhoeus (>= 0.6, < 2.0)
     stringio (3.2.0)
-    thor (1.4.0)
+    thor (1.5.0)
     time (0.4.2)
       date
     toml-rb (4.1.0)
