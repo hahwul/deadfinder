@@ -19,10 +19,12 @@ group :development, :test do
   gem 'rubocop'
   gem 'rubocop-rspec'
   gem 'rubocop-rake'
+  gem 'rubocop-capybara'
+  gem 'rubocop-factory_bot'
+  gem 'rubocop-performance'
   gem 'webmock', '~> 3.14'
   gem 'rake'
   gem 'simplecov'
   gem 'simplecov-cobertura'
-  gem 'panolint'
   gem 'cyclonedx-ruby'
 end
