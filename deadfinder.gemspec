@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'colorize', '~> 0.8.0', '>= 0.8.0'
   s.add_runtime_dependency 'concurrent-ruby-edge', '~> 0.6.0', '>= 0.6.0'
   s.add_runtime_dependency 'json', '>= 2.6', '< 2.19'
-  s.add_runtime_dependency 'nokogiri', '>= 1.13', '< 1.19'
+  s.add_runtime_dependency 'nokogiri', '>= 1.13', '< 1.20'
   s.add_runtime_dependency 'open-uri', '~> 0.2.0', '>= 0.2.0'
   s.add_runtime_dependency 'set', '~> 1.1.0', '>= 1.1.0'
   s.add_runtime_dependency 'sitemap-parser', '~> 0.5.0', '>= 0.5.0'
