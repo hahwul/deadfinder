@@ -15,6 +15,11 @@ RSpec.describe DeadFinder::UrlPatternMatcher do
     it 'raises an error when the pattern is an invalid regex' do
       expect { described_class.match?('http://example.com', '[') }.to raise_error(RegexpError)
     end
+
+    it 'returns false when Timeout::Error is raised' do
+      allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
+      expect(described_class.match?('http://example.com', 'example')).to be false
+    end
   end
 
   describe '.ignore?' do
@@ -28,6 +33,11 @@ RSpec.describe DeadFinder::UrlPatternMatcher do
 
     it 'raises an error when the pattern is an invalid regex' do
       expect { described_class.ignore?('http://example.com', '[') }.to raise_error(RegexpError)
+    end
+
+    it 'returns false when Timeout::Error is raised' do
+      allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
+      expect(described_class.ignore?('http://example.com', 'example')).to be false
     end
   end
 end
