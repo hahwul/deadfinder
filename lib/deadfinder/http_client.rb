@@ -6,12 +6,26 @@ require 'openssl'
 module DeadFinder
   # HTTP client module
   module HttpClient
+    @proxy_cache = {}
+    @proxy_cache_mutex = Mutex.new
+
     def self.create(uri, options)
-      begin
-        proxy_uri = URI.parse(options['proxy']) if options['proxy'] && !options['proxy'].empty?
-      rescue URI::InvalidURIError => e
-        DeadFinder::Logger.error "Invalid proxy URI: #{options['proxy']} - #{e.message}"
-        proxy_uri = nil # or handle the error as appropriate
+      proxy_str = options['proxy']
+      proxy_uri = nil
+
+      if proxy_str && !proxy_str.empty?
+        proxy_uri = if @proxy_cache.key?(proxy_str)
+                      @proxy_cache[proxy_str]
+                    else
+                      @proxy_cache_mutex.synchronize do
+                        @proxy_cache[proxy_str] ||= begin
+                          URI.parse(proxy_str)
+                        rescue URI::InvalidURIError => e
+                          DeadFinder::Logger.error "Invalid proxy URI: #{proxy_str} - #{e.message}"
+                          nil
+                        end
+                      end
+                    end
       end
       http = if proxy_uri
                Net::HTTP.new(uri.host, uri.port,
