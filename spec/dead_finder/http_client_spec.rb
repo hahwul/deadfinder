@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'deadfinder/http_client'
+require 'deadfinder/logger'
 require 'net/http'
 
 RSpec.describe DeadFinder::HttpClient do
@@ -50,6 +51,18 @@ RSpec.describe DeadFinder::HttpClient do
         options = { 'timeout' => '10' }
         http = described_class.create(uri, options)
         expect(http.read_timeout).to eq(10)
+      end
+    end
+
+    context 'with invalid proxy' do
+      let(:invalid_proxy) { ':::' }
+
+      it 'logs an error and creates an HTTP client without proxy' do
+        options = { 'proxy' => invalid_proxy }
+        expect(DeadFinder::Logger).to receive(:error).with(/Invalid proxy URI/)
+        http = described_class.create(uri, options)
+        expect(http).to be_a(Net::HTTP)
+        expect(http.proxy_address).to be_nil
       end
     end
 
