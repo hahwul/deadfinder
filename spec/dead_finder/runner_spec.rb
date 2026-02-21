@@ -120,37 +120,20 @@ RSpec.describe DeadFinder::Runner do
     end
     let(:page) { Nokogiri::HTML(html) }
 
-    it 'extracts links from the page' do
+    it 'extracts links and compacts nil values from missing attributes' do
       links = runner.send(:extract_links, page)
 
-      expect(links[:anchor]).to include('http://example.com/anchor')
-      expect(links[:script]).to include('http://example.com/script.js')
-      expect(links[:link]).to include('http://example.com/style.css')
-      expect(links[:iframe]).to include('http://example.com/frame')
-      expect(links[:form]).to include('http://example.com/form')
-      expect(links[:object]).to include('http://example.com/object')
-      expect(links[:embed]).to include('http://example.com/embed')
-    end
+      expected_links = {
+        anchor: ['http://example.com/anchor'],
+        script: ['http://example.com/script.js'],
+        link: ['http://example.com/style.css'],
+        iframe: ['http://example.com/frame'],
+        form: ['http://example.com/form'],
+        object: ['http://example.com/object'],
+        embed: ['http://example.com/embed']
+      }
 
-    it 'compacts nil values from missing attributes' do
-      links = runner.send(:extract_links, page)
-
-      expect(links[:anchor]).not_to include(nil)
-      expect(links[:script]).not_to include(nil)
-      expect(links[:link]).not_to include(nil)
-      expect(links[:iframe]).not_to include(nil)
-      expect(links[:form]).not_to include(nil)
-      expect(links[:object]).not_to include(nil)
-      expect(links[:embed]).not_to include(nil)
-
-      # Ensure only valid links are present
-      expect(links[:anchor].size).to eq(1)
-      expect(links[:script].size).to eq(1)
-      expect(links[:link].size).to eq(1)
-      expect(links[:iframe].size).to eq(1)
-      expect(links[:form].size).to eq(1)
-      expect(links[:object].size).to eq(1)
-      expect(links[:embed].size).to eq(1)
+      expect(links).to eq(expected_links)
     end
   end
 end
