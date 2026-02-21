@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 require 'webmock/rspec'
-require 'deadfinder/runner'
+require 'deadfinder'
 
 RSpec.describe DeadFinder::Runner do
   let(:runner) { described_class.new }
@@ -95,12 +95,62 @@ RSpec.describe DeadFinder::Runner do
   end
 
   describe '#extract_links' do
-    let(:html) { '<html><body><a href="http://example.com">Link</a></body></html>' }
+    let(:html) do
+      <<~HTML
+        <html>
+          <body>
+            <a href="http://example.com/anchor">Anchor</a>
+            <script src="http://example.com/script.js"></script>
+            <link href="http://example.com/style.css" rel="stylesheet">
+            <iframe src="http://example.com/frame"></iframe>
+            <form action="http://example.com/form"></form>
+            <object data="http://example.com/object"></object>
+            <embed src="http://example.com/embed">
+            <!-- Missing attributes -->
+            <a>Anchor No Href</a>
+            <script>Script No Src</script>
+            <link>Link No Href</link>
+            <iframe>Frame No Src</iframe>
+            <form>Form No Action</form>
+            <object>Object No Data</object>
+            <embed>Embed No Src</embed>
+          </body>
+        </html>
+      HTML
+    end
     let(:page) { Nokogiri::HTML(html) }
 
     it 'extracts links from the page' do
       links = runner.send(:extract_links, page)
-      expect(links[:anchor]).to include('http://example.com')
+
+      expect(links[:anchor]).to include('http://example.com/anchor')
+      expect(links[:script]).to include('http://example.com/script.js')
+      expect(links[:link]).to include('http://example.com/style.css')
+      expect(links[:iframe]).to include('http://example.com/frame')
+      expect(links[:form]).to include('http://example.com/form')
+      expect(links[:object]).to include('http://example.com/object')
+      expect(links[:embed]).to include('http://example.com/embed')
+    end
+
+    it 'compacts nil values from missing attributes' do
+      links = runner.send(:extract_links, page)
+
+      expect(links[:anchor]).not_to include(nil)
+      expect(links[:script]).not_to include(nil)
+      expect(links[:link]).not_to include(nil)
+      expect(links[:iframe]).not_to include(nil)
+      expect(links[:form]).not_to include(nil)
+      expect(links[:object]).not_to include(nil)
+      expect(links[:embed]).not_to include(nil)
+
+      # Ensure only valid links are present
+      expect(links[:anchor].size).to eq(1)
+      expect(links[:script].size).to eq(1)
+      expect(links[:link].size).to eq(1)
+      expect(links[:iframe].size).to eq(1)
+      expect(links[:form].size).to eq(1)
+      expect(links[:object].size).to eq(1)
+      expect(links[:embed].size).to eq(1)
     end
   end
 end
