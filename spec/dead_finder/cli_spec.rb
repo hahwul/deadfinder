@@ -36,6 +36,15 @@ RSpec.describe DeadFinder::CLI do
         expect(DeadFinder).to have_received(:run_pipe).with(hash_including(options))
       end
     end
+
+    context 'with --visualize option' do
+      let(:options) { { 'visualize' => 'report.png' } }
+
+      it 'runs the pipe command with coverage enabled' do
+        cli.invoke(:pipe, [], options)
+        expect(DeadFinder).to have_received(:run_pipe).with(hash_including('coverage' => true))
+      end
+    end
   end
 
   describe '#file' do
