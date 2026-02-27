@@ -58,7 +58,7 @@ module DeadFinder
             links[type] = urls.reject { |url| DeadFinder::UrlPatternMatcher.ignore?(url, options['ignore']) }
           end
         rescue RegexpError => e
-          DeadFinder::Logger.error "Invalid match pattern: #{e.message}"
+          DeadFinder::Logger.error "Invalid ignore pattern: #{e.message}"
         end
       end
 

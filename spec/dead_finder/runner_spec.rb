@@ -71,7 +71,7 @@ RSpec.describe DeadFinder::Runner do
 
       it 'logs an error for invalid ignore pattern' do
         runner.run(target, options)
-        expect(DeadFinder::Logger).to have_received(:error).with(/Invalid match pattern/)
+        expect(DeadFinder::Logger).to have_received(:error).with(/Invalid ignore pattern/)
       end
     end
   end
