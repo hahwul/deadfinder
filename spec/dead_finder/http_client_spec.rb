@@ -9,6 +9,11 @@ RSpec.describe DeadFinder::HttpClient do
     let(:uri) { URI.parse('http://example.com') }
     let(:https_uri) { URI.parse('https://example.com') }
 
+    before do
+      # Clear the proxy cache before each test to ensure isolation
+      described_class.instance_variable_set(:@proxy_cache, {})
+    end
+
     context 'without proxy' do
       it 'creates an HTTP client' do
         options = {}
@@ -60,6 +65,25 @@ RSpec.describe DeadFinder::HttpClient do
       it 'logs an error and creates an HTTP client without proxy' do
         options = { 'proxy' => invalid_proxy }
         expect(DeadFinder::Logger).to receive(:error).with(/Invalid proxy URI/)
+        http = described_class.create(uri, options)
+        expect(http).to be_a(Net::HTTP)
+        expect(http.proxy_address).to be_nil
+      end
+    end
+
+    context 'when URI.parse raises InvalidURIError' do
+      let(:proxy_str) { 'http://test-proxy' }
+
+      before do
+        # We need to allow other calls to URI.parse to pass through,
+        # specifically the one in the `let(:uri)` block.
+        allow(URI).to receive(:parse).and_call_original
+        allow(URI).to receive(:parse).with(proxy_str).and_raise(URI::InvalidURIError.new('Simulation'))
+      end
+
+      it 'logs an error and creates an HTTP client without proxy' do
+        options = { 'proxy' => proxy_str }
+        expect(DeadFinder::Logger).to receive(:error).with(/Invalid proxy URI: #{proxy_str} - Simulation/)
         http = described_class.create(uri, options)
         expect(http).to be_a(Net::HTTP)
         expect(http.proxy_address).to be_nil
