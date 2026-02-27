@@ -233,6 +233,38 @@ RSpec.describe DeadFinder::Visualizer do
       end
     end
 
+    context 'with mixed zero and non-zero height bars' do
+      let(:data) do
+        {
+          summary: {
+            total_tested: 10_000,
+            overall_status_counts: {
+              '200' => 9_999,
+              '404' => 1
+            }
+          }
+        }
+      end
+
+      it 'draws the large bar and skips the zero-height bar' do
+        described_class.generate(data, output_path)
+        expect(File.exist?(output_path)).to be true
+        png = ChunkyPNG::Image.from_file(output_path)
+        bar_center_x = 250
+
+        green_color = ChunkyPNG::Color.rgb(0, 255, 0)
+        red_color = ChunkyPNG::Color.rgb(255, 0, 0)
+
+        # Green bar should be present (large count)
+        green_found = (110..180).any? { |y| png[bar_center_x, y] == green_color }
+        expect(green_found).to be true
+
+        # Red bar should be absent (zero height)
+        red_found = (110..180).any? { |y| png[bar_center_x, y] == red_color }
+        expect(red_found).to be false
+      end
+    end
+
     context 'with rounded corners and outline' do
       let(:data) do
         {
