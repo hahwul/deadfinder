@@ -102,45 +102,75 @@ RSpec.describe DeadFinder::Runner do
   end
 
   describe '#extract_links' do
-    let(:html) do
-      <<~HTML
-        <html>
-          <body>
-            <a href="http://example.com/anchor">Anchor</a>
-            <script src="http://example.com/script.js"></script>
-            <link href="http://example.com/style.css" rel="stylesheet">
-            <iframe src="http://example.com/frame"></iframe>
-            <form action="http://example.com/form"></form>
-            <object data="http://example.com/object"></object>
-            <embed src="http://example.com/embed">
-            <!-- Missing attributes -->
-            <a>Anchor No Href</a>
-            <script>Script No Src</script>
-            <link>Link No Href</link>
-            <iframe>Frame No Src</iframe>
-            <form>Form No Action</form>
-            <object>Object No Data</object>
-            <embed>Embed No Src</embed>
-          </body>
-        </html>
-      HTML
+    context 'with valid attributes' do
+      let(:html) do
+        <<~HTML
+          <html>
+            <body>
+              <a href="http://example.com/anchor">Anchor</a>
+              <script src="http://example.com/script.js"></script>
+              <link href="http://example.com/style.css" rel="stylesheet">
+              <iframe src="http://example.com/frame"></iframe>
+              <form action="http://example.com/form"></form>
+              <object data="http://example.com/object"></object>
+              <embed src="http://example.com/embed">
+            </body>
+          </html>
+        HTML
+      end
+      let(:page) { Nokogiri::HTML(html) }
+
+      it 'extracts valid links' do
+        links = runner.send(:extract_links, page)
+
+        expected_links = {
+          anchor: ['http://example.com/anchor'],
+          script: ['http://example.com/script.js'],
+          link: ['http://example.com/style.css'],
+          iframe: ['http://example.com/frame'],
+          form: ['http://example.com/form'],
+          object: ['http://example.com/object'],
+          embed: ['http://example.com/embed']
+        }
+
+        expect(links).to eq(expected_links)
+      end
     end
-    let(:page) { Nokogiri::HTML(html) }
 
-    it 'extracts links and compacts nil values from missing attributes' do
-      links = runner.send(:extract_links, page)
+    context 'with missing attributes' do
+      let(:html) do
+        <<~HTML
+          <html>
+            <body>
+              <!-- Missing attributes -->
+              <a>Anchor No Href</a>
+              <script>Script No Src</script>
+              <link>Link No Href</link>
+              <iframe>Frame No Src</iframe>
+              <form>Form No Action</form>
+              <object>Object No Data</object>
+              <embed>Embed No Src</embed>
+            </body>
+          </html>
+        HTML
+      end
+      let(:page) { Nokogiri::HTML(html) }
 
-      expected_links = {
-        anchor: ['http://example.com/anchor'],
-        script: ['http://example.com/script.js'],
-        link: ['http://example.com/style.css'],
-        iframe: ['http://example.com/frame'],
-        form: ['http://example.com/form'],
-        object: ['http://example.com/object'],
-        embed: ['http://example.com/embed']
-      }
+      it 'returns empty arrays for elements with missing attributes' do
+        links = runner.send(:extract_links, page)
 
-      expect(links).to eq(expected_links)
+        expected_links = {
+          anchor: [],
+          script: [],
+          link: [],
+          iframe: [],
+          form: [],
+          object: [],
+          embed: []
+        }
+
+        expect(links).to eq(expected_links)
+      end
     end
   end
 end
