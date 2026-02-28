@@ -124,9 +124,21 @@ RSpec.describe DeadFinder::CLI do
       expect { cli.invoke(:completion, ['fish']) }.to output(/complete -c/).to_stdout
     end
 
-    it 'shows an error for unsupported shell' do
-      cli.invoke(:completion, ['unsupported_shell'])
-      expect(DeadFinder::Logger).to have_received(:error).with('Unsupported shell: unsupported_shell')
+    context 'with unsupported shell' do
+      it 'shows an error for csh' do
+        cli.invoke(:completion, ['csh'])
+        expect(DeadFinder::Logger).to have_received(:error).with('Unsupported shell: csh')
+      end
+
+      it 'shows an error for invalid shell' do
+        cli.invoke(:completion, ['invalid'])
+        expect(DeadFinder::Logger).to have_received(:error).with('Unsupported shell: invalid')
+      end
+
+      it 'shows an error for generic unsupported shell' do
+        cli.invoke(:completion, ['unsupported_shell'])
+        expect(DeadFinder::Logger).to have_received(:error).with('Unsupported shell: unsupported_shell')
+      end
     end
   end
 end
