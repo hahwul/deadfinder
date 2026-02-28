@@ -99,6 +99,30 @@ RSpec.describe DeadFinder::Runner do
       runner.worker(1, jobs, results, target, options)
       expect(DeadFinder.output[target]).to include(url)
     end
+
+    context 'when a network error occurs' do
+      let(:error_url) { 'http://example.com/error' }
+      let(:url) { error_url }
+
+      before do
+        stub_request(:get, error_url).to_raise(StandardError)
+        # Clear cache to ensure worker processes the URL
+        DeadFinder::CACHE_SET.delete(error_url)
+        DeadFinder::CACHE_QUE.delete(error_url)
+      end
+
+      it 'handles the error gracefully' do
+        expect { runner.worker(1, jobs, results, target, options) }.not_to raise_error
+      end
+
+      it 'tracks the error in coverage data when coverage is enabled' do
+        options['coverage'] = true
+        DeadFinder.coverage_data[target] = nil
+        runner.worker(1, jobs, results, target, options)
+        expect(DeadFinder.coverage_data[target][:dead]).to eq(1)
+        expect(DeadFinder.coverage_data[target][:status_counts]['error']).to eq(1)
+      end
+    end
   end
 
   describe '#extract_links' do
