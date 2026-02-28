@@ -41,6 +41,14 @@ RSpec.describe 'Utils' do
       # 잘못된 기준 URL을 전달했을 경우에도 예외 발생 후 nil 리턴
       expect(generate_url('relative/path', '://invalid')).to be_nil
     end
+
+    it 'returns nil if base_url is nil (ArgumentError)' do
+      expect(generate_url('path', nil)).to be_nil
+    end
+
+    it 'returns nil if base_url is relative (URI::BadURIError)' do
+      expect(generate_url('path', 'relative/base')).to be_nil
+    end
   end
 
   describe '#ignore_scheme?' do
