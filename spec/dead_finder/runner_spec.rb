@@ -108,17 +108,12 @@ RSpec.describe DeadFinder::Runner do
         expect { runner.worker(1, jobs, results, target, options) }.not_to raise_error
       end
 
-      context 'with coverage enabled' do
-        before do
-          options['coverage'] = true
-          DeadFinder.coverage_data[target] = nil
-        end
-
-        it 'tracks the error in coverage data' do
-          runner.worker(1, jobs, results, target, options)
-          expect(DeadFinder.coverage_data[target][:dead]).to eq(1)
-          expect(DeadFinder.coverage_data[target][:status_counts]['error']).to eq(1)
-        end
+      it 'tracks the error in coverage data when coverage is enabled' do
+        options['coverage'] = true
+        DeadFinder.coverage_data[target] = nil
+        runner.worker(1, jobs, results, target, options)
+        expect(DeadFinder.coverage_data[target][:dead]).to eq(1)
+        expect(DeadFinder.coverage_data[target][:status_counts]['error']).to eq(1)
       end
     end
   end
