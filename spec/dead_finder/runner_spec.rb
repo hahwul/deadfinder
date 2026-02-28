@@ -10,6 +10,9 @@ RSpec.describe DeadFinder::Runner do
 
   before do
     options['silent'] = true
+    DeadFinder.output.clear
+    DeadFinder::CACHE_SET.clear
+    DeadFinder::CACHE_QUE.clear
   end
 
   describe '#run' do
@@ -60,6 +63,8 @@ RSpec.describe DeadFinder::Runner do
       it 'logs an error for invalid match pattern' do
         runner.run(target, options)
         expect(DeadFinder::Logger).to have_received(:error).with(/Invalid match pattern/)
+        expect(DeadFinder.output[target]).to include('http://example.com/broken')
+        expect(a_request(:get, 'http://example.com/valid')).to have_been_made
       end
     end
 
@@ -72,6 +77,8 @@ RSpec.describe DeadFinder::Runner do
       it 'logs an error for invalid ignore pattern' do
         runner.run(target, options)
         expect(DeadFinder::Logger).to have_received(:error).with(/Invalid match pattern/)
+        expect(DeadFinder.output[target]).to include('http://example.com/broken')
+        expect(a_request(:get, 'http://example.com/valid')).to have_been_made
       end
     end
   end
