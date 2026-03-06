@@ -1,0 +1,18 @@
+version: 2.0
+shards:
+  lexbor:
+    git: https://github.com/kostya/lexbor.git
+    version: 3.4.2
+
+  stumpy_core:
+    git: https://github.com/stumpycr/stumpy_core.git
+    version: 1.9.1
+
+  stumpy_png:
+    git: https://github.com/stumpycr/stumpy_png.git
+    version: 5.0.1
+
+  webmock:
+    git: https://github.com/manastech/webmock.cr.git
+    version: 0.14.0
+
