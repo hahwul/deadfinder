@@ -1,0 +1,25 @@
+name: deadfinder
+version: 1.10.0
+
+authors:
+  - hahwul <hahwul@gmail.com>
+
+targets:
+  deadfinder:
+    main: src/cli_main.cr
+
+dependencies:
+  lexbor:
+    github: kostya/lexbor
+  stumpy_png:
+    github: stumpycr/stumpy_png
+    version: "~> 5.0"
+
+development_dependencies:
+  webmock:
+    github: manastech/webmock.cr
+    version: "~> 0.14"
+
+crystal: '>= 1.19.1'
+
+license: MIT
