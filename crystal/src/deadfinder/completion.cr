@@ -7,7 +7,7 @@ module Deadfinder
         local cur prev opts
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
-        opts="--include30x --concurrency --timeout --output --output_format --headers --worker_headers --user_agent --proxy --proxy_auth --match --ignore --silent --verbose --debug"
+        opts="--include30x --concurrency --timeout --output --output_format --headers --worker_headers --user_agent --proxy --proxy_auth --match --ignore --silent --verbose --debug --limit --coverage --visualize"
 
         COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
         return 0
@@ -35,7 +35,10 @@ module Deadfinder
         '--ignore[Ignore URL pattern]:string' \\
         '--silent[Silent mode]' \\
         '--verbose[Verbose mode]' \\
-        '--debug[Debug mode]'
+        '--debug[Debug mode]' \\
+        '--limit[Limit number of URLs to scan]:number' \\
+        '--coverage[Enable coverage tracking]' \\
+        '--visualize[Generate visualization PNG]:file'
       ZSH
     end
 
@@ -56,6 +59,9 @@ module Deadfinder
       complete -c deadfinder -l silent -d 'Silent mode'
       complete -c deadfinder -l verbose -d 'Verbose mode'
       complete -c deadfinder -l debug -d 'Debug mode'
+      complete -c deadfinder -l limit -d 'Limit number of URLs to scan' -r
+      complete -c deadfinder -l coverage -d 'Enable coverage tracking'
+      complete -c deadfinder -l visualize -d 'Generate visualization PNG' -r
       FISH
     end
   end

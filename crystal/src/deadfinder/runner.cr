@@ -39,7 +39,12 @@ module Deadfinder
 
       uri = URI.parse(target)
       client = HttpClient.create(uri, options)
-      response = client.get(request_path(uri), headers: headers)
+      path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
+               HttpClient.absolute_uri(uri)
+             else
+               request_path(uri)
+             end
+      response = client.get(path, headers: headers)
       client.close
 
       page = Lexbor::Parser.new(response.body)
@@ -61,7 +66,7 @@ module Deadfinder
             links[type] = urls.reject { |url| UrlPatternMatcher.ignore?(url, options.ignore) }
           end
         rescue ex : ArgumentError
-          Deadfinder::Logger.error "Invalid match pattern: #{ex.message}"
+          Deadfinder::Logger.error "Invalid ignore pattern: #{ex.message}"
         end
       end
 
@@ -146,7 +151,12 @@ module Deadfinder
             end
           end
 
-          response = client.get(request_path(uri), headers: request_headers)
+          worker_path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
+                          HttpClient.absolute_uri(uri)
+                        else
+                          request_path(uri)
+                        end
+          response = client.get(worker_path, headers: request_headers)
           client.close
           status_code = response.status_code
 

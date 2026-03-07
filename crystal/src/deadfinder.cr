@@ -85,8 +85,12 @@ module Deadfinder
       client = HttpClient.create(uri, options)
       headers = HTTP::Headers.new
       headers["User-Agent"] = options.user_agent
-      req_path = uri.path.presence || "/"
-      req_path = "#{req_path}?#{uri.query}" if uri.query.presence
+      req_path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
+                   HttpClient.absolute_uri(uri)
+                 else
+                   path = uri.path.presence || "/"
+                   uri.query.presence ? "#{path}?#{uri.query}" : path
+                 end
       response = client.get(req_path, headers: headers)
       client.close
 
