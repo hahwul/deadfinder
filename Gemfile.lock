@@ -1,7 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.8.8)
+    addressable (2.8.9)
       public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
     bigdecimal (4.0.1)
@@ -39,13 +39,13 @@ GEM
     http-cookie (1.1.0)
       domain_name (~> 0.5)
     json (2.18.1)
-    json-schema (6.1.0)
+    json-schema (6.2.0)
       addressable (~> 2.8)
       bigdecimal (>= 3.1, < 5)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     logger (1.7.0)
-    mcp (0.7.1)
+    mcp (0.8.0)
       json-schema (>= 4.1)
     mime-types (3.7.0)
       logger
@@ -78,7 +78,7 @@ GEM
       ast (~> 2.4.1)
       racc
     prism (1.9.0)
-    public_suffix (7.0.0)
+    public_suffix (7.0.5)
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.3.1)
@@ -102,7 +102,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.13.0)
     rspec-support (3.13.6)
-    rubocop (1.85.0)
+    rubocop (1.85.1)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
