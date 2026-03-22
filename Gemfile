@@ -22,7 +22,7 @@ group :development, :test do
   gem 'rubocop-capybara'
   gem 'rubocop-factory_bot'
   gem 'rubocop-performance'
-  gem 'webmock', '~> 3.14'
+  gem 'webmock', '~> 3.26'
   gem 'rake'
   gem 'simplecov'
   gem 'simplecov-cobertura'
