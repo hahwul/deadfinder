@@ -24,6 +24,6 @@ jobs:
       - name: Run tests and collect coverage
         run: bundle exec rake test
       - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
