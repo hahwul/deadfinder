@@ -62,6 +62,18 @@ describe "Deadfinder.generate_url" do
   it "handles root-relative paths" do
     Deadfinder.generate_url("/about", "https://example.com/some/deep/path").should eq "https://example.com/about"
   end
+
+  it "preserves non-default port when resolving root-relative paths" do
+    Deadfinder.generate_url("/about", "http://127.0.0.1:8080/index.html").should eq "http://127.0.0.1:8080/about"
+  end
+
+  it "preserves non-default port when resolving relative paths" do
+    Deadfinder.generate_url("about", "http://127.0.0.1:8080/index.html").should eq "http://127.0.0.1:8080/about"
+  end
+
+  it "preserves non-default port when base path is a directory" do
+    Deadfinder.generate_url("page.html", "http://127.0.0.1:8080/dir/").should eq "http://127.0.0.1:8080/dir/page.html"
+  end
 end
 
 describe "Deadfinder.ignore_scheme?" do
