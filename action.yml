@@ -27,6 +27,10 @@ inputs:
     description: Custom HTTP headers to include in requests, separated by commas
     required: false
     default: ""
+  worker_headers:
+    description: Custom HTTP headers for worker requests, separated by commas
+    required: false
+    default: ""
   verbose:
     description: Enable verbose mode for detailed logging
     required: false
@@ -63,26 +67,107 @@ inputs:
     description: Generate a visualization of the scan results (e.g., report.png)
     required: false
     default: ""
+  version:
+    description: DeadFinder release tag to download (default: latest)
+    required: false
+    default: "latest"
 outputs:
   output:
     description: JSON formatted result of the dead-link check
+    value: ${{ steps.scan.outputs.output }}
 runs:
-  using: docker
-  image: github-action/Dockerfile
-  args:
-    - ${{ inputs.command }}
-    - ${{ inputs.target }}
-    - ${{ inputs.timeout }}
-    - ${{ inputs.concurrency }}
-    - ${{ inputs.silent }}
-    - ${{ inputs.headers }}
-    - ${{ inputs.worker_headers}}
-    - ${{ inputs.verbose }}
-    - ${{ inputs.include30x }}
-    - ${{ inputs.user_agent }}
-    - ${{ inputs.proxy }}
-    - ${{ inputs.proxy_auth }}
-    - ${{ inputs.match }}
-    - ${{ inputs.ignore }}
-    - ${{ inputs.coverage }}
-    - ${{ inputs.visualize }}
+  using: composite
+  steps:
+    - name: Detect platform
+      id: platform
+      shell: bash
+      run: |
+        case "${RUNNER_OS}-${RUNNER_ARCH}" in
+          Linux-X64)   asset="deadfinder-linux-x86_64.tar.gz"  ;;
+          Linux-ARM64) asset="deadfinder-linux-aarch64.tar.gz" ;;
+          macOS-ARM64) asset="deadfinder-macos-arm64.tar.gz"   ;;
+          macOS-X64)   asset="deadfinder-macos-x86_64.tar.gz"  ;;
+          *) echo "::error::Unsupported platform: ${RUNNER_OS}-${RUNNER_ARCH}"; exit 1 ;;
+        esac
+        echo "asset=${asset}" >> "$GITHUB_OUTPUT"
+
+    - name: Download deadfinder binary
+      shell: bash
+      run: |
+        set -e
+        version="${{ inputs.version }}"
+        asset="${{ steps.platform.outputs.asset }}"
+        if [ "${version}" = "latest" ]; then
+          url="https://github.com/hahwul/deadfinder/releases/latest/download/${asset}"
+        else
+          url="https://github.com/hahwul/deadfinder/releases/download/${version}/${asset}"
+        fi
+        echo "Downloading ${url}"
+        curl -fsSL "${url}" -o /tmp/deadfinder.tar.gz
+        tar xzf /tmp/deadfinder.tar.gz -C /tmp
+        chmod +x /tmp/deadfinder
+        /tmp/deadfinder version
+
+    - name: Run deadfinder
+      id: scan
+      shell: bash
+      env:
+        DF_COMMAND:        ${{ inputs.command }}
+        DF_TARGET:         ${{ inputs.target }}
+        DF_TIMEOUT:        ${{ inputs.timeout }}
+        DF_CONCURRENCY:    ${{ inputs.concurrency }}
+        DF_SILENT:         ${{ inputs.silent }}
+        DF_HEADERS:        ${{ inputs.headers }}
+        DF_WORKER_HEADERS: ${{ inputs.worker_headers }}
+        DF_VERBOSE:        ${{ inputs.verbose }}
+        DF_INCLUDE30X:     ${{ inputs.include30x }}
+        DF_USER_AGENT:     ${{ inputs.user_agent }}
+        DF_PROXY:          ${{ inputs.proxy }}
+        DF_PROXY_AUTH:     ${{ inputs.proxy_auth }}
+        DF_MATCH:          ${{ inputs.match }}
+        DF_IGNORE:         ${{ inputs.ignore }}
+        DF_COVERAGE:       ${{ inputs.coverage }}
+        DF_VISUALIZE:      ${{ inputs.visualize }}
+      run: |
+        set -e
+        args=( "${DF_COMMAND}" "${DF_TARGET}" -o /tmp/output.json -f json )
+        [ -n "${DF_TIMEOUT}" ]     && args+=( --timeout="${DF_TIMEOUT}" )
+        [ -n "${DF_CONCURRENCY}" ] && args+=( --concurrency="${DF_CONCURRENCY}" )
+        [ "${DF_SILENT}" = "true" ]     && args+=( --silent )
+        [ "${DF_VERBOSE}" = "true" ]    && args+=( --verbose )
+        [ "${DF_INCLUDE30X}" = "true" ] && args+=( --include30x )
+        [ -n "${DF_USER_AGENT}" ]     && args+=( --user_agent="${DF_USER_AGENT}" )
+        [ -n "${DF_PROXY}" ]          && args+=( --proxy="${DF_PROXY}" )
+        [ -n "${DF_PROXY_AUTH}" ]     && args+=( --proxy_auth="${DF_PROXY_AUTH}" )
+        [ -n "${DF_MATCH}" ]          && args+=( --match="${DF_MATCH}" )
+        [ -n "${DF_IGNORE}" ]         && args+=( --ignore="${DF_IGNORE}" )
+        [ "${DF_COVERAGE}" = "true" ] && args+=( --coverage )
+        [ -n "${DF_VISUALIZE}" ]      && args+=( --visualize="${DF_VISUALIZE}" )
+
+        if [ -n "${DF_HEADERS}" ]; then
+          IFS=',' read -ra hdrs <<< "${DF_HEADERS}"
+          for h in "${hdrs[@]}"; do
+            [ -n "${h}" ] && args+=( -H "${h}" )
+          done
+        fi
+
+        if [ -n "${DF_WORKER_HEADERS}" ]; then
+          IFS=',' read -ra whdrs <<< "${DF_WORKER_HEADERS}"
+          for h in "${whdrs[@]}"; do
+            [ -n "${h}" ] && args+=( --worker_headers="${h}" )
+          done
+        fi
+
+        /tmp/deadfinder "${args[@]}"
+
+        if [ ! -f /tmp/output.json ]; then
+          echo "::error::/tmp/output.json was not produced"
+          exit 1
+        fi
+
+        if command -v jq >/dev/null 2>&1; then
+          encoded=$(jq -c . /tmp/output.json)
+        else
+          encoded=$(tr -d '\n' < /tmp/output.json)
+        fi
+        echo "output=${encoded}" >> "$GITHUB_OUTPUT"
