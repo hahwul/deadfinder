@@ -98,15 +98,23 @@ runs:
         version="${{ inputs.version }}"
         asset="${{ steps.platform.outputs.asset }}"
         if [ "${version}" = "latest" ]; then
-          url="https://github.com/hahwul/deadfinder/releases/latest/download/${asset}"
+          base_url="https://github.com/hahwul/deadfinder/releases/latest/download"
         else
-          url="https://github.com/hahwul/deadfinder/releases/download/${version}/${asset}"
+          base_url="https://github.com/hahwul/deadfinder/releases/download/${version}"
         fi
-        echo "Downloading ${url}"
-        curl -fsSL "${url}" -o /tmp/deadfinder.tar.gz
-        tar xzf /tmp/deadfinder.tar.gz -C /tmp
-        chmod +x /tmp/deadfinder
-        /tmp/deadfinder version
+        echo "Downloading ${base_url}/${asset}"
+        curl -fsSL "${base_url}/${asset}" -o /tmp/deadfinder.tar.gz
+        curl -fsSL "${base_url}/${asset}.sha256" -o /tmp/deadfinder.tar.gz.sha256
+        cd /tmp
+        # macOS runners ship `shasum`, Linux ships `sha256sum`.
+        if command -v sha256sum >/dev/null 2>&1; then
+          sha256sum -c deadfinder.tar.gz.sha256
+        else
+          shasum -a 256 -c deadfinder.tar.gz.sha256
+        fi
+        tar xzf deadfinder.tar.gz
+        chmod +x deadfinder
+        ./deadfinder version
 
     - name: Run deadfinder
       id: scan
