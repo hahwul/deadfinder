@@ -5,6 +5,12 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+env:
+  CRYSTAL_BUILD_IMAGE: crystallang/crystal:1.19.1-alpine
+
 jobs:
   build-linux:
     strategy:
@@ -22,7 +28,7 @@ jobs:
       - name: Build static binary (Alpine / musl)
         run: |
           docker run --rm -v "$PWD":/workspace -w /workspace/crystal \
-            crystallang/crystal:latest-alpine \
+            ${{ env.CRYSTAL_BUILD_IMAGE }} \
             sh -c 'apk add --no-cache cmake make g++ \
                    && shards install \
                    && crystal build src/cli_main.cr -o deadfinder --release --static --no-debug'
