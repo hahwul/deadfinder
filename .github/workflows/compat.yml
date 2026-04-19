@@ -1,0 +1,38 @@
+---
+name: Compat Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+
+      - name: Set up Crystal
+        uses: crystal-lang/install-crystal@v1
+
+      - name: Install cmake (for lexbor)
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Build Crystal binary
+        working-directory: crystal
+        run: |
+          shards install
+          crystal build src/cli_main.cr -o deadfinder --release
+
+      - name: Compat — Ruby implementation
+        run: bundle exec ruby spec/compat/run.rb
+
+      - name: Compat — Crystal implementation
+        env:
+          BIN: ./crystal/deadfinder
+        run: bundle exec ruby spec/compat/run.rb
