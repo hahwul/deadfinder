@@ -15,7 +15,7 @@ describe Deadfinder::CLI do
       options.output_format.should eq "json"
       options.headers.should eq [] of String
       options.worker_headers.should eq [] of String
-      options.silent.should be_true
+      options.silent.should be_false
       options.verbose.should be_false
       options.debug.should be_false
       options.include30x.should be_false

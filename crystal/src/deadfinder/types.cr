@@ -6,7 +6,7 @@ module Deadfinder
     property output_format : String = "json"
     property headers : Array(String) = [] of String
     property worker_headers : Array(String) = [] of String
-    property silent : Bool = true
+    property silent : Bool = false
     property verbose : Bool = false
     property debug : Bool = false
     property include30x : Bool = false
