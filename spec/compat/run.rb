@@ -12,9 +12,12 @@
 #   ruby spec/compat/run.rb                   # uses the repo's Ruby binary
 #   BIN="./crystal/deadfinder" ruby spec/compat/run.rb
 
+require 'csv'
 require 'json'
 require 'open3'
 require 'tempfile'
+require 'toml-rb'
+require 'yaml'
 
 REPO_ROOT    = File.expand_path('../..', __dir__)
 HARNESS_ROOT = __dir__
@@ -30,33 +33,60 @@ def sort_arrays(obj)
   end
 end
 
-def run_case(base, name, args, golden_path)
-  Tempfile.create(['deadfinder', '.json']) do |tmp|
-    cmd = "#{BIN} #{args.gsub('{{BASE}}', base)} -o #{tmp.path} -s"
-    stdout, stderr, status = Open3.capture3(cmd)
+def parse_output(path, format)
+  text = File.read(path)
+  case format
+  when 'json'        then JSON.parse(text)
+  when 'yaml', 'yml' then YAML.safe_load(text)
+  when 'toml'        then TomlRB.parse(text)
+  when 'csv'         then CSV.parse(text)
+  else raise "unknown format: #{format}"
+  end
+end
+
+def substitute_base(text, base)
+  text.gsub('{{BASE}}', base)
+end
+
+def run_case(base, name:, args:, format:, golden:, stdin: nil, extra_files: {})
+  extra_files.each do |path, content|
+    File.write(path, substitute_base(content, base))
+  end
+
+  Tempfile.create(['deadfinder', ".#{format}"]) do |tmp|
+    resolved_args = substitute_base(args, base)
+    cmd = "#{BIN} #{resolved_args} -o #{tmp.path} -f #{format} -s"
+    stdout, stderr, status = Open3.capture3(cmd, stdin_data: stdin || '')
+
     unless status.success?
       warn "FAIL: #{name} — exit #{status.exitstatus}"
-      warn "CMD:     #{cmd}"
-      warn "STDOUT:  #{stdout}"
-      warn "STDERR:  #{stderr}"
+      warn "CMD:    #{cmd}"
+      warn "STDOUT: #{stdout}"
+      warn "STDERR: #{stderr}"
       return false
     end
 
-    expected = JSON.parse(File.read(golden_path).gsub('{{BASE}}', base))
-    actual   = JSON.parse(File.read(tmp.path))
+    expected_text = substitute_base(File.read(golden), base)
+    expected_path = Tempfile.new(['expected', ".#{format}"]).tap { |f| f.write(expected_text); f.close }.path
+
+    expected = parse_output(expected_path, format)
+    actual   = parse_output(tmp.path, format)
 
     if sort_arrays(actual) == sort_arrays(expected)
       puts "PASS: #{name}"
       true
     else
       warn "FAIL: #{name}"
-      warn "EXPECTED: #{JSON.pretty_generate(expected)}"
-      warn "ACTUAL:   #{JSON.pretty_generate(actual)}"
+      warn "EXPECTED: #{expected.inspect}"
+      warn "ACTUAL:   #{actual.inspect}"
       false
     end
   end
+ensure
+  extra_files.each_key { |path| File.delete(path) if File.exist?(path) }
 end
 
+# --- Boot fixture server ----------------------------------------------------
 server_io = IO.popen(['ruby', "#{HARNESS_ROOT}/fixtures/server.rb"], 'r')
 port = server_io.gets&.strip
 abort 'fixture server did not start' unless port && !port.empty?
@@ -70,9 +100,53 @@ at_exit do
   end
 end
 
-all_pass = true
-all_pass &= run_case(base, 'url_json',
-                     'url {{BASE}}/index.html -f json',
-                     "#{HARNESS_ROOT}/golden/url_json.json")
+# --- Cases ------------------------------------------------------------------
+urls_file = File.join(Dir.tmpdir, "deadfinder_compat_urls_#{Process.pid}.txt")
 
-exit(all_pass ? 0 : 1)
+results = []
+
+results << run_case(base,
+                    name:   'url_json',
+                    args:   'url {{BASE}}/index.html',
+                    format: 'json',
+                    golden: "#{HARNESS_ROOT}/golden/url_json.json")
+
+results << run_case(base,
+                    name:   'url_yaml',
+                    args:   'url {{BASE}}/index.html',
+                    format: 'yaml',
+                    golden: "#{HARNESS_ROOT}/golden/url_yaml.yaml")
+
+results << run_case(base,
+                    name:   'url_toml',
+                    args:   'url {{BASE}}/index.html',
+                    format: 'toml',
+                    golden: "#{HARNESS_ROOT}/golden/url_toml.toml")
+
+results << run_case(base,
+                    name:   'url_csv',
+                    args:   'url {{BASE}}/index.html',
+                    format: 'csv',
+                    golden: "#{HARNESS_ROOT}/golden/url_csv.csv")
+
+results << run_case(base,
+                    name:   'url_json_include30x',
+                    args:   'url {{BASE}}/index.html -r',
+                    format: 'json',
+                    golden: "#{HARNESS_ROOT}/golden/url_json_include30x.json")
+
+results << run_case(base,
+                    name:         'file_json',
+                    args:         "file #{urls_file}",
+                    format:       'json',
+                    golden:       "#{HARNESS_ROOT}/golden/file_json.json",
+                    extra_files:  { urls_file => "{{BASE}}/index.html\n" })
+
+results << run_case(base,
+                    name:   'pipe_json',
+                    args:   'pipe',
+                    format: 'json',
+                    golden: "#{HARNESS_ROOT}/golden/pipe_json.json",
+                    stdin:  substitute_base("{{BASE}}/index.html\n", base))
+
+exit(results.all? ? 0 : 1)
