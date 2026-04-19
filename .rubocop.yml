@@ -14,6 +14,7 @@ AllCops:
     - "Gemfile*"
     - "lib/deadfinder/runner.rb"
     - "examples/**/*"
+    - "spec/compat/**/*" # black-box compat harness (not RSpec)
     - "vendor/bundle/**/*" # Add this line to exclude vendor/bundle directory
   SuggestExtensions: false
 

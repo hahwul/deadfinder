@@ -67,13 +67,16 @@ def run_case(base, name:, args:, format:, golden:, stdin: nil, extra_files: {})
     end
 
     expected_text = substitute_base(File.read(golden), base)
-    expected_path = Tempfile.new(['expected', ".#{format}"]).tap { |f| f.write(expected_text); f.close }.path
+    expected_path = Tempfile.new(['expected', ".#{format}"]).tap do |f|
+      f.write(expected_text)
+      f.close
+    end.path
 
     expected = parse_output(expected_path, format)
     actual   = parse_output(tmp.path, format)
 
     if sort_arrays(actual) == sort_arrays(expected)
-      puts "PASS: #{name}"
+
       true
     else
       warn "FAIL: #{name}"
@@ -83,7 +86,7 @@ def run_case(base, name:, args:, format:, golden:, stdin: nil, extra_files: {})
     end
   end
 ensure
-  extra_files.each_key { |path| File.delete(path) if File.exist?(path) }
+  extra_files.each_key { |path| FileUtils.rm_f(path) }
 end
 
 # --- Boot fixture server ----------------------------------------------------
@@ -93,11 +96,9 @@ abort 'fixture server did not start' unless port && !port.empty?
 base = "http://127.0.0.1:#{port}"
 
 at_exit do
-  begin
-    Process.kill('TERM', server_io.pid)
-  rescue Errno::ESRCH
-    # already gone
-  end
+  Process.kill('TERM', server_io.pid)
+rescue Errno::ESRCH
+  # already gone
 end
 
 # --- Cases ------------------------------------------------------------------
@@ -106,47 +107,47 @@ urls_file = File.join(Dir.tmpdir, "deadfinder_compat_urls_#{Process.pid}.txt")
 results = []
 
 results << run_case(base,
-                    name:   'url_json',
-                    args:   'url {{BASE}}/index.html',
+                    name: 'url_json',
+                    args: 'url {{BASE}}/index.html',
                     format: 'json',
                     golden: "#{HARNESS_ROOT}/golden/url_json.json")
 
 results << run_case(base,
-                    name:   'url_yaml',
-                    args:   'url {{BASE}}/index.html',
+                    name: 'url_yaml',
+                    args: 'url {{BASE}}/index.html',
                     format: 'yaml',
                     golden: "#{HARNESS_ROOT}/golden/url_yaml.yaml")
 
 results << run_case(base,
-                    name:   'url_toml',
-                    args:   'url {{BASE}}/index.html',
+                    name: 'url_toml',
+                    args: 'url {{BASE}}/index.html',
                     format: 'toml',
                     golden: "#{HARNESS_ROOT}/golden/url_toml.toml")
 
 results << run_case(base,
-                    name:   'url_csv',
-                    args:   'url {{BASE}}/index.html',
+                    name: 'url_csv',
+                    args: 'url {{BASE}}/index.html',
                     format: 'csv',
                     golden: "#{HARNESS_ROOT}/golden/url_csv.csv")
 
 results << run_case(base,
-                    name:   'url_json_include30x',
-                    args:   'url {{BASE}}/index.html -r',
+                    name: 'url_json_include30x',
+                    args: 'url {{BASE}}/index.html -r',
                     format: 'json',
                     golden: "#{HARNESS_ROOT}/golden/url_json_include30x.json")
 
 results << run_case(base,
-                    name:         'file_json',
-                    args:         "file #{urls_file}",
-                    format:       'json',
-                    golden:       "#{HARNESS_ROOT}/golden/file_json.json",
-                    extra_files:  { urls_file => "{{BASE}}/index.html\n" })
+                    name: 'file_json',
+                    args: "file #{urls_file}",
+                    format: 'json',
+                    golden: "#{HARNESS_ROOT}/golden/file_json.json",
+                    extra_files: { urls_file => "{{BASE}}/index.html\n" })
 
 results << run_case(base,
-                    name:   'pipe_json',
-                    args:   'pipe',
+                    name: 'pipe_json',
+                    args: 'pipe',
                     format: 'json',
                     golden: "#{HARNESS_ROOT}/golden/pipe_json.json",
-                    stdin:  substitute_base("{{BASE}}/index.html\n", base))
+                    stdin: substitute_base("{{BASE}}/index.html\n", base))
 
 exit(results.all? ? 0 : 1)
