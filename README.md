@@ -112,7 +112,9 @@ steps:
 
 If you have found a Dead Link and want to automatically add it as an issue, please refer to the "[Automating Dead Link Detection](https://www.hahwul.com/2024/10/20/automating-dead-link-detection/)" article.
 
-### Ruby Code
+### Ruby Code (deprecated)
+Library usage is tied to the Ruby gem and will go away with it. The CLI is the supported integration surface.
+
 ```ruby
 require 'deadfinder'
 
