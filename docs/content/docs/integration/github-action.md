@@ -4,7 +4,7 @@ description = "hahwul/deadfinder composite action — inputs, outputs, examples.
 weight = 1
 +++
 
-`hahwul/deadfinder` is a composite action that downloads the matching release binary, verifies its sha256, and executes the scan. Runs on Linux (x86_64/aarch64) and macOS (arm64/x86_64).
+`hahwul/deadfinder` is a composite action that downloads the matching release binary, verifies its sha256, and executes the scan. Runs on Linux (x86_64/aarch64) and macOS (arm64). Intel macOS runners (`macos-13`) are not supported — use `macos-latest`.
 
 ## Pin a specific version
 

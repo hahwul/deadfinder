@@ -86,7 +86,10 @@ runs:
           Linux-X64)   asset="deadfinder-linux-x86_64.tar.gz"  ;;
           Linux-ARM64) asset="deadfinder-linux-aarch64.tar.gz" ;;
           macOS-ARM64) asset="deadfinder-macos-arm64.tar.gz"   ;;
-          macOS-X64)   asset="deadfinder-macos-x86_64.tar.gz"  ;;
+          macOS-X64)
+            echo "::error title=macOS Intel not supported::DeadFinder no longer ships a macOS x86_64 prebuilt binary. Use an Apple Silicon (macos-latest) runner, or install from source via 'brew install deadfinder'."
+            exit 1
+            ;;
           *) echo "::error::Unsupported platform: ${RUNNER_OS}-${RUNNER_ARCH}"; exit 1 ;;
         esac
         echo "asset=${asset}" >> "$GITHUB_OUTPUT"

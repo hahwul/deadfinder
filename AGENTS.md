@@ -82,7 +82,7 @@ spec/
 ## CI
 
 - `.github/workflows/compat.yml` — Crystal build + compat harness on every PR
-- `.github/workflows/crystal-release.yml` — release-triggered builds for linux x86_64/aarch64 and macOS arm64/x86_64; uploads tar.gz + sha256 as release assets
+- `.github/workflows/crystal-release.yml` — release-triggered builds for linux x86_64/aarch64 and macOS arm64; uploads tar.gz + sha256 as release assets
 - `.github/workflows/docker-build.yml` / `docker-ghcr.yml` — multi-arch image builds (Crystal static binary in Alpine)
 
 ## Distribution channels

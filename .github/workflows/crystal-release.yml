@@ -44,7 +44,7 @@ jobs:
 
       - name: Upload to release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             deadfinder-linux-${{ matrix.arch }}.tar.gz
@@ -60,14 +60,17 @@ jobs:
             deadfinder-linux-${{ matrix.arch }}.tar.gz.sha256
 
   build-macos:
+    # macOS x86_64 (macos-13) is no longer built — Apple's Intel transition
+    # has shrunk GitHub's macos-13 runner pool to the point where releases
+    # routinely sit in the queue indefinitely. Apple Silicon binaries cover
+    # current macOS users; Intel users can `brew install` from source or run
+    # the Apple Silicon binary under Rosetta.
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: arm64
             runs-on: macos-latest
-          - arch: x86_64
-            runs-on: macos-13
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v6
@@ -88,7 +91,7 @@ jobs:
 
       - name: Upload to release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             deadfinder-macos-${{ matrix.arch }}.tar.gz

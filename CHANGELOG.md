@@ -8,7 +8,7 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ### Added
 - Crystal implementation (fiber-based concurrency via `spawn` + `Channel`) replaces the Ruby gem as the supported runtime.
-- Multi-platform release binaries auto-attached on every GitHub Release: linux x86_64/aarch64 (static/musl), macOS arm64/x86_64. Each tarball ships alongside a `.sha256` sidecar.
+- Multi-platform release binaries auto-attached on every GitHub Release: linux x86_64/aarch64 (static/musl), macOS arm64. Each tarball ships alongside a `.sha256` sidecar. (Intel macOS isn't shipped as a prebuilt — see [installation docs](https://hahwul.github.io/deadfinder/docs/getting-started/installation/) for source/Rosetta options.)
 - Cross-implementation compatibility harness (`spec/compat/`) — black-box golden files captured from v1 Ruby output, locking the CLI/output contract for Crystal.
 - GitHub Action migrated to a composite action that downloads the release binary and verifies its sha256 before running. The `version` input (defaulting to `latest`) lets callers pin a specific release. `worker_headers` is now a first-class input.
 - Docker image rebuilt on Crystal static binary (`alpine:3.21` runtime, `<15 MB`). OCI labels, semver tags (`2.0.0` / `2.0` / `latest`), and keyless cosign signatures on every published tag.

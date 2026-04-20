@@ -29,7 +29,8 @@ Download the tarball for your platform from [Releases](https://github.com/hahwul
 | Linux | x86_64 | `deadfinder-linux-x86_64.tar.gz` |
 | Linux | aarch64 | `deadfinder-linux-aarch64.tar.gz` |
 | macOS | arm64 | `deadfinder-macos-arm64.tar.gz` |
-| macOS | x86_64 | `deadfinder-macos-x86_64.tar.gz` |
+
+> Intel macOS (`x86_64`) doesn't have a prebuilt binary — use `brew install deadfinder` (builds from source) or run the Apple Silicon binary under Rosetta.
 
 Extract and put `deadfinder` on your `PATH`:
 
