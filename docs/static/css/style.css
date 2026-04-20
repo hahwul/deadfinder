@@ -72,32 +72,163 @@ body {
 }
 .menu-btn:hover { background: var(--hover-bg); }
 
+/* Search trigger (button in topbar) */
 .topbar-search {
-  position: relative;
-}
-.topbar-search input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 260px;
+  padding: 6px 8px 6px 10px;
   font-family: var(--font);
   font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--text-muted);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 12px 6px 32px;
-  width: 220px;
-  background: var(--code-bg);
-  color: var(--text);
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
 }
-.topbar-search input:focus {
+.topbar-search:hover {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+  color: var(--text);
 }
-.topbar-search input::placeholder { color: var(--text-light); }
+.topbar-search:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
 .topbar-search svg {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
   color: var(--text-light);
+}
+.topbar-search span {
+  flex: 1;
+  text-align: left;
+}
+.topbar-search kbd {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+/* Search modal */
+#search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  font-family: var(--font);
+}
+#search-modal[hidden] { display: none; }
+.search-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.search-dialog {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 640px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-sidebar);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.search-dialog-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.search-dialog-header svg {
+  flex-shrink: 0;
+  color: var(--text-light);
+}
+#search-input {
+  flex: 1;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  outline: none;
+  padding: 4px 0;
+}
+#search-input::placeholder { color: var(--text-light); }
+#search-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+  line-height: 1.4;
+}
+#search-close:hover { color: var(--text); border-color: var(--primary); }
+#search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+#search-results::-webkit-scrollbar { width: 6px; }
+#search-results::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.search-result {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.search-result + .search-result { margin-top: 2px; }
+.search-result:hover,
+.search-result.selected { background: var(--hover-bg); }
+.search-result-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+.search-result-description {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.search-result-content {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  margin-top: 4px;
+  line-height: 1.45;
+  font-family: var(--mono);
+}
+.search-result mark {
+  background: rgba(34, 197, 94, 0.22);
+  color: var(--text);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+.search-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 /* -- Layout -- */
@@ -355,5 +486,7 @@ nav.pagination a:hover { color: var(--primary); border-color: var(--primary); }
   .site-footer { padding: 1.5rem 1rem; }
   .page-nav { flex-direction: column; }
   .page-nav a { max-width: 100%; }
-  .topbar-search { display: none; }
+  .topbar-search { width: auto; padding: 6px 10px; }
+  .topbar-search span,
+  .topbar-search kbd { display: none; }
 }
