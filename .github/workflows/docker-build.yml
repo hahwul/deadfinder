@@ -10,29 +10,28 @@ on:
 
 jobs:
   build-docker:
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        arch: [linux/amd64, linux/arm64]
+        include:
+          - arch: linux/amd64
+            runner: ubuntu-latest
+          - arch: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v4.1.1
-        with:
-          cosign-release: v2.1.1
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+      - uses: actions/checkout@v6
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
+      - name: Prepare platform slug
+        id: platform
+        run: echo "slug=$(echo '${{ matrix.arch }}' | tr '/' '-')" >> "$GITHUB_OUTPUT"
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
       - name: Build Docker image
-        id: build-and-push
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -40,5 +39,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.arch }}
-          cache-from: type=gha,scope=${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+          cache-from: type=gha,scope=build-${{ steps.platform.outputs.slug }}
+          cache-to: type=gha,mode=max,scope=build-${{ steps.platform.outputs.slug }}
