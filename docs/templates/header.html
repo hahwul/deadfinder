@@ -15,6 +15,7 @@
 
   {{ highlight_css }}
   {{ auto_includes_css }}
+  <script>window.__DF_BASE_URL = "{{ base_url }}";</script>
 </head>
 <body data-section="{{ page.section }}">
   <!-- Top bar -->
@@ -28,10 +29,11 @@
         {{ site.title }}
       </a>
     </div>
-    <div class="topbar-search">
+    <button type="button" class="topbar-search" data-search-trigger aria-label="Search documentation">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" placeholder="Search...">
-    </div>
+      <span>Search...</span>
+      <kbd>⌘K</kbd>
+    </button>
   </div>
 
   <!-- Sidebar overlay (mobile) -->

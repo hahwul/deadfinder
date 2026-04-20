@@ -56,3 +56,13 @@ priority = 0.5
 safe = false
 lazy_loading = false
 emoji = false
+
+# =============================================================================
+# Search (client-side, Fuse.js)
+# =============================================================================
+
+[search]
+enabled = true
+format = "fuse_json"
+fields = ["title", "content", "description"]
+filename = "search.json"
