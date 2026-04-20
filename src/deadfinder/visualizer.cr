@@ -60,15 +60,15 @@ module Deadfinder
     private def self.status_color(status : String) : StumpyPNG::RGBA
       case status
       when "200"
-        StumpyPNG::RGBA.from_rgb8(0, 255, 0)       # Green
+        StumpyPNG::RGBA.from_rgb8(0, 255, 0) # Green
       when /^3\d{2}$/
-        StumpyPNG::RGBA.from_rgb8(255, 165, 0)     # Orange
+        StumpyPNG::RGBA.from_rgb8(255, 165, 0) # Orange
       when /^4\d{2}$/
-        StumpyPNG::RGBA.from_rgb8(255, 0, 0)       # Red
+        StumpyPNG::RGBA.from_rgb8(255, 0, 0) # Red
       when /^5\d{2}$/
-        StumpyPNG::RGBA.from_rgb8(128, 0, 128)     # Purple
+        StumpyPNG::RGBA.from_rgb8(128, 0, 128) # Purple
       else
-        StumpyPNG::RGBA.from_rgb8(128, 128, 128)   # Gray
+        StumpyPNG::RGBA.from_rgb8(128, 128, 128) # Gray
       end
     end
 
