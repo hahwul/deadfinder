@@ -1,0 +1,6 @@
+{
+  "{{BASE}}/index.html": [
+    "{{BASE}}/dead",
+    "{{BASE}}/redirect"
+  ]
+}
