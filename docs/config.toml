@@ -66,3 +66,186 @@ enabled = true
 format = "fuse_json"
 fields = ["title", "content", "description"]
 filename = "search.json"
+
+# =============================================================================
+# OpenGraph & Twitter Cards
+# =============================================================================
+# Default meta tags for social sharing. Page-level front matter overrides.
+
+[og]
+type = "website"
+twitter_card = "summary_large_image"
+# twitter_site = "@hahwul"
+# twitter_creator = "@hahwul"
+
+# =============================================================================
+# Auto OG Images
+# =============================================================================
+# Auto-generate 1200x630 OG preview images for pages without a custom `image`.
+# https://hwaro.hahwul.com/features/og-images/
+
+[og.auto_image]
+enabled = true
+format = "png"
+background = "#0a0f0a"
+text_color = "#e8ede8"
+accent_color = "#22c55e"
+font_size = 52
+style = "dots"
+pattern_opacity = 0.12
+pattern_scale = 1.0
+logo = "static/images/deadfinder-light.png"
+logo_position = "bottom-left"
+output_dir = "og-images"
+show_title = true
+
+# =============================================================================
+# Pagination (Optional)
+# =============================================================================
+
+# [pagination]
+# enabled = false
+# per_page = 10
+
+# =============================================================================
+# Series (Optional)
+# =============================================================================
+# Group posts into ordered series
+
+# [series]
+# enabled = true
+
+# =============================================================================
+# Related Posts (Optional)
+# =============================================================================
+# Recommend related content based on shared taxonomy terms
+
+# [related]
+# enabled = true
+# limit = 5
+# taxonomies = ["tags"]
+
+# =============================================================================
+# Robots.txt
+# =============================================================================
+# Controls search engine crawler access
+
+[robots]
+enabled = true
+filename = "robots.txt"
+rules = [
+  { user_agent = "*", allow = ["/"] }
+]
+
+# =============================================================================
+# LLMs.txt
+# =============================================================================
+# Instructions for AI/LLM crawlers
+
+[llms]
+enabled = true
+filename = "llms.txt"
+instructions = "This is documentation for DeadFinder, an open-source CLI that finds broken links in web pages, URL lists, and sitemaps. Content is MIT-licensed."
+full_enabled = true
+full_filename = "llms-full.txt"
+
+# =============================================================================
+# RSS/Atom Feeds
+# =============================================================================
+# Generates RSS or Atom feed for content syndication
+
+# [feeds]
+# enabled = true
+# type = "rss"
+# limit = 10
+# full_content = true
+# sections = []
+
+# =============================================================================
+# Build Hooks (Optional)
+# =============================================================================
+# Run custom shell commands before/after build process
+
+# [build]
+# hooks.pre = ["npm install"]
+# hooks.post = ["npm run minify"]
+
+# =============================================================================
+# Permalinks (Optional)
+# =============================================================================
+# Override the output path for specific sections or taxonomies
+
+# [permalinks]
+# posts = "/posts/:year/:month/:slug/"
+# tags = "/topic/:slug/"
+
+# =============================================================================
+# Auto Includes (Optional)
+# =============================================================================
+# Automatically load CSS/JS files from static directories
+
+# [auto_includes]
+# enabled = true
+# dirs = ["assets/css", "assets/js"]
+
+# =============================================================================
+# Asset Pipeline (Optional)
+# =============================================================================
+
+# [assets]
+# enabled = true
+# minify = true
+# fingerprint = true
+
+# =============================================================================
+# Deployment (Optional)
+# =============================================================================
+
+# [deployment]
+# target = "prod"
+# source_dir = "public"
+#
+# [[deployment.targets]]
+# name = "prod"
+# url = "file://./out"
+
+# =============================================================================
+# Image Processing (Optional)
+# =============================================================================
+# Automatic image resizing and LQIP (Low-Quality Image Placeholder) generation
+# Uses vendored stb libraries — no external tools required.
+# Use resize_image() in templates to generate responsive variants.
+
+# [image_processing]
+# enabled = true
+# widths = [320, 640, 1024, 1280]
+# quality = 85
+#
+# [image_processing.lqip]
+# enabled = true
+# width = 32             # Placeholder width in pixels (8-128)
+# quality = 20           # JPEG quality for placeholder (1-100, lower = smaller)
+
+# =============================================================================
+# PWA (Progressive Web App) (Optional)
+# =============================================================================
+# Generate manifest.json and service worker for offline access
+
+# [pwa]
+# enabled = true
+# name = "My Site"
+# short_name = "Site"
+# theme_color = "#ffffff"
+# background_color = "#ffffff"
+# display = "standalone"
+# icons = ["static/icon-192.png", "static/icon-512.png"]
+
+# =============================================================================
+# AMP (Accelerated Mobile Pages) (Optional)
+# =============================================================================
+# Generate AMP-compliant versions of content pages
+
+# [amp]
+# enabled = true
+# path_prefix = "amp"
+# sections = ["posts"]
