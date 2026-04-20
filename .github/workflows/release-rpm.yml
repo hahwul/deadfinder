@@ -1,0 +1,103 @@
+---
+name: Build and Release .rpm Package
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g., 2.0.0)"
+        required: true
+        type: string
+      upload_to_release:
+        description: "Upload .rpm to GitHub Release (requires existing tag)"
+        required: false
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: ["Crystal Release Builds"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  build-rpm:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'release')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            asset_arch: x86_64
+          - arch: aarch64
+            asset_arch: aarch64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.event.workflow_run.head_branch }}
+
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW="${{ github.event.inputs.version }}"
+          else
+            RAW="${{ github.event.workflow_run.head_branch }}"
+          fi
+          VERSION="${RAW#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Download prebuilt binary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ env.VERSION }}" \
+            --pattern "deadfinder-linux-${{ matrix.asset_arch }}.tar.gz" \
+            --output deadfinder.tar.gz
+          tar xzf deadfinder.tar.gz
+          chmod +x deadfinder
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Install nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Build .rpm
+        run: |
+          cat > nfpm.yaml <<EOF
+          name: deadfinder
+          arch: ${{ matrix.arch }}
+          version: ${{ env.VERSION }}
+          maintainer: HAHWUL <hahwul@gmail.com>
+          description: "Find dead (broken) links in web pages, URL lists, and sitemaps."
+          license: MIT
+          contents:
+            - src: deadfinder
+              dst: /usr/bin/deadfinder
+              file_info:
+                mode: 0755
+            - src: LICENSE
+              dst: /usr/share/licenses/deadfinder/LICENSE
+              file_info:
+                mode: 0644
+          EOF
+          nfpm package --packager rpm --target deadfinder-${{ env.VERSION }}.${{ matrix.arch }}.rpm
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadfinder-${{ env.VERSION }}.${{ matrix.arch }}.rpm
+          path: deadfinder-${{ env.VERSION }}.${{ matrix.arch }}.rpm
+
+      - name: Upload .rpm to Release
+        if: github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.upload_to_release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ env.VERSION }}" \
+            "deadfinder-${{ env.VERSION }}.${{ matrix.arch }}.rpm" --clobber

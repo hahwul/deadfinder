@@ -1,0 +1,92 @@
+---
+name: Build and Release .deb Package
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g., 2.0.0)"
+        required: true
+        type: string
+      upload_to_release:
+        description: "Upload .deb to GitHub Release (requires existing tag)"
+        required: false
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: ["Crystal Release Builds"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'release')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            asset_arch: x86_64
+          - arch: arm64
+            asset_arch: aarch64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.event.workflow_run.head_branch }}
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW="${{ github.event.inputs.version }}"
+          else
+            RAW="${{ github.event.workflow_run.head_branch }}"
+          fi
+          VERSION="${RAW#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Resolved: $VERSION"
+
+      - name: Download prebuilt binary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ env.VERSION }}" \
+            --pattern "deadfinder-linux-${{ matrix.asset_arch }}.tar.gz" \
+            --output deadfinder.tar.gz
+          tar xzf deadfinder.tar.gz
+          chmod +x deadfinder
+
+      - name: Build Debian package layout
+        run: |
+          PKGDIR="deadfinder_${{ env.VERSION }}_${{ matrix.arch }}"
+          mkdir -p "$PKGDIR/DEBIAN" "$PKGDIR/usr/bin" "$PKGDIR/usr/share/doc/deadfinder"
+          cp deadfinder "$PKGDIR/usr/bin/"
+          cp README.md "$PKGDIR/usr/share/doc/deadfinder/"
+          cp LICENSE "$PKGDIR/usr/share/doc/deadfinder/"
+          cat > "$PKGDIR/DEBIAN/control" <<EOF
+          Package: deadfinder
+          Version: ${{ env.VERSION }}
+          Architecture: ${{ matrix.arch }}
+          Maintainer: HAHWUL <hahwul@gmail.com>
+          Description: Find dead (broken) links in web pages, URL lists, and sitemaps.
+          EOF
+          dpkg-deb --build "$PKGDIR"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadfinder_${{ env.VERSION }}_${{ matrix.arch }}.deb
+          path: deadfinder_${{ env.VERSION }}_${{ matrix.arch }}.deb
+
+      - name: Upload .deb to Release
+        if: github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.upload_to_release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ env.VERSION }}" \
+            "deadfinder_${{ env.VERSION }}_${{ matrix.arch }}.deb" --clobber
