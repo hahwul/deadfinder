@@ -35,6 +35,9 @@ jobs:
 
       - name: Package
         run: |
+          # Docker container ran as root, so the binary lands as root-owned.
+          # Reclaim ownership before chmod, otherwise it fails with EPERM.
+          sudo chown "$(id -u):$(id -g)" deadfinder
           chmod +x deadfinder
           tar czf deadfinder-linux-${{ matrix.arch }}.tar.gz deadfinder
           sha256sum deadfinder-linux-${{ matrix.arch }}.tar.gz > deadfinder-linux-${{ matrix.arch }}.tar.gz.sha256
