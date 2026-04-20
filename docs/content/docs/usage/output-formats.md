@@ -4,8 +4,6 @@ description = "JSON, YAML, TOML, CSV, coverage reports, and PNG visualization."
 weight = 2
 +++
 
-# Output Formats
-
 DeadFinder writes results only when `-o <FILE>` is set (stdout stays human-readable log). Pick the format with `-f <format>`.
 
 | Flag | Format |

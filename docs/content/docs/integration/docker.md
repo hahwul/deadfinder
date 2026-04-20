@@ -4,8 +4,6 @@ description = "ghcr.io/hahwul/deadfinder — multi-arch, cosign-signed, tiny Alp
 weight = 2
 +++
 
-# Docker
-
 Image: [`ghcr.io/hahwul/deadfinder`](https://github.com/hahwul/deadfinder/pkgs/container/deadfinder)
 
 - Multi-arch: `linux/amd64`, `linux/arm64`

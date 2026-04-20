@@ -4,8 +4,6 @@ description = "Run your first DeadFinder scan and read its output."
 weight = 2
 +++
 
-# Quick Start
-
 ## Scan a single URL
 
 ```bash

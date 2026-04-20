@@ -4,8 +4,6 @@ description = "url / file / pipe / sitemap / completion / version"
 weight = 1
 +++
 
-# Subcommands
-
 ## `url <URL>`
 
 Scan a single page. Extract links from the HTML and check each one.

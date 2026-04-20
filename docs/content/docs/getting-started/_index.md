@@ -5,8 +5,6 @@ weight = 1
 sort_by = "weight"
 +++
 
-# Getting Started
-
 Two steps:
 
 1. [Install](/docs/getting-started/installation/) the binary.

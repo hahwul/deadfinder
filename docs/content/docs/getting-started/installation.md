@@ -4,8 +4,6 @@ description = "Install DeadFinder via Homebrew, Docker, prebuilt binary, Nix, or
 weight = 1
 +++
 
-# Installation
-
 Pick the channel that fits your environment. All paths produce the same CLI.
 
 ## Homebrew (macOS / Linux)

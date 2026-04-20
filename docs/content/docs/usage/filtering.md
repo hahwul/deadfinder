@@ -4,8 +4,6 @@ description = "Regex match/ignore, 3xx inclusion, URL limit."
 weight = 3
 +++
 
-# Filtering
-
 ## `--match=PATTERN` / `--ignore=PATTERN`
 
 Regex applied to every discovered URL before it's fetched. Each pattern has a 1-second timeout to prevent ReDoS.

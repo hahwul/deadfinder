@@ -3,8 +3,6 @@ title = "DeadFinder"
 description = "Find dead (broken) links in web pages, URL lists, and sitemaps."
 +++
 
-# DeadFinder
-
 Find dead (broken) links in web pages, URL lists, and sitemaps. Fast native CLI written in Crystal with fiber-based concurrency.
 
 ## Why DeadFinder

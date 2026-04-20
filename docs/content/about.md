@@ -3,8 +3,6 @@ title = "About"
 description = "About DeadFinder"
 +++
 
-# About
-
 DeadFinder detects broken links — 4xx, 5xx, optionally 3xx — on any page, URL list, or sitemap. It's built for automation: one static binary, machine-readable output, and a GitHub Action wrapper so CI pipelines can gate on link health.
 
 ## Status

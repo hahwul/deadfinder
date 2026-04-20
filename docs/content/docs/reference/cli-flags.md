@@ -4,8 +4,6 @@ description = "Complete reference for every deadfinder option."
 weight = 1
 +++
 
-# CLI Flags
-
 Run `deadfinder --help` for the live help text. This page is the documented contract.
 
 ## Synopsis
