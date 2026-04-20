@@ -14,5 +14,8 @@
 /result-*
 .direnv/
 
-# Zola docs site
+# macOS
+.DS_Store
+
+# Hwaro docs site
 docs/public/*
