@@ -1,9 +1,5 @@
 <div align="center">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/static/images/deadfinder-dark.png" width="500px;">
-      <source media="(prefers-color-scheme: light)" srcset="docs/static/images/deadfinder-light.png" width="500px;">
-      <img alt="DeadFinder Logo" src="docs/static/images/deadfinder-dark.png" width="500px;">
-    </picture>
+      <img alt="DeadFinder Logo" src="docs/static/images/deadfinder.webp" width="200px;">
   <p>Find dead-links (broken links)</p>
 </div>
 
