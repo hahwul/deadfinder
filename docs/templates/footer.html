@@ -1,0 +1,49 @@
+    </div><!-- .main -->
+  </div><!-- .layout -->
+
+  <footer class="site-footer">
+    Powered by Hwaro
+  </footer>
+
+  {{ highlight_js }}
+  {{ auto_includes_js }}
+
+  <script>
+    // Mobile sidebar toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    if (menuBtn) {
+      menuBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+    }
+    if (overlay) {
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
+    }
+
+    // Highlight active sidebar link
+    const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+      const href = link.getAttribute('href').replace(/\/$/, '') || '/';
+      if (currentPath === href) {
+        link.classList.add('active');
+      }
+    });
+
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('open');
+        const nested = btn.nextElementSibling;
+        if (nested) nested.style.display = nested.style.display === 'none' ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>

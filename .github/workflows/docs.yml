@@ -1,0 +1,41 @@
+---
+name: Docs CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build (no deploy)
+        uses: hahwul/hwaro@main
+        with:
+          build_dir: "docs"
+          build_only: true
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build and deploy to GitHub Pages
+        uses: hahwul/hwaro@main
+        with:
+          build_dir: "docs"
+          token: ${{ secrets.GITHUB_TOKEN }}
