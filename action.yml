@@ -68,7 +68,7 @@ inputs:
     required: false
     default: ""
   version:
-    description: DeadFinder release tag to download (default: latest)
+    description: "DeadFinder release tag to download (default: latest)"
     required: false
     default: "latest"
 outputs:

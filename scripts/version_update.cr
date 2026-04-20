@@ -46,11 +46,14 @@ def replace_in_file(path : String, pattern : Regex, replacement : String) : Bool
 end
 
 ok = true
-ok &= replace_in_file(SHARD_YML, /^version:\s*.+$/m, "version: #{nv}")
+# Crystal's `m` flag enables both line-anchor and DOTALL semantics, so a
+# bare `.+$/m` swallows everything from the match start to end of file.
+# Constrain to single-line content with `[^\n]+`.
+ok &= replace_in_file(SHARD_YML, /^version:\s*[^\n]+$/m, "version: #{nv}")
 ok &= replace_in_file(VERSION_CR, /VERSION\s*=\s*"[^"]+"/, %(VERSION = "#{nv}"))
 ok &= replace_in_file(SPEC_TOP, /VERSION\.should\s+eq\s+"[^"]+"/, %(VERSION.should eq "#{nv}"))
 ok &= replace_in_file(SPEC_CLI, /VERSION\.should\s+eq\s+"[^"]+"/, %(VERSION.should eq "#{nv}"))
-ok &= replace_in_file(SNAPCRAFT, /^version:\s*.+$/m, "version: #{nv}")
-ok &= replace_in_file(PKGBUILD, /^pkgver=.+$/m, "pkgver=#{nv}")
+ok &= replace_in_file(SNAPCRAFT, /^version:\s*[^\n]+$/m, "version: #{nv}")
+ok &= replace_in_file(PKGBUILD, /^pkgver=[^\n]+$/m, "pkgver=#{nv}")
 
 exit(ok ? 0 : 1)

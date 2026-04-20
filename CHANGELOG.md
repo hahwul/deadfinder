@@ -4,6 +4,12 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [2.0.1]
+
+### Fixed
+- `action.yml`: quote the `version` input description so its embedded `(default: latest)` doesn't trip strict YAML parsers used by the GitHub Actions runner. Caller workflows on `uses: hahwul/deadfinder@2.0.0` saw `Mapping values are not allowed in this context.` and failed at job startup.
+- `scripts/version_update.cr`: constrain `^version:\s*.+$/m` patterns with `[^\n]+` — Crystal's `m` flag enables both line-anchor and DOTALL semantics, so `.+$` greedily ate the rest of the file and truncated `shard.yml`/`snap/snapcraft.yaml`/`aur/PKGBUILD` on the first 2.0.1 bump attempt.
+
 ## [2.0.0] — Crystal rewrite
 
 ### Added
@@ -44,5 +50,6 @@ If you need a bugfix in v1, open an issue/PR against the [`legacy/v1`](https://g
 
 History prior to 2.0.0 was not maintained in this file. See [GitHub Releases](https://github.com/hahwul/deadfinder/releases?q=prerelease%3Afalse) and the [`legacy/v1`](https://github.com/hahwul/deadfinder/tree/legacy/v1) branch for v1 release history.
 
-[Unreleased]: https://github.com/hahwul/deadfinder/compare/2.0.0...HEAD
+[Unreleased]: https://github.com/hahwul/deadfinder/compare/2.0.1...HEAD
+[2.0.1]: https://github.com/hahwul/deadfinder/releases/tag/2.0.1
 [2.0.0]: https://github.com/hahwul/deadfinder/releases/tag/2.0.0

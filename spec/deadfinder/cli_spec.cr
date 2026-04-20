@@ -54,7 +54,7 @@ describe Deadfinder::CLI do
 
   describe "version" do
     it "has correct version" do
-      Deadfinder::VERSION.should eq "2.0.0"
+      Deadfinder::VERSION.should eq "2.0.1"
     end
   end
 end
