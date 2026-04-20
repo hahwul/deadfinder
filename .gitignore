@@ -10,8 +10,8 @@
 /deadfinder-*.tar.gz.sha256
 
 # Nix
-result
-result-*
+/result
+/result-*
 .direnv/
 
 # Zola docs site
