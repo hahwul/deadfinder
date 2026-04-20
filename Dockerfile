@@ -1,17 +1,15 @@
-FROM ruby:4.0.2-slim
+FROM crystallang/crystal:1.19.1-alpine AS builder
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libcurl4-openssl-dev \
-    libxml2-dev \
-    libxslt-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache cmake make g++ git
 
-RUN mkdir /app
-WORKDIR /app
-COPY . .
+WORKDIR /build
+COPY crystal/ ./crystal/
 
-RUN gem build deadfinder.gemspec
-RUN gem install deadfinder-*.gem
+WORKDIR /build/crystal
+RUN shards install
+RUN crystal build src/cli_main.cr -o /build/deadfinder --release --static --no-debug
 
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /build/deadfinder /usr/local/bin/deadfinder
 CMD ["deadfinder"]
