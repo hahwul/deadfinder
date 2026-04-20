@@ -1,22 +1,41 @@
 ---
 config:
   - changed-files:
-      - any-glob-to-any-file: [deadfinder.gemspec, ruby-version, .rubocop.yml]
+      - any-glob-to-any-file:
+          - shard.yml
+          - shard.lock
+          - .github/labeler.yml
 dependencies:
   - changed-files:
-      - any-glob-to-any-file: [Gemfile, Gemfile.lock, deadfinder.gemspec]
+      - any-glob-to-any-file:
+          - shard.yml
+          - shard.lock
 workflow:
   - changed-files:
-      - any-glob-to-any-file: [.github/workflows/**, .github/labeler.yml]
+      - any-glob-to-any-file:
+          - .github/workflows/**
+          - .github/labeler.yml
 github-action:
   - changed-files:
-      - any-glob-to-any-file: [github-action/**, action.yml]
+      - any-glob-to-any-file:
+          - action.yml
 docker:
   - changed-files:
       - any-glob-to-any-file:
           - Dockerfile
+          - .dockerignore
           - .github/workflows/docker-ghcr.yml
-          - github-action/Dockerfile
+          - .github/workflows/docker-build.yml
 code:
   - changed-files:
-      - any-glob-to-any-file: [lib/**, bin/**, spec/**]
+      - any-glob-to-any-file:
+          - src/**
+          - spec/**
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - README.md
+          - CHANGELOG.md
+          - AGENTS.md
+          - SECURITY.md
+          - docs/**
