@@ -85,7 +85,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -93,11 +92,6 @@ jobs:
           path: /tmp/digests
           pattern: digests-*
           merge-multiple: true
-
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3.7.0
-        with:
-          cosign-release: v2.4.1
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
@@ -138,18 +132,6 @@ jobs:
 
       - name: Inspect image
         run: docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-
-      - name: Sign the published image with cosign (keyless)
-        if: github.event_name != 'pull_request'
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-        run: |
-          # Cosign resolves each tag to its manifest digest and records
-          # the signature in the registry (Sigstore keyless / OIDC flow).
-          for tag in $TAGS; do
-            echo "Signing ${tag}"
-            cosign sign --yes "${tag}"
-          done
 
   cleanup:
     runs-on: ubuntu-latest
