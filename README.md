@@ -19,25 +19,22 @@ Dead link (broken link) means a link within a web page that cannot be connected.
 ![](https://github.com/user-attachments/assets/92129de9-90c6-41e0-a424-883fe30858f6)
 
 ## Installation
-### Install with Gem
-#### CLI
-```bash
-gem install deadfinder
-# https://rubygems.org/gems/deadfinder
-```
 
-#### Gemfile
-
-```ruby
-gem 'deadfinder'
-# and `bundle install`
-```
+> **Notice**: DeadFinder is migrating from Ruby to Crystal. The CLI surface stays the same but the runtime is changing. If you installed via `gem install deadfinder`, see the [Migration from Ruby gem](#migration-from-ruby-gem) section below.
 
 ### Install with Homebrew
 ```bash
 brew install deadfinder
 # https://formulae.brew.sh/formula/deadfinder
 ```
+
+### Docker Image
+```shell
+docker pull ghcr.io/hahwul/deadfinder:latest
+```
+
+### Prebuilt binary
+Download the archive for your platform from the [latest release](https://github.com/hahwul/deadfinder/releases/latest), extract, and place `deadfinder` on your `PATH`.
 
 ### Install with Nix
 ```bash
@@ -52,10 +49,32 @@ nix profile install github:hahwul/deadfinder
 nix develop github:hahwul/deadfinder
 ```
 
-### Docker Image
-```shell
-docker pull ghcr.io/hahwul/deadfinder:latest
+### Install with Gem (deprecated)
+The Ruby gem still works but will stop being published in a future major release.
+
+```bash
+gem install deadfinder
+# https://rubygems.org/gems/deadfinder
 ```
+
+```ruby
+# Gemfile
+gem 'deadfinder'
+```
+
+Suppress the deprecation notice with `DEADFINDER_SUPPRESS_GEM_DEPRECATION=1`.
+
+### Migration from Ruby gem
+The Crystal binary accepts the same subcommands, flags, and produces the same output formats as the gem. Typical replacements:
+
+| You had | Switch to |
+|---|---|
+| `gem install deadfinder` | `brew install deadfinder` or prebuilt binary |
+| `bundle exec deadfinder …` | Same binary on `PATH`, no bundler |
+| Docker image (same name) | No change — the image now ships the Crystal binary |
+| `uses: hahwul/deadfinder@…` | No change — the action now uses the Crystal binary under the hood |
+
+If you hit any behavioral difference, please open an issue.
 
 ## Using In
 ### CLI
@@ -93,7 +112,9 @@ steps:
 
 If you have found a Dead Link and want to automatically add it as an issue, please refer to the "[Automating Dead Link Detection](https://www.hahwul.com/2024/10/20/automating-dead-link-detection/)" article.
 
-### Ruby Code
+### Ruby Code (deprecated)
+Library usage is tied to the Ruby gem and will go away with it. The CLI is the supported integration surface.
+
 ```ruby
 require 'deadfinder'
 

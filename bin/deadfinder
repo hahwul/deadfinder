@@ -1,4 +1,16 @@
 #!/usr/bin/env ruby
 
+unless ENV['DEADFINDER_SUPPRESS_GEM_DEPRECATION']
+  warn <<~DEPRECATION
+    [DEPRECATED] The DeadFinder Ruby gem will stop being published in a future major release.
+    Migrate to the Crystal binary (same CLI, faster, no runtime deps):
+      - Homebrew:      brew install deadfinder
+      - Docker:        docker run ghcr.io/hahwul/deadfinder:latest
+      - GitHub Action: hahwul/deadfinder@latest
+      - Prebuilt:      https://github.com/hahwul/deadfinder/releases/latest
+    Suppress this message with DEADFINDER_SUPPRESS_GEM_DEPRECATION=1
+  DEPRECATION
+end
+
 require 'deadfinder'
 DeadFinder::CLI.start(ARGV)
