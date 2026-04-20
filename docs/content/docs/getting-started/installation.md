@@ -59,11 +59,35 @@ nix develop github:hahwul/deadfinder
 
 ## Build from source
 
-Requires Crystal >= 1.19.1 and `cmake` (for the `lexbor` HTML parser).
+Prerequisites:
+
+- Crystal >= 1.19.1
+- `cmake` — required by the `lexbor` HTML parser's postinstall step. Without it, `shards install` fails with `Error executing process: 'cmake': No such file or directory`.
+
+```bash
+# macOS
+brew install crystal cmake
+
+# Debian / Ubuntu
+sudo apt install crystal cmake
+
+# Arch Linux
+sudo pacman -S crystal cmake
+```
+
+Then build:
 
 ```bash
 git clone https://github.com/hahwul/deadfinder
 cd deadfinder
 shards install
 crystal build src/cli_main.cr -o deadfinder --release --no-debug
+```
+
+Or use the [`justfile`](https://github.com/hahwul/deadfinder/blob/main/justfile) recipes:
+
+```bash
+just build        # release binary
+just build-debug  # fast debug build
+just test         # run specs
 ```
