@@ -1,0 +1,49 @@
+---
+name: Publish AUR Package
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g., 2.0.0)"
+        required: true
+        type: string
+  workflow_run:
+    workflows: ["Crystal Release Builds"]
+    types: [completed]
+
+jobs:
+  publish-aur:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.event.workflow_run.head_branch }}
+
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW="${{ github.event.inputs.version }}"
+          else
+            RAW="${{ github.event.workflow_run.head_branch }}"
+          fi
+          VERSION="${RAW#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Update PKGBUILD
+        run: |
+          sed -i "s/^pkgver=.*/pkgver=${{ env.VERSION }}/" aur/PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" aur/PKGBUILD
+          cat aur/PKGBUILD
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
+        with:
+          pkgname: deadfinder
+          pkgbuild: aur/PKGBUILD
+          commit_username: hahwul
+          commit_email: hahwul@gmail.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
