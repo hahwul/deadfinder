@@ -56,10 +56,12 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```
 
 ### GitHub Action
+Pin a specific release tag. `@latest` is **not** a valid Actions ref.
+
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@latest
+  uses: hahwul/deadfinder@2.0.0   # or any released tag: see Releases page
   id: broken-link
   with:
     command: sitemap           # url / file / sitemap / pipe

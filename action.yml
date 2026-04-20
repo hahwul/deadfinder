@@ -103,8 +103,20 @@ runs:
           base_url="https://github.com/hahwul/deadfinder/releases/download/${version}"
         fi
         echo "Downloading ${base_url}/${asset}"
-        curl -fsSL "${base_url}/${asset}" -o /tmp/deadfinder.tar.gz
-        curl -fsSL "${base_url}/${asset}.sha256" -o /tmp/deadfinder.tar.gz.sha256
+        if ! curl -fsSL "${base_url}/${asset}" -o /tmp/deadfinder.tar.gz; then
+          echo "::error title=DeadFinder binary not found::Failed to download ${base_url}/${asset}"
+          echo "::error::Common causes:"
+          echo "::error::  1. Using 'uses: hahwul/deadfinder@main' before the v2.0.0 release is published."
+          echo "::error::     → Pin a released version instead: uses: hahwul/deadfinder@2.0.0"
+          echo "::error::  2. Requested version (input: version=${version}) is not yet released."
+          echo "::error::     → See https://github.com/hahwul/deadfinder/releases for available tags."
+          echo "::error::  3. Using a v1.x workflow with a v2 ref — v1 users should pin hahwul/deadfinder@1.10.0."
+          exit 1
+        fi
+        if ! curl -fsSL "${base_url}/${asset}.sha256" -o /tmp/deadfinder.tar.gz.sha256; then
+          echo "::error::Downloaded ${asset} but its .sha256 sidecar is missing at ${base_url}/${asset}.sha256"
+          exit 1
+        fi
         cd /tmp
         # macOS runners ship `shasum`, Linux ships `sha256sum`.
         if command -v sha256sum >/dev/null 2>&1; then
