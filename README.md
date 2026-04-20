@@ -14,6 +14,8 @@
   <a href="https://formulae.brew.sh/formula/deadfinder"><img src="https://img.shields.io/homebrew/v/deadfinder?style=for-the-badge&color=000000&logo=homebrew&labelColor=000000"></a>
 </p>
 
+> ⚠️ **This branch (`legacy/v1`) is the frozen Ruby v1.x implementation.** Active development happens on [`main`](https://github.com/hahwul/deadfinder/tree/main), which hosts the Crystal rewrite (v2.x+). This branch receives bug-fix and security updates only, and continues to publish the `deadfinder` gem on RubyGems.
+
 Dead link (broken link) means a link within a web page that cannot be connected. These links can have a negative impact to SEO and Security. This tool makes it easy to identify and modify.
 
 ![](https://github.com/user-attachments/assets/92129de9-90c6-41e0-a424-883fe30858f6)
