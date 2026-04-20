@@ -1,0 +1,106 @@
+---
+name: Crystal Release Builds
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CRYSTAL_BUILD_IMAGE: crystallang/crystal:1.19.1-alpine
+
+jobs:
+  build-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runs-on: ubuntu-latest
+          - arch: aarch64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build static binary (Alpine / musl)
+        run: |
+          docker run --rm -v "$PWD":/workspace -w /workspace/crystal \
+            ${{ env.CRYSTAL_BUILD_IMAGE }} \
+            sh -c 'apk add --no-cache cmake make g++ \
+                   && shards install \
+                   && crystal build src/cli_main.cr -o deadfinder --release --static --no-debug'
+
+      - name: Package
+        run: |
+          cd crystal
+          chmod +x deadfinder
+          tar czf ../deadfinder-linux-${{ matrix.arch }}.tar.gz deadfinder
+          cd ..
+          sha256sum deadfinder-linux-${{ matrix.arch }}.tar.gz > deadfinder-linux-${{ matrix.arch }}.tar.gz.sha256
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            deadfinder-linux-${{ matrix.arch }}.tar.gz
+            deadfinder-linux-${{ matrix.arch }}.tar.gz.sha256
+
+      - name: Upload as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadfinder-linux-${{ matrix.arch }}
+          path: |
+            deadfinder-linux-${{ matrix.arch }}.tar.gz
+            deadfinder-linux-${{ matrix.arch }}.tar.gz.sha256
+
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runs-on: macos-latest
+          - arch: x86_64
+            runs-on: macos-13
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Crystal and cmake
+        run: brew install crystal cmake
+
+      - name: Build release binary
+        working-directory: crystal
+        run: |
+          shards install
+          crystal build src/cli_main.cr -o deadfinder --release --no-debug
+
+      - name: Package
+        run: |
+          cd crystal
+          chmod +x deadfinder
+          tar czf ../deadfinder-macos-${{ matrix.arch }}.tar.gz deadfinder
+          cd ..
+          shasum -a 256 deadfinder-macos-${{ matrix.arch }}.tar.gz > deadfinder-macos-${{ matrix.arch }}.tar.gz.sha256
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            deadfinder-macos-${{ matrix.arch }}.tar.gz
+            deadfinder-macos-${{ matrix.arch }}.tar.gz.sha256
+
+      - name: Upload as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadfinder-macos-${{ matrix.arch }}
+          path: |
+            deadfinder-macos-${{ matrix.arch }}.tar.gz
+            deadfinder-macos-${{ matrix.arch }}.tar.gz.sha256
