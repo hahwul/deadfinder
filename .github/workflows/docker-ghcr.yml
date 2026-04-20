@@ -150,3 +150,21 @@ jobs:
             echo "Signing ${tag}"
             cosign sign --yes "${tag}"
           done
+
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: merge
+    permissions:
+      packages: write
+    steps:
+      # The build matrix pushes per-platform digests with push-by-digest=true,
+      # which leaves untagged manifests in GHCR after the merge job assembles
+      # the multi-arch manifest list. Prune them so only tagged versions
+      # (main, latest, semver) remain.
+      - name: Delete untagged GHCR versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: deadfinder
+          package-type: container
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 0
