@@ -6,20 +6,22 @@ weight = 1
 
 `hahwul/deadfinder` is a composite action that downloads the matching release binary, verifies its sha256, and executes the scan. Runs on Linux (x86_64/aarch64) and macOS (arm64). Intel macOS runners (`macos-13`) are not supported — use `macos-latest`.
 
-## Pin a specific version
+## Pin a version
 
-Always pin a released tag. `@latest` is **not** a valid Actions ref (GitHub has no auto-resolver for it).
+Always pin a released ref. `@latest` is **not** a valid Actions ref (GitHub has no auto-resolver for it).
 
 ```yaml
-- uses: hahwul/deadfinder@2.0.0
+- uses: hahwul/deadfinder@2        # tracks latest 2.x — gets bug-fix patches automatically
+# or
+- uses: hahwul/deadfinder@2.0.1    # exact pin — fully reproducible
 ```
 
-The `version` input can override independently:
+The `version` input can override the binary independently of the action ref:
 
 ```yaml
-- uses: hahwul/deadfinder@main
+- uses: hahwul/deadfinder@2
   with:
-    version: "2.0.0"   # download binary from this release tag
+    version: "2.0.1"   # download binary from this release tag
 ```
 
 ## Full example
@@ -27,7 +29,7 @@ The `version` input can override independently:
 ```yaml
 steps:
   - name: Run DeadFinder
-    uses: hahwul/deadfinder@2.0.0
+    uses: hahwul/deadfinder@2
     id: scan
     with:
       command: sitemap
@@ -91,4 +93,4 @@ Consume with `fromJSON()`:
 
 The v1 action was Docker-based and bundled the Ruby gem. v2 is a composite action that downloads the Crystal binary directly. All v1 inputs are preserved. `worker_headers` was previously undeclared but wired through args — it's now a formal input. `version` is new. No inputs were renamed or removed.
 
-Pin to `@1.10.0` to keep the v1 behavior; pin to `@2.0.0+` for v2.
+Pin to `@1.10.0` to keep the v1 behavior; use `@2` (or pin a specific 2.x tag like `@2.0.1`) for v2.

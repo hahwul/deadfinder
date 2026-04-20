@@ -1,0 +1,39 @@
+---
+name: Update Major Version Tag
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+# Force-update the floating `<major>` tag (e.g. `2`) to point at the
+# latest published <major>.<minor>.<patch> release. Lets callers pin
+# `uses: hahwul/deadfinder@2` and receive bug-fix patches automatically.
+# Skips pre-releases so RC tags don't displace the stable major pointer.
+
+jobs:
+  bump-major-tag:
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Move <major> tag to release commit
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -e
+          stripped="${TAG#v}"
+          major="${stripped%%.*}"
+          if ! [[ "$major" =~ ^[0-9]+$ ]]; then
+            echo "Skipping: derived major '$major' from tag '$TAG' is not numeric."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "$major" "$TAG"
+          git push origin "refs/tags/$major" --force
+          echo "Moved tag '$major' → '$TAG'."

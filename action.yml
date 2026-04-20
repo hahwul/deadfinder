@@ -109,9 +109,9 @@ runs:
         if ! curl -fsSL "${base_url}/${asset}" -o /tmp/deadfinder.tar.gz; then
           echo "::error title=DeadFinder binary not found::Failed to download ${base_url}/${asset}"
           echo "::error::Common causes:"
-          echo "::error::  1. Using 'uses: hahwul/deadfinder@main' before the v2.0.0 release is published."
-          echo "::error::     → Pin a released version instead: uses: hahwul/deadfinder@2.0.0"
-          echo "::error::  2. Requested version (input: version=${version}) is not yet released."
+          echo "::error::  1. Using 'uses: hahwul/deadfinder@main' or '@latest' — neither resolves to a release."
+          echo "::error::     → Pin a released ref instead: uses: hahwul/deadfinder@2 (latest 2.x) or @2.0.1 (exact)."
+          echo "::error::  2. Requested version (input: version=${version}) is not a published release tag."
           echo "::error::     → See https://github.com/hahwul/deadfinder/releases for available tags."
           echo "::error::  3. Using a v1.x workflow with a v2 ref — v1 users should pin hahwul/deadfinder@1.10.0."
           exit 1
