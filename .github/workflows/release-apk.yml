@@ -1,0 +1,127 @@
+---
+name: Build and Release .apk Package
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g., 2.0.0)"
+        required: true
+        type: string
+      upload_to_release:
+        description: "Upload .apk to GitHub Release (requires existing tag)"
+        required: false
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: ["Crystal Release Builds"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'release')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            asset_arch: x86_64
+          - arch: aarch64
+            asset_arch: aarch64
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+    steps:
+      - name: Install build tools
+        run: apk add --no-cache alpine-sdk sudo github-cli git
+
+      - name: Trust workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.event.workflow_run.head_branch }}
+
+      - name: Resolve version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW="${{ github.event.inputs.version }}"
+          else
+            RAW="${{ github.event.workflow_run.head_branch }}"
+          fi
+          VERSION="${RAW#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Download prebuilt binary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ env.VERSION }}" \
+            --pattern "deadfinder-linux-${{ matrix.asset_arch }}.tar.gz" \
+            --output deadfinder.tar.gz
+          tar xzf deadfinder.tar.gz
+          chmod +x deadfinder
+
+      - name: Setup abuild
+        run: |
+          adduser -D builder
+          addgroup builder abuild
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          sudo -u builder abuild-keygen -ain
+
+      - name: Create APKBUILD
+        run: |
+          mkdir -p /home/builder/deadfinder
+          cp deadfinder /home/builder/deadfinder/
+          cp LICENSE /home/builder/deadfinder/
+          cat > /home/builder/deadfinder/APKBUILD <<APKEOF
+          # Maintainer: HAHWUL <hahwul@gmail.com>
+          pkgname=deadfinder
+          pkgver=${{ env.VERSION }}
+          pkgrel=0
+          pkgdesc="Find dead (broken) links in web pages, URL lists, and sitemaps."
+          url="https://github.com/hahwul/deadfinder"
+          arch="${{ matrix.arch }}"
+          license="MIT"
+          source=""
+          options="!check !strip !tracedeps"
+
+          package() {
+          	install -Dm755 "\$srcdir/../deadfinder" "\$pkgdir/usr/bin/deadfinder"
+          	install -Dm644 "\$srcdir/../LICENSE" "\$pkgdir/usr/share/licenses/\$pkgname/LICENSE"
+          }
+          APKEOF
+          sed -i 's/^          //' /home/builder/deadfinder/APKBUILD
+          chown -R builder:builder /home/builder/deadfinder
+
+      - name: Build .apk
+        run: |
+          cd /home/builder/deadfinder
+          sudo -u builder -H CARCH=${{ matrix.arch }} abuild -F checksum
+          sudo -u builder -H CARCH=${{ matrix.arch }} abuild -Fr
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p output
+          find /home/builder/packages -name "*.apk" ! -name "APKINDEX*" -exec cp {} output/ \;
+          ls -la output/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadfinder-${{ env.VERSION }}-${{ matrix.arch }}.apk
+          path: output/*.apk
+
+      - name: Upload .apk to Release
+        if: github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.upload_to_release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in output/*.apk; do
+            gh release upload "${{ env.VERSION }}" "$f" --clobber
+          done
