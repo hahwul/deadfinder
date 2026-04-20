@@ -72,6 +72,28 @@ body {
 }
 .menu-btn:hover { background: var(--hover-bg); }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.topbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.topbar-icon:hover {
+  color: var(--text);
+  border-color: var(--primary);
+}
+
 /* Search trigger (button in topbar) */
 .topbar-search {
   display: inline-flex;
@@ -443,6 +465,8 @@ nav.pagination a:hover { color: var(--primary); border-color: var(--primary); }
   color: var(--text-light);
   font-size: 0.8rem;
 }
+.site-footer a { color: var(--text-muted); text-decoration: none; }
+.site-footer a:hover { color: var(--primary); }
 
 /* -- Alert shortcode -- */
 .alert { padding: 0.75rem 1rem; border-radius: 6px; margin: 1rem 0; font-size: 0.9rem; border-left: 4px solid; }
