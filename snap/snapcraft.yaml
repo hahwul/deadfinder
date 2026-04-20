@@ -1,3 +1,51 @@
 name: deadfinder
 base: core24
-version: 2.0.1
+version: 2.0.0
+summary: Find dead (broken) links in web pages, URL lists, and sitemaps.
+description: |
+  DeadFinder is a fast CLI tool for detecting broken links on a page, a
+  list of URLs, or an entire sitemap. Written in Crystal for native
+  speed and fiber-based concurrency. Supports JSON/YAML/TOML/CSV output
+  and coverage reporting.
+
+grade: stable
+confinement: strict
+license: MIT
+
+apps:
+  deadfinder:
+    command: deadfinder
+    plugs:
+      - home
+      - removable-media
+      - network
+      - network-bind
+
+parts:
+  deadfinder:
+    source: ./
+    plugin: nil
+    override-build: |
+      curl -fsSL https://crystal-lang.org/install.sh | bash
+      shards install --production
+      shards build --release --no-debug --production
+      cp ./bin/deadfinder $CRAFT_PART_INSTALL/
+    build-packages:
+      - git
+      - curl
+      - cmake
+      - make
+      - g++
+      - pkg-config
+      - libssl-dev
+      - libxml2-dev
+      - libz-dev
+      - libyaml-dev
+      - libpcre2-dev
+      - libevent-dev
+      - libgmp-dev
+    stage-packages:
+      - libxml2
+      - zlib1g
+      - libyaml-0-2
+      - ca-certificates
