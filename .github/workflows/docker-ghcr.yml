@@ -95,9 +95,9 @@ jobs:
           merge-multiple: true
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4.0.0
+        uses: sigstore/cosign-installer@v3.7.0
         with:
-          cosign-release: v2.1.1
+          cosign-release: v2.4.1
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
@@ -142,13 +142,11 @@ jobs:
       - name: Sign the published image with cosign (keyless)
         if: github.event_name != 'pull_request'
         env:
-          COSIGN_EXPERIMENTAL: "true"
           TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ steps.meta.outputs.version }}
         run: |
-          # Re-resolve the digest for each published tag and sign it.
+          # Cosign resolves each tag to its manifest digest and records
+          # the signature in the registry (Sigstore keyless / OIDC flow).
           for tag in $TAGS; do
-            digest=$(docker buildx imagetools inspect "$tag" --raw | sha256sum | awk '{print $1}')
-            echo "Signing ${tag}@sha256:${digest}"
-            cosign sign --yes "${tag}@sha256:${digest}"
+            echo "Signing ${tag}"
+            cosign sign --yes "${tag}"
           done
