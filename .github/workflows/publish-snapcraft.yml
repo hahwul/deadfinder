@@ -1,0 +1,44 @@
+---
+name: Snapcraft Publish
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: Log level
+        required: true
+        default: warning
+      tags:
+        description: Test scenario tags
+
+jobs:
+  snapcraft-releaser:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - amd64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build snap
+        id: build
+        uses: canonical/action-build@v1
+
+      - name: Publish snap to the stable channel
+        if: github.event_name == 'release'
+        uses: snapcore/action-publish@master
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_LOGIN }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable
+
+      - name: Upload snap as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadfinder-snap-${{ matrix.platform }}
+          path: ${{ steps.build.outputs.snap }}
