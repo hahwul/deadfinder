@@ -106,28 +106,31 @@ runs:
           base_url="https://github.com/hahwul/deadfinder/releases/download/${version}"
         fi
         echo "Downloading ${base_url}/${asset}"
-        if ! curl -fsSL "${base_url}/${asset}" -o /tmp/deadfinder.tar.gz; then
+        # The sha256 sidecar was generated with the tarball's real filename
+        # (deadfinder-linux-x86_64.tar.gz etc.), so we must save the download
+        # under the same name for `sha256sum -c` to resolve it.
+        if ! curl -fsSL "${base_url}/${asset}" -o "/tmp/${asset}"; then
           echo "::error title=DeadFinder binary not found::Failed to download ${base_url}/${asset}"
           echo "::error::Common causes:"
           echo "::error::  1. Using 'uses: hahwul/deadfinder@main' or '@latest' — neither resolves to a release."
-          echo "::error::     → Pin a released ref instead: uses: hahwul/deadfinder@2 (latest 2.x) or @2.0.1 (exact)."
+          echo "::error::     → Pin a released ref instead: uses: hahwul/deadfinder@2 (latest 2.x) or @2.0.2 (exact)."
           echo "::error::  2. Requested version (input: version=${version}) is not a published release tag."
           echo "::error::     → See https://github.com/hahwul/deadfinder/releases for available tags."
           echo "::error::  3. Using a v1.x workflow with a v2 ref — v1 users should pin hahwul/deadfinder@1.10.0."
           exit 1
         fi
-        if ! curl -fsSL "${base_url}/${asset}.sha256" -o /tmp/deadfinder.tar.gz.sha256; then
+        if ! curl -fsSL "${base_url}/${asset}.sha256" -o "/tmp/${asset}.sha256"; then
           echo "::error::Downloaded ${asset} but its .sha256 sidecar is missing at ${base_url}/${asset}.sha256"
           exit 1
         fi
         cd /tmp
         # macOS runners ship `shasum`, Linux ships `sha256sum`.
         if command -v sha256sum >/dev/null 2>&1; then
-          sha256sum -c deadfinder.tar.gz.sha256
+          sha256sum -c "${asset}.sha256"
         else
-          shasum -a 256 -c deadfinder.tar.gz.sha256
+          shasum -a 256 -c "${asset}.sha256"
         fi
-        tar xzf deadfinder.tar.gz
+        tar xzf "${asset}"
         chmod +x deadfinder
         ./deadfinder version
 

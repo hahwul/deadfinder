@@ -4,6 +4,11 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [2.0.2]
+
+### Fixed
+- `action.yml`: save the downloaded release tarball under its real filename (`deadfinder-linux-x86_64.tar.gz` etc.) instead of a generic `deadfinder.tar.gz`, so `sha256sum -c` can resolve the path referenced inside the sidecar. Composite-action callers hit `sha256sum: deadfinder-linux-x86_64.tar.gz: No such file or directory` right after a successful download — the earlier 2.0.0 YAML parser error was masking this. Surfaced by owasp-noir/noir run #24651380673.
+
 ## [2.0.1]
 
 ### Fixed
@@ -50,6 +55,7 @@ If you need a bugfix in v1, open an issue/PR against the [`legacy/v1`](https://g
 
 History prior to 2.0.0 was not maintained in this file. See [GitHub Releases](https://github.com/hahwul/deadfinder/releases?q=prerelease%3Afalse) and the [`legacy/v1`](https://github.com/hahwul/deadfinder/tree/legacy/v1) branch for v1 release history.
 
-[Unreleased]: https://github.com/hahwul/deadfinder/compare/2.0.1...HEAD
+[Unreleased]: https://github.com/hahwul/deadfinder/compare/2.0.2...HEAD
+[2.0.2]: https://github.com/hahwul/deadfinder/releases/tag/2.0.2
 [2.0.1]: https://github.com/hahwul/deadfinder/releases/tag/2.0.1
 [2.0.0]: https://github.com/hahwul/deadfinder/releases/tag/2.0.0
