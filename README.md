@@ -9,8 +9,6 @@
 
 <p align="center">
   <a href="#contributions-welcome"><img src="https://img.shields.io/badge/CONTRIBUTIONS-WELCOME-000000?style=for-the-badge&labelColor=000000"></a>
-  <a href="https://app.codecov.io/gh/hahwul/deadfinder/"><img src="https://img.shields.io/codecov/c/gh/hahwul/deadfinder?style=for-the-badge&color=000000&logo=codecov&labelColor=000000"></a>
-  <a href="https://rubygems.org/gems/deadfinder"><img src="https://img.shields.io/gem/v/deadfinder?style=for-the-badge&color=000000&logo=ruby&labelColor=000000&logoColor=red"></a>
   <a href="https://formulae.brew.sh/formula/deadfinder"><img src="https://img.shields.io/homebrew/v/deadfinder?style=for-the-badge&color=000000&logo=homebrew&labelColor=000000"></a>
 </p>
 
@@ -18,79 +16,53 @@ Dead link (broken link) means a link within a web page that cannot be connected.
 
 ![](https://github.com/user-attachments/assets/92129de9-90c6-41e0-a424-883fe30858f6)
 
+> **Looking for v1 (Ruby gem)?** It now lives on the [`legacy/v1`](https://github.com/hahwul/deadfinder/tree/legacy/v1) branch and continues to publish the `deadfinder` gem for bug-fix and security releases. `main` hosts the Crystal rewrite (v2+).
+
 ## Installation
 
-> **Notice**: DeadFinder is migrating from Ruby to Crystal. The CLI surface stays the same but the runtime is changing. If you installed via `gem install deadfinder`, see the [Migration from Ruby gem](#migration-from-ruby-gem) section below.
-
-### Install with Homebrew
+### Homebrew
 ```bash
 brew install deadfinder
 # https://formulae.brew.sh/formula/deadfinder
 ```
 
-### Docker Image
-```shell
-docker pull ghcr.io/hahwul/deadfinder:latest
+### Docker
+```bash
+docker run ghcr.io/hahwul/deadfinder:latest deadfinder url https://example.com
 ```
 
 ### Prebuilt binary
 Download the archive for your platform from the [latest release](https://github.com/hahwul/deadfinder/releases/latest), extract, and place `deadfinder` on your `PATH`.
 
-### Install with Nix
+### Nix
 ```bash
-# Run directly without installing
 nix run github:hahwul/deadfinder
-
-# Install to profile
 nix profile install github:hahwul/deadfinder
-
-# Or add to your flake.nix inputs
-# Development shell is also available:
 nix develop github:hahwul/deadfinder
 ```
 
-### Install with Gem (deprecated)
-The Ruby gem still works but will stop being published in a future major release.
-
+### Build from source
 ```bash
-gem install deadfinder
-# https://rubygems.org/gems/deadfinder
+shards install
+crystal build src/cli_main.cr -o deadfinder --release
 ```
 
-```ruby
-# Gemfile
-gem 'deadfinder'
-```
-
-Suppress the deprecation notice with `DEADFINDER_SUPPRESS_GEM_DEPRECATION=1`.
-
-### Migration from Ruby gem
-The Crystal binary accepts the same subcommands, flags, and produces the same output formats as the gem. Typical replacements:
-
-| You had | Switch to |
-|---|---|
-| `gem install deadfinder` | `brew install deadfinder` or prebuilt binary |
-| `bundle exec deadfinder …` | Same binary on `PATH`, no bundler |
-| Docker image (same name) | No change — the image now ships the Crystal binary |
-| `uses: hahwul/deadfinder@…` | No change — the action now uses the Crystal binary under the hood |
-
-If you hit any behavioral difference, please open an issue.
+Requires Crystal >= 1.19.1 and cmake (for the `lexbor` HTML parser).
 
 ## Using In
 ### CLI
-```shell
+```bash
 deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```
 
-### Github Action
+### GitHub Action
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@1.10.0
-  # or uses: hahwul/deadfinder@latest
+  uses: hahwul/deadfinder@latest
   id: broken-link
   with:
-    command: sitemap # url / file / sitemap
+    command: sitemap           # url / file / sitemap / pipe
     target: https://www.hahwul.com/sitemap.xml
     # timeout: 10
     # concurrency: 50
@@ -101,8 +73,8 @@ steps:
     # user_agent: "Apple"
     # proxy: "http://localhost:8070"
     # proxy_auth: "id:pw"
-    # match:  false
-    # ignore: false
+    # match:  ""
+    # ignore: ""
     # coverage: true
     # visualize: report.png
 
@@ -112,86 +84,57 @@ steps:
 
 If you have found a Dead Link and want to automatically add it as an issue, please refer to the "[Automating Dead Link Detection](https://www.hahwul.com/2024/10/20/automating-dead-link-detection/)" article.
 
-### Ruby Code (deprecated)
-Library usage is tied to the Ruby gem and will go away with it. The CLI is the supported integration surface.
-
-```ruby
-require 'deadfinder'
-
-runner = DeadFinder::Runner.new
-options = runner.default_options
-options['concurrency'] = 30
-
-DeadFinder.run_url('https://www.hahwul.com/cullinan/csrf/', options)
-puts DeadFinder.output
-
-# {"https://www.hahwul.com/cullinan/csrf/" => ["https://www.hahwul.com/tag/cullinan/"]}
-```
-
-For various examples and detailed usage, including sitemap, file, and other modes, please refer to the [rubydoc](https://rubydoc.info/gems/deadfinder/DeadFinder) and [examples](./examples) directory in the repository.
-
 ## Usage
 ```
+Usage: deadfinder <command> [options]
+
 Commands:
-  deadfinder completion <SHELL>     # Generate completion script for shell.
-  deadfinder file <FILE>            # Scan the URLs from File. (e.g., deadfinder file urls.txt)
-  deadfinder help [COMMAND]         # Describe available commands or one specific command
-  deadfinder pipe                   # Scan the URLs from STDIN. (e.g., cat urls.txt | deadfinder pipe)
-  deadfinder sitemap <SITEMAP-URL>  # Scan the URLs from sitemap.
-  deadfinder url <URL>              # Scan the Single URL.
-  deadfinder version                # Show version.
+  pipe                        Scan the URLs from STDIN
+  file <FILE>                 Scan the URLs from File
+  url <URL>                   Scan the Single URL
+  sitemap <SITEMAP-URL>       Scan the URLs from sitemap
+  completion <SHELL>          Generate completion script (bash/zsh/fish)
+  version                     Show version
 
 Options:
-  -r, [--include30x], [--no-include30x], [--skip-include30x]  # Include 30x redirections
-                                                              # Default: false
-  -c, [--concurrency=N]                                       # Number of concurrency
-                                                              # Default: 50
-  -t, [--timeout=N]                                           # Timeout in seconds
-                                                              # Default: 10
-  -o, [--output=OUTPUT]                                       # File to write result (e.g., json, yaml, csv, toml)
-  -f, [--output-format=OUTPUT_FORMAT]                         # Output format
-                                                              # Default: json
-  -H, [--headers=one two three]                               # Custom HTTP headers to send with initial request
-      [--worker-headers=one two three]                        # Custom HTTP headers to send with worker requests
-      [--user-agent=USER_AGENT]                               # User-Agent string to use for requests
-                                                              # Default: Mozilla/5.0 (compatible; DeadFinder/1.10.0;)
-  -p, [--proxy=PROXY]                                         # Proxy server to use for requests
-      [--proxy-auth=PROXY_AUTH]                               # Proxy server authentication credentials
-  -m, [--match=MATCH]                                         # Match the URL with the given pattern
-  -i, [--ignore=IGNORE]                                       # Ignore the URL with the given pattern
-  -s, [--silent], [--no-silent], [--skip-silent]              # Silent mode
-                                                              # Default: false
-  -v, [--verbose], [--no-verbose], [--skip-verbose]           # Verbose mode
-                                                              # Default: false
-      [--debug], [--no-debug], [--skip-debug]                 # Debug mode
-                                                              # Default: false
-      [--limit=N]                                             # Limit the number of URLs to scan
-                                                              # Default: 0
-      [--coverage], [--no-coverage], [--skip-coverage]        # Enable coverage tracking and reporting
-                                                              # Default: false
-      [--visualize=VISUALIZE]                                 # Generate a visualization of the scan results (e.g., report.png)
+  -r, --include30x                 Include 30x redirections as dead links
+  -c, --concurrency=N              Number of concurrent workers (default: 50)
+  -t, --timeout=N                  Timeout in seconds (default: 10)
+  -o, --output=FILE                File to write results
+  -f, --output_format=FORMAT       Output format: json, yaml, toml, csv (default: json)
+  -H, --headers=HEADER             Custom HTTP headers for initial request
+      --worker_headers=HEADER      Custom HTTP headers for worker requests
+      --user_agent=UA              User-Agent string
+  -p, --proxy=PROXY                Proxy server (HTTP and HTTPS CONNECT)
+      --proxy_auth=USER:PASS       Proxy authentication
+  -m, --match=PATTERN              Match URL pattern (regex)
+  -i, --ignore=PATTERN             Ignore URL pattern (regex)
+  -s, --silent                     Silent mode
+  -v, --verbose                    Verbose mode
+      --debug                      Debug mode
+      --limit=N                    Limit number of URLs to scan
+      --coverage                   Enable coverage tracking and reporting
+      --visualize=PATH             Generate visualization PNG
 ```
 
 ## Modes
-```shell
+```bash
 # Scan the URLs from STDIN (multiple URLs)
 cat urls.txt | deadfinder pipe
 
-# Scan the URLs from File. (multiple URLs)
+# Scan the URLs from a file
 deadfinder file urls.txt
 
-# Scan the Single URL.
+# Scan a single URL
 deadfinder url https://www.hahwul.com
 
-# Scan the URLs from sitemap. (multiple URLs)
+# Scan the URLs from a sitemap
 deadfinder sitemap https://www.hahwul.com/sitemap.xml
 ```
 
 ## JSON Handling
-```shell
-deadfinder sitemap https://www.hahwul.com/sitemap.xml \
-  -o output.json
-
+```bash
+deadfinder sitemap https://www.hahwul.com/sitemap.xml -o output.json
 cat output.json | jq
 ```
 
@@ -205,7 +148,7 @@ cat output.json | jq
 }
 ```
 
-With `--coverage` flag:
+With `--coverage`:
 
 ```bash
 deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
@@ -214,15 +157,7 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
 ```json
 {
   "dead_links": {
-    "Target URL": [
-      "DeadLink URL 1",
-      "DeadLink URL 2",
-      "DeadLink URL 3",
-      "DeadLink URL 4",
-      "DeadLink URL 5",
-      "DeadLink URL 6",
-      "DeadLink URL 7",
-    ]
+    "Target URL": ["DeadLink URL 1", "DeadLink URL 2"]
   },
   "coverage": {
     "targets": {
@@ -241,44 +176,23 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
 }
 ```
 
-## SBOM (Software Bill of Materials)
-
-DeadFinder includes automatic SBOM generation using CycloneDX format. When releases are published, a `bom.xml` file is automatically generated and attached as a release asset.
-
-The SBOM includes:
-- All runtime and development dependencies
-- Component versions and licenses
-- Package URLs (purl) for traceability
-- SHA-256 hashes for integrity verification
-
-### Manual SBOM Generation
-
-You can manually generate an SBOM for development purposes:
-
+## Shell Completion
 ```bash
-# Install dependencies
-bundle install
-
-# Generate SBOM
-bundle exec cyclonedx-ruby -p .
-
-# SBOM will be created as bom.xml
+deadfinder completion bash > /etc/bash_completion.d/deadfinder
+deadfinder completion zsh  > ~/.zsh/completion/_deadfinder
+deadfinder completion fish > ~/.config/fish/completions/deadfinder.fish
 ```
-
-The generated SBOM follows the [CycloneDX 1.1 specification](https://cyclonedx.org/) and can be used with various security scanning and compliance tools.
 
 ## Contributions Welcome!
 
-We welcome contributions from everyone! If you have an idea for an improvement or want to report a bug:
+Contributions are welcome! If you have an idea for an improvement or want to report a bug:
 
 - **Fork the repository.**
 - **Create a new branch** for your feature or bug fix (e.g., `feature/awesome-feature` or `bugfix/annoying-bug`).
 - **Make your changes.**
-- **Commit your changes** with a clear commit message.
+- **Commit your changes** with a clear message.
 - **Push** to the branch.
 - **Submit a Pull Request (PR)** to our `main` branch.
-
-We'll review your PR as soon as possible. Thank you for contributing to our project!
 
 ### Contributors
 

@@ -27,7 +27,7 @@ jobs:
 
       - name: Build static binary (Alpine / musl)
         run: |
-          docker run --rm -v "$PWD":/workspace -w /workspace/crystal \
+          docker run --rm -v "$PWD":/workspace -w /workspace \
             ${{ env.CRYSTAL_BUILD_IMAGE }} \
             sh -c 'apk add --no-cache cmake make g++ \
                    && shards install \
@@ -35,10 +35,8 @@ jobs:
 
       - name: Package
         run: |
-          cd crystal
           chmod +x deadfinder
-          tar czf ../deadfinder-linux-${{ matrix.arch }}.tar.gz deadfinder
-          cd ..
+          tar czf deadfinder-linux-${{ matrix.arch }}.tar.gz deadfinder
           sha256sum deadfinder-linux-${{ matrix.arch }}.tar.gz > deadfinder-linux-${{ matrix.arch }}.tar.gz.sha256
 
       - name: Upload to release
@@ -75,17 +73,14 @@ jobs:
         run: brew install crystal cmake
 
       - name: Build release binary
-        working-directory: crystal
         run: |
           shards install
           crystal build src/cli_main.cr -o deadfinder --release --no-debug
 
       - name: Package
         run: |
-          cd crystal
           chmod +x deadfinder
-          tar czf ../deadfinder-macos-${{ matrix.arch }}.tar.gz deadfinder
-          cd ..
+          tar czf deadfinder-macos-${{ matrix.arch }}.tar.gz deadfinder
           shasum -a 256 deadfinder-macos-${{ matrix.arch }}.tar.gz > deadfinder-macos-${{ matrix.arch }}.tar.gz.sha256
 
       - name: Upload to release
