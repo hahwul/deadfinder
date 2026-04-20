@@ -8,6 +8,8 @@ require "yaml"
 
 SHARD_YML  = "shard.yml"
 VERSION_CR = "src/deadfinder/version.cr"
+SPEC_TOP   = "spec/deadfinder_spec.cr"
+SPEC_CLI   = "spec/deadfinder/cli_spec.cr"
 
 SEMVER = /\A\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\z/
 
@@ -25,24 +27,28 @@ end
 
 nv = new_version.as(String)
 
-# shard.yml: replace top-level `version: ...`
-shard_src = File.read(SHARD_YML)
-updated_shard = shard_src.sub(/^version:\s*.+$/m, "version: #{nv}")
-if updated_shard == shard_src
-  STDERR.puts "#{SHARD_YML}: no version: line found"
-  exit 1
+def replace_in_file(path : String, pattern : Regex, replacement : String) : Bool
+  src = File.read(path)
+  updated = src.sub(pattern, replacement)
+  if updated == src
+    STDERR.puts "#{path}: pattern not found"
+    return false
+  end
+  File.write(path, updated)
+  true
 end
-File.write(SHARD_YML, updated_shard)
+
+ok = true
+ok &= replace_in_file(SHARD_YML, /^version:\s*.+$/m, "version: #{nv}")
 puts "#{SHARD_YML}: #{nv}"
 
-# src/deadfinder/version.cr: replace VERSION = "..."
-vcr_src = File.read(VERSION_CR)
-updated_vcr = vcr_src.sub(/VERSION\s*=\s*"[^"]+"/, %(VERSION = "#{nv}"))
-if updated_vcr == vcr_src
-  STDERR.puts "#{VERSION_CR}: no VERSION constant found"
-  exit 1
-end
-File.write(VERSION_CR, updated_vcr)
+ok &= replace_in_file(VERSION_CR, /VERSION\s*=\s*"[^"]+"/, %(VERSION = "#{nv}"))
 puts "#{VERSION_CR}: #{nv}"
 
-puts "done"
+ok &= replace_in_file(SPEC_TOP, /VERSION\.should\s+eq\s+"[^"]+"/, %(VERSION.should eq "#{nv}"))
+puts "#{SPEC_TOP}: #{nv}"
+
+ok &= replace_in_file(SPEC_CLI, /VERSION\.should\s+eq\s+"[^"]+"/, %(VERSION.should eq "#{nv}"))
+puts "#{SPEC_CLI}: #{nv}"
+
+exit(ok ? 0 : 1)

@@ -9,7 +9,7 @@ describe Deadfinder do
   describe "#version" do
     it "returns the version number" do
       Deadfinder::VERSION.should_not be_nil
-      Deadfinder::VERSION.should eq "1.10.0"
+      Deadfinder::VERSION.should eq "2.0.0"
     end
   end
 
