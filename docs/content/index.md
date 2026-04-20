@@ -42,7 +42,7 @@ See [Quick Start](/docs/getting-started/quickstart/) for more.
 Run DeadFinder on every push via the official GitHub Action:
 
 ```yaml
-- uses: hahwul/deadfinder@2
+- uses: hahwul/deadfinder@v2
   with:
     command: sitemap
     target: https://www.example.com/sitemap.xml

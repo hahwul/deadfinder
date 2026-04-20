@@ -113,7 +113,7 @@ runs:
           echo "::error title=DeadFinder binary not found::Failed to download ${base_url}/${asset}"
           echo "::error::Common causes:"
           echo "::error::  1. Using 'uses: hahwul/deadfinder@main' or '@latest' — neither resolves to a release."
-          echo "::error::     → Pin a released ref instead: uses: hahwul/deadfinder@2 (latest 2.x) or @2.0.2 (exact)."
+          echo "::error::     → Pin a released ref instead: uses: hahwul/deadfinder@v2 (latest 2.x) or @2.0.2 (exact)."
           echo "::error::  2. Requested version (input: version=${version}) is not a published release tag."
           echo "::error::     → See https://github.com/hahwul/deadfinder/releases for available tags."
           echo "::error::  3. Using a v1.x workflow with a v2 ref — v1 users should pin hahwul/deadfinder@1.10.0."

@@ -7,10 +7,12 @@ on:
 permissions:
   contents: write
 
-# Force-update the floating `<major>` tag (e.g. `2`) to point at the
+# Force-update the floating `v<major>` tag (e.g. `v2`) to point at the
 # latest published <major>.<minor>.<patch> release. Lets callers pin
-# `uses: hahwul/deadfinder@2` and receive bug-fix patches automatically.
-# Skips pre-releases so RC tags don't displace the stable major pointer.
+# `uses: hahwul/deadfinder@v2` and receive bug-fix patches automatically.
+# The `v` prefix is required — GitHub Actions rejects bare `2` as a
+# "shortened commit SHA". Skips pre-releases so RC tags don't displace
+# the stable pointer.
 
 jobs:
   bump-major-tag:
@@ -21,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Move <major> tag to release commit
+      - name: Move v<major> tag to release commit
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
@@ -32,8 +34,9 @@ jobs:
             echo "Skipping: derived major '$major' from tag '$TAG' is not numeric."
             exit 0
           fi
+          movable="v${major}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f "$major" "$TAG"
-          git push origin "refs/tags/$major" --force
-          echo "Moved tag '$major' → '$TAG'."
+          git tag -f "$movable" "$TAG"
+          git push origin "refs/tags/$movable" --force
+          echo "Moved tag '$movable' → '$TAG'."
