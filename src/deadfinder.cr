@@ -357,13 +357,13 @@ module Deadfinder
       end
 
       if coverage_info
-        csv.row  # Empty row separator
+        csv.row # Empty row separator
         csv.row "Coverage Report"
         csv.row "target", "total_tested", "dead_links", "coverage_percentage"
         coverage_info.targets.each do |target, data|
           csv.row target, data.total_tested, data.dead_links, "#{data.coverage_percentage}%"
         end
-        csv.row  # Empty row separator
+        csv.row # Empty row separator
         csv.row "Overall Summary"
         csv.row "total_tested", "total_dead", "overall_coverage_percentage"
         csv.row coverage_info.summary.total_tested, coverage_info.summary.total_dead, "#{coverage_info.summary.overall_coverage_percentage}%"

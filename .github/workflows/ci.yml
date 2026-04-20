@@ -1,0 +1,39 @@
+---
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  spec:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crystal-version: ["1.19.1", "1.20.0"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Crystal ${{ matrix.crystal-version }}
+        uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: ${{ matrix.crystal-version }}
+
+      - name: Install cmake (lexbor dependency)
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Install shards
+        run: shards install
+
+      - name: Run crystal spec
+        run: crystal spec
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: crystal-lang/install-crystal@v1
+      - name: Check formatting
+        run: crystal tool format --check src spec
