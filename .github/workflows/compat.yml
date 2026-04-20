@@ -11,11 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Ruby
+      - name: Set up Ruby (harness driver)
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '4.0'
-          bundler-cache: true
+          ruby-version: '3.4'
+          bundler-cache: false
+
+      - name: Install harness Ruby deps
+        run: gem install --no-document toml-rb
 
       - name: Set up Crystal
         uses: crystal-lang/install-crystal@v1
@@ -24,15 +27,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake
 
       - name: Build Crystal binary
-        working-directory: crystal
         run: |
           shards install
           crystal build src/cli_main.cr -o deadfinder --release
 
-      - name: Compat — Ruby implementation
-        run: bundle exec ruby spec/compat/run.rb
-
       - name: Compat — Crystal implementation
         env:
-          BIN: ./crystal/deadfinder
-        run: bundle exec ruby spec/compat/run.rb
+          BIN: ./deadfinder
+        run: ruby spec/compat/run.rb

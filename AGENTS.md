@@ -1,214 +1,99 @@
-# DeadFinder - Dead Link Detection Tool
+# DeadFinder — Agent Guide
 
-DeadFinder is a Ruby gem that finds broken links (dead links) in web pages. It provides a command-line interface, Ruby library API, and GitHub Action for detecting broken URLs in websites, sitemaps, and files.
+DeadFinder is a CLI tool that finds broken links in web pages, sitemaps, and URL lists. It is written in **Crystal** (v2.x+). The legacy Ruby v1.x implementation lives on the `legacy/v1` branch.
 
-Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
+Reference this file first; fall back to the source only when something here is stale.
 
-## Working Effectively
+## Prerequisites
 
-### Prerequisites and Setup
-- Install Ruby 3.3+ (officially requires 4.0+, but 3.3+ works):
-  - Check version: `ruby --version`
-- Install bundler for user if not available: `gem install bundler --user-install`
-- Add bundler to PATH: `export PATH="$HOME/.local/share/gem/ruby/4.0.0/bin:$PATH"`
+- Crystal >= 1.19.1
+- cmake, make, g++ (for building the `lexbor` HTML parser)
 
-### Bootstrap and Dependencies  
-- Set up the repository:
-  - `chmod +x bin/setup && ./bin/setup`
-  - OR manually: `bundle config set --local path 'vendor/bundle' && bundle install`
-- NEVER CANCEL: Bundle install takes 2-3 minutes. Set timeout to 5+ minutes.
+## Bootstrap
 
-### Building and Testing
-- Build: NOT APPLICABLE - This is a Ruby gem, no compilation required
-- Run tests: `bundle exec rspec`
-  - TIMING: Tests complete in ~0.5 seconds (108 tests). Set timeout to 1 minute for safety.
-- Run linter: `bundle exec rubocop`  
-  - TIMING: Linting takes ~5-10 seconds. Set timeout to 1 minute for safety.
-
-### Running the Application
-- CLI interface: `bundle exec ruby -I lib bin/deadfinder <command>`
-- Available commands:
-  - `bundle exec ruby -I lib bin/deadfinder --help` - Show help
-  - `bundle exec ruby -I lib bin/deadfinder version` - Show version  
-  - `bundle exec ruby -I lib bin/deadfinder url <URL>` - Scan single URL
-  - `bundle exec ruby -I lib bin/deadfinder file <filename>` - Scan URLs from file
-  - `bundle exec ruby -I lib bin/deadfinder sitemap <sitemap-url>` - Scan URLs from sitemap
-  - `bundle exec ruby -I lib bin/deadfinder pipe` - Scan URLs from STDIN
-  - `bundle exec ruby -I lib bin/deadfinder completion <shell>` - Generate shell completion
-
-## Validation
-
-### Manual Testing Scenarios
-ALWAYS test functionality after making changes by running through these scenarios:
-
-1. **Basic CLI functionality**:
-   - `bundle exec ruby -I lib bin/deadfinder version` - Should show version info
-   - `bundle exec ruby -I lib bin/deadfinder --help` - Should display help text
-
-2. **URL scanning** (will show network errors in sandbox environment, but tool should work):
-   - Create test file: `echo -e "https://example.com\nhttps://nonexistent.example" > /tmp/test_urls.txt`
-   - `bundle exec ruby -I lib bin/deadfinder file /tmp/test_urls.txt --silent`
-   - Should run without crashing (network errors are expected)
-
-3. **Ruby API usage**:
-   - `bundle exec ruby -I lib -e "require 'deadfinder'; puts DeadFinder::VERSION"`
-   - Should print version number
-
-### Build Validation
-- ALWAYS run `bundle exec rspec` before committing changes
-- ALWAYS run `bundle exec rubocop` before committing changes  
-- Both must pass for CI to succeed
-
-## Common Tasks
-
-### Repository Structure
-```
-/home/runner/work/deadfinder/deadfinder/
-├── bin/
-│   ├── console          # IRB console with deadfinder loaded
-│   ├── deadfinder       # Main CLI executable 
-│   └── setup           # Setup script
-├── lib/
-│   ├── deadfinder.rb              # Main module
-│   └── deadfinder/
-│       ├── cli.rb                 # Thor-based CLI
-│       ├── runner.rb              # Core scanning logic
-│       ├── logger.rb              # Logging utilities
-│       ├── utils.rb               # Utility functions
-│       ├── version.rb             # Version constant
-│       ├── http_client.rb         # HTTP client wrapper
-│       ├── url_pattern_matcher.rb # URL pattern matching
-│       ├── completion.rb          # Shell completion
-│       └── visualizer.rb          # Coverage visualization
-├── spec/                          # RSpec test suite
-├── examples/                      # Usage examples
-├── github-action/                 # GitHub Action implementation
-├── Gemfile                        # Dependencies
-├── deadfinder.gemspec            # Gem specification
-├── Rakefile                      # Rake tasks
-└── .rubocop.yml                  # Linting configuration
+```bash
+shards install
 ```
 
-### Key Project Files
-- **CLI Entry Point**: `bin/deadfinder` - Thor-based command line interface
-- **Core Library**: `lib/deadfinder.rb` - Main module with scanning functions
-- **Test Suite**: `spec/` - RSpec tests (108 tests, all passing)
-- **Examples**: `examples/` - Ruby usage examples for different modes
-- **GitHub Action**: `github-action/` - Docker-based GitHub Action
+## Build
 
-### CLI Usage Patterns
-```shell
-# Scan single URL
-bundle exec ruby -I lib bin/deadfinder url https://example.com
+```bash
+# Debug (fast compile, slower binary)
+crystal build src/cli_main.cr -o deadfinder
 
-# Scan multiple URLs from file  
-bundle exec ruby -I lib bin/deadfinder file urls.txt
-
-# Scan sitemap
-bundle exec ruby -I lib bin/deadfinder sitemap https://example.com/sitemap.xml
-
-# Scan from STDIN
-cat urls.txt | bundle exec ruby -I lib bin/deadfinder pipe
-
-# Output options
-bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.json -f json
-bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.yaml -f yaml
-bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.csv -f csv
-bundle exec ruby -I lib bin/deadfinder url https://example.com -o output.toml -f toml
-
-# Advanced options
-bundle exec ruby -I lib bin/deadfinder url https://example.com --concurrency=30 --timeout=15 --silent
-
-# Coverage and visualization options
-bundle exec ruby -I lib bin/deadfinder url https://example.com --coverage --visualize=report.png
+# Release (slow compile, fast binary)
+crystal build src/cli_main.cr -o deadfinder --release --no-debug
 ```
 
-### Ruby API Usage Patterns
-```ruby
-require 'deadfinder'
+## Test
 
-# Basic usage
-runner = DeadFinder::Runner.new
-options = runner.default_options
-options['concurrency'] = 30
+```bash
+# Unit specs
+crystal spec
 
-DeadFinder.run_url('https://example.com', options)
-puts DeadFinder.output
-
-# Multiple URLs
-DeadFinder.run_file('urls.txt', options)
-puts DeadFinder.output
-
-# Sitemap scanning
-DeadFinder.run_sitemap('https://example.com/sitemap.xml', options)
-puts DeadFinder.output
+# Cross-implementation compat harness (golden files from v1 Ruby output)
+BIN="./deadfinder" ruby spec/compat/run.rb
 ```
 
-### GitHub Action Usage
-```yaml
-steps:
-- name: Run DeadFinder
-  uses: hahwul/deadfinder@latest
-  with:
-    command: sitemap
-    target: https://example.com/sitemap.xml
-    timeout: 10
-    concurrency: 50
+The compat harness requires `toml-rb` (`gem install toml-rb`) and spins up a local fixture HTTP server on a random port.
+
+## Run
+
+```bash
+./deadfinder url https://example.com
+./deadfinder file urls.txt
+cat urls.txt | ./deadfinder pipe
+./deadfinder sitemap https://example.com/sitemap.xml
 ```
 
-### Development Workflow
-1. Make changes to code
-2. Run tests: `bundle exec rspec` (must pass)
-3. Run linter: `bundle exec rubocop` (must pass) 
-4. Test CLI manually with validation scenarios above
-5. Commit changes
+Full flag list lives in `src/deadfinder/cli.cr` (the `OptionParser` block).
 
-### Installation Methods
-- **Gem**: `gem install deadfinder`
-- **Homebrew**: `brew install deadfinder`  
-- **Docker**: `docker pull ghcr.io/hahwul/deadfinder:latest`
-- **Development**: `bundle config set --local path 'vendor/bundle' && bundle install`
+## Layout
 
-### Output Formats
-- **JSON** (default): `{"origin_url": ["broken_link1", "broken_link2"]}`
-- **YAML**: YAML formatted output
-- **CSV**: Comma-separated values with target,url columns
-- **TOML**: TOML formatted output
+```
+src/
+├── cli_main.cr                # binary entry
+├── deadfinder.cr              # module root (run_* dispatchers, output serialization)
+└── deadfinder/
+    ├── cli.cr                 # OptionParser + subcommand routing
+    ├── types.cr               # Options + coverage structs
+    ├── runner.cr              # fiber workers, link extraction, HTTP calls
+    ├── http_client.cr         # HTTP::Client wrapper (proxy, CONNECT tunneling)
+    ├── utils.cr               # URL resolution helpers
+    ├── url_pattern_matcher.cr # match/ignore regex with 1s timeout
+    ├── logger.cr              # silent/verbose/debug gating
+    ├── completion.cr          # bash/zsh/fish completion generators
+    ├── visualizer.cr          # PNG coverage chart (stumpy_png)
+    └── version.cr
 
-### Common Options
-- `--concurrency=N` - Number of concurrent workers (default: 50)
-- `--timeout=N` - Request timeout in seconds (default: 10)  
-- `--silent` - Suppress output during scanning
-- `--verbose` - Verbose output with detailed information
-- `--debug` - Debug mode for troubleshooting
-- `--output=FILE` - Write results to file
-- `--output-format=FORMAT` - Output format (json, yaml, toml, csv)
-- `--headers="Header: Value"` - Custom HTTP headers to send with initial request
-- `--worker-headers="Header: Value"` - Custom HTTP headers to send with worker requests
-- `--match=PATTERN` - Only include URLs matching pattern
-- `--ignore=PATTERN` - Ignore URLs matching pattern
-- `--proxy=URL` - Use proxy server
-- `--proxy-auth=CREDENTIALS` - Proxy server authentication credentials
-- `--user-agent=STRING` - Custom User-Agent string
-- `--limit=N` - Limit the number of URLs to scan
-- `--include30x` - Include 30x redirections as dead links
-- `--coverage` - Enable coverage tracking and reporting
-- `--visualize=FILE` - Generate a visualization of the scan results (e.g., report.png)
+spec/
+├── deadfinder_spec.cr
+├── spec_helper.cr
+├── deadfinder/                # unit specs per module
+└── compat/                    # black-box harness (v1 golden files)
+```
 
-### Network Considerations
-- Tool requires internet access for actual URL scanning
-- In sandboxed environments, network requests may fail (this is expected)
-- Tool functionality can still be validated even with network errors
-- Use short timeouts (5-10 seconds) for testing to avoid hangs
+## Conventions
 
-### Error Handling
-- Network errors are expected and handled gracefully
-- Invalid URLs are logged but don't crash the application
-- Missing files result in clear error messages
-- Invalid regex patterns in --match/--ignore are logged as errors
+- Output surface is stable: CLI flags, subcommands, and JSON/YAML/TOML/CSV shapes match v1 Ruby. The golden files in `spec/compat/golden/` lock this contract.
+- Resolved URLs must preserve the base URL's port (see `utils.cr::origin`). This was a v1 pain point; don't regress.
+- Silent default is `false` — the CLI emits logs by default. `-s` / `--silent` opts in.
 
-### Performance Notes
-- Default concurrency: 50 workers
-- Default timeout: 10 seconds per request
-- Large sitemaps may take time to process (this is normal)
-- Memory usage scales with number of URLs being processed
+## CI
+
+- `.github/workflows/compat.yml` — Crystal build + compat harness on every PR
+- `.github/workflows/crystal-release.yml` — release-triggered builds for linux x86_64/aarch64 and macOS arm64/x86_64; uploads tar.gz + sha256 as release assets
+- `.github/workflows/docker-build.yml` / `docker-ghcr.yml` — multi-arch image builds (Crystal static binary in Alpine)
+
+## Distribution channels
+
+| Channel | How it picks up a new release |
+|---|---|
+| GitHub Release binaries | `crystal-release.yml` auto-uploads on `release: published` |
+| Docker (`ghcr.io/hahwul/deadfinder`) | `docker-ghcr.yml` on push to main / release |
+| Homebrew (homebrew-core) | Manual PR via `brew bump-formula-pr` after tagging |
+| GitHub Action (`hahwul/deadfinder@<tag>`) | `action.yml` in repo root; downloads the release binary |
+
+## Legacy (Ruby v1) branch
+
+Gem releases still happen on `legacy/v1`. Bug-fix and security updates only — no new features. Do not port v1 changes to main unless they are true behavioral fixes that should also apply to Crystal.

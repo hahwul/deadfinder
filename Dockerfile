@@ -3,9 +3,9 @@ FROM crystallang/crystal:1.19.1-alpine AS builder
 RUN apk add --no-cache cmake make g++ git
 
 WORKDIR /build
-COPY crystal/ ./crystal/
+COPY shard.yml shard.lock ./
+COPY src/ ./src/
 
-WORKDIR /build/crystal
 RUN shards install
 RUN crystal build src/cli_main.cr -o /build/deadfinder --release --static --no-debug
 

@@ -1,16 +1,18 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Cross-implementation compatibility harness.
+# Black-box compatibility harness for the deadfinder Crystal binary.
 #
-# Runs the deadfinder binary under test against a local fixture server,
-# writes the output to a temp file (deadfinder only serializes to file),
-# and compares to a golden file. Golden files use the `{{BASE}}` placeholder
-# for the dynamic fixture server origin.
+# The golden files in this directory were captured from the v1 Ruby
+# implementation and now act as the frozen contract the Crystal binary
+# must match. The harness runs the binary under test against a local
+# fixture server, writes the output to a temp file, and compares the
+# parsed structure to the corresponding golden file (with `{{BASE}}`
+# substituted for the dynamic fixture origin).
 #
 # Usage:
-#   ruby spec/compat/run.rb                   # uses the repo's Ruby binary
-#   BIN="./crystal/deadfinder" ruby spec/compat/run.rb
+#   BIN="./deadfinder" ruby spec/compat/run.rb
+#   BIN="/path/to/deadfinder" ruby spec/compat/run.rb
 
 require 'csv'
 require 'json'
@@ -19,11 +21,9 @@ require 'tempfile'
 require 'toml-rb'
 require 'yaml'
 
-REPO_ROOT    = File.expand_path('../..', __dir__)
 HARNESS_ROOT = __dir__
-DEFAULT_BIN  = "ruby -I #{REPO_ROOT}/lib #{REPO_ROOT}/bin/deadfinder"
 
-BIN = ENV.fetch('BIN', DEFAULT_BIN)
+BIN = ENV.fetch('BIN', './deadfinder')
 
 def sort_arrays(obj)
   case obj
