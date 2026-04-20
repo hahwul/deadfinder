@@ -16,7 +16,7 @@ module Deadfinder
       if node.starts_with?("//")
         "#{uri.scheme}:#{node}"
       elsif node.starts_with?("/")
-        "#{uri.scheme}://#{uri.host}#{node}"
+        "#{origin(uri)}#{node}"
       elsif ignore_scheme?(node)
         nil
       else
@@ -25,6 +25,14 @@ module Deadfinder
       end
     rescue
       nil
+    end
+  end
+
+  private def self.origin(uri : URI) : String
+    if port = uri.port
+      "#{uri.scheme}://#{uri.host}:#{port}"
+    else
+      "#{uri.scheme}://#{uri.host}"
     end
   end
 
@@ -45,7 +53,7 @@ module Deadfinder
           resolved_path = "/" + relative
         end
       end
-      "#{base_uri.scheme}://#{base_uri.host}#{resolved_path}"
+      "#{origin(base_uri)}#{resolved_path}"
     rescue
       nil
     end
