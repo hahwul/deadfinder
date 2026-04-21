@@ -195,6 +195,10 @@ module Deadfinder
         Deadfinder::Logger.verbose_ok "[#{status_code}] #{url}" if options.verbose
       end
 
+      # Skip the mutex entirely on the common "alive + no coverage" path
+      # so we don't serialize every live link on the cache-set mutex.
+      return unless dead || options.coverage
+
       mutex.synchronize do
         if dead
           output[target] ||= [] of String
