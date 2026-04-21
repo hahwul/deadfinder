@@ -4,8 +4,18 @@
 </div>
 
 <p align="center">
-  <a href="#contributions-welcome"><img src="https://img.shields.io/badge/CONTRIBUTIONS-WELCOME-000000?style=for-the-badge&labelColor=000000"></a>
-  <a href="https://formulae.brew.sh/formula/deadfinder"><img src="https://img.shields.io/homebrew/v/deadfinder?style=for-the-badge&color=000000&logo=homebrew&labelColor=000000"></a>
+<a href="https://github.com/hahwul/deadfinder/releases">
+<img src="https://img.shields.io/github/v/release/hahwul/deadfinder?style=for-the-badge&color=black&labelColor=black&logo=web"></a>
+<a href="https://crystal-lang.org">
+<img src="https://img.shields.io/badge/Crystal-000000?style=for-the-badge&logo=crystal&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="https://deadfinder.hahwul.com">Documentation</a> •
+  <a href="https://deadfinder.hahwul.com/docs/getting-started/installation/">Installation</a> •
+  <a href="https://deadfinder.hahwul.com/docs/integration/github-action/">Github Action</a> •
+  <a href="#contributing">Contributing</a> •
+  <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 Dead link (broken link) means a link within a web page that cannot be connected. These links can have a negative impact to SEO and Security. This tool makes it easy to identify and modify.
@@ -190,7 +200,7 @@ deadfinder completion zsh  > ~/.zsh/completion/_deadfinder
 deadfinder completion fish > ~/.config/fish/completions/deadfinder.fish
 ```
 
-## Contributions Welcome!
+## Contributing
 
 Contributions are welcome! If you have an idea for an improvement or want to report a bug:
 
