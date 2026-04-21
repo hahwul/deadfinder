@@ -83,6 +83,12 @@ describe Deadfinder::UrlPatternMatcher do
     it "UnsafePatternError is-a ArgumentError so runner rescue still catches" do
       (Deadfinder::UrlPatternMatcher::UnsafePatternError < ArgumentError).should be_true
     end
+
+    it "does not flag patterns with escaped literal parens" do
+      # `\(a+\)+` = literal `(`, one-or-more `a`, literal `)`, one-or-more —
+      # there's no actual group being quantified, so no catastrophic backtracking.
+      Deadfinder::UrlPatternMatcher.match?("(aaa))))", "\\(a+\\)+").should be_true
+    end
   end
 
   describe "regex caching" do
