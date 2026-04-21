@@ -43,6 +43,22 @@ describe Deadfinder::HttpClient do
       client = Deadfinder::HttpClient.create(uri, options)
       client.should be_a(HTTP::Client)
     end
+
+    it "creates an HTTPS client when insecure flag is enabled" do
+      uri = URI.parse("https://example.com")
+      options = default_test_options
+      options.insecure = true
+      client = Deadfinder::HttpClient.create(uri, options)
+      client.should be_a(HTTP::Client)
+    end
+
+    it "creates an HTTPS client with verification enabled by default" do
+      uri = URI.parse("https://example.com")
+      options = default_test_options
+      options.insecure.should be_false
+      client = Deadfinder::HttpClient.create(uri, options)
+      client.should be_a(HTTP::Client)
+    end
   end
 
   describe ".proxy_configured?" do

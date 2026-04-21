@@ -31,6 +31,7 @@ module Deadfinder
         parser.on("--user_agent=UA", "User-Agent string") { |v| options.user_agent = v }
         parser.on("-p PROXY", "--proxy=PROXY", "Proxy server") { |v| options.proxy = v }
         parser.on("--proxy_auth=CREDS", "Proxy authentication (user:pass)") { |v| options.proxy_auth = v }
+        parser.on("-k", "--insecure", "Skip TLS certificate verification (not recommended)") { options.insecure = true }
         parser.on("-m PATTERN", "--match=PATTERN", "Match URL pattern") { |v| options.match = v }
         parser.on("-i PATTERN", "--ignore=PATTERN", "Ignore URL pattern") { |v| options.ignore = v }
         parser.on("-s", "--silent", "Silent mode") { options.silent = true }
