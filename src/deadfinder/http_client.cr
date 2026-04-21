@@ -53,14 +53,13 @@ module Deadfinder
             response_line = socket.gets
             unless response_line && response_line.includes?("200")
               socket.close
-              # Fallback to direct connection
-              return create_direct(host, port, use_ssl, options)
+              raise "Proxy CONNECT to #{host}:#{target_port} via #{proxy_host}:#{proxy_port} failed: #{response_line.try(&.strip) || "no response"}"
             end
             # Consume remaining headers
             while (line = socket.gets) && !line.strip.empty?
             end
 
-            tls_socket = OpenSSL::SSL::Socket::Client.new(socket, context: ssl_context, hostname: host)
+            tls_socket = OpenSSL::SSL::Socket::Client.new(socket, context: ssl_context(options), hostname: host)
             client = HTTP::Client.new(io: tls_socket, host: host, port: target_port)
             client.read_timeout = options.timeout.seconds
             return client
@@ -92,7 +91,7 @@ module Deadfinder
     end
 
     private def self.create_direct(host : String, port : Int32?, use_ssl : Bool, options : Options) : HTTP::Client
-      client = HTTP::Client.new(host, port: port, tls: use_ssl ? ssl_context : nil)
+      client = HTTP::Client.new(host, port: port, tls: use_ssl ? ssl_context(options) : nil)
       client.read_timeout = options.timeout.seconds
       client.connect_timeout = options.timeout.seconds
       client
@@ -116,9 +115,9 @@ module Deadfinder
       end
     end
 
-    private def self.ssl_context : OpenSSL::SSL::Context::Client
+    private def self.ssl_context(options : Options) : OpenSSL::SSL::Context::Client
       ctx = OpenSSL::SSL::Context::Client.new
-      ctx.verify_mode = OpenSSL::SSL::VerifyMode::NONE
+      ctx.verify_mode = options.insecure ? OpenSSL::SSL::VerifyMode::NONE : OpenSSL::SSL::VerifyMode::PEER
       ctx
     end
   end

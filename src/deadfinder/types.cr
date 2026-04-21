@@ -12,6 +12,7 @@ module Deadfinder
     property include30x : Bool = false
     property proxy : String = ""
     property proxy_auth : String = ""
+    property insecure : Bool = false
     property match : String = ""
     property ignore : String = ""
     property user_agent : String = "Mozilla/5.0 (compatible; DeadFinder/#{VERSION};)"
