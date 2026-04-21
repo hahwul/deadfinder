@@ -64,6 +64,11 @@ jobs:
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=ghcr-${{ steps.platform.outputs.slug }}
           cache-to: type=gha,mode=max,scope=ghcr-${{ steps.platform.outputs.slug }}
+          # push-by-digest only pushes the image manifest; provenance wraps it in
+          # a manifest list, so the reported digest would point at a list that
+          # was never pushed and the merge step fails with "not found".
+          provenance: false
+          sbom: false
 
       - name: Export digest
         run: |
@@ -135,14 +140,16 @@ jobs:
 
   cleanup:
     runs-on: ubuntu-latest
-    needs: merge
+    needs: [build, merge]
+    if: always() && needs.build.result == 'success'
     permissions:
       packages: write
     steps:
       # The build matrix pushes per-platform digests with push-by-digest=true,
       # which leaves untagged manifests in GHCR after the merge job assembles
       # the multi-arch manifest list. Prune them so only tagged versions
-      # (main, latest, semver) remain.
+      # (main, latest, semver) remain — run even if merge fails so orphaned
+      # per-platform digests don't accumulate in the package listing.
       - name: Delete untagged GHCR versions
         uses: actions/delete-package-versions@v5
         with:
