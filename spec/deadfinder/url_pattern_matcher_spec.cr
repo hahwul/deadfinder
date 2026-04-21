@@ -51,4 +51,51 @@ describe Deadfinder::UrlPatternMatcher do
       Deadfinder::UrlPatternMatcher.ignore?("http://example.com/page", "ads|tracking").should be_false
     end
   end
+
+  describe "ReDoS guardrails" do
+    before_each { Deadfinder::UrlPatternMatcher.clear_cache }
+
+    it "rejects patterns longer than MAX_PATTERN_LENGTH" do
+      long_pattern = "a" * (Deadfinder::UrlPatternMatcher::MAX_PATTERN_LENGTH + 1)
+      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
+        Deadfinder::UrlPatternMatcher.match?("http://example.com", long_pattern)
+      end
+    end
+
+    it "rejects classic nested-quantifier ReDoS shapes like (a+)+" do
+      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
+        Deadfinder::UrlPatternMatcher.match?("aaaa", "(a+)+")
+      end
+    end
+
+    it "rejects (a*)* " do
+      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
+        Deadfinder::UrlPatternMatcher.ignore?("aaaa", "(a*)*")
+      end
+    end
+
+    it "rejects (.+){2,} bounded-repeat variant" do
+      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
+        Deadfinder::UrlPatternMatcher.match?("aaaa", "(.+){2,}")
+      end
+    end
+
+    it "UnsafePatternError is-a ArgumentError so runner rescue still catches" do
+      (Deadfinder::UrlPatternMatcher::UnsafePatternError < ArgumentError).should be_true
+    end
+  end
+
+  describe "regex caching" do
+    before_each { Deadfinder::UrlPatternMatcher.clear_cache }
+
+    it "reuses the compiled regex across calls with the same pattern" do
+      pattern = "example"
+      Deadfinder::UrlPatternMatcher.match?("http://example.com", pattern)
+      Deadfinder::UrlPatternMatcher.match?("http://example.org", pattern)
+      Deadfinder::UrlPatternMatcher.match?("http://other.com", pattern)
+      # No public accessor to the cache map, but we at least exercise the
+      # hot path to confirm it does not blow up and returns consistent results.
+      Deadfinder::UrlPatternMatcher.match?("http://example.com", pattern).should be_true
+    end
+  end
 end
