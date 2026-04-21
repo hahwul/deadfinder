@@ -13,6 +13,20 @@ describe Deadfinder do
     end
   end
 
+  describe ".reset_state" do
+    it "clears output, coverage_data, and cache_set accumulators" do
+      Deadfinder.output["foo"] = ["bar"]
+      Deadfinder.coverage_data["foo"] = Deadfinder::TargetCoverage.new(total: 1, dead: 1)
+      Deadfinder.cache_set["foo"] = true
+
+      Deadfinder.reset_state
+
+      Deadfinder.output.should be_empty
+      Deadfinder.coverage_data.should be_empty
+      Deadfinder.cache_set.should be_empty
+    end
+  end
+
   describe "#run_url" do
     it "scans a single URL and collects broken links" do
       target = "http://mock-site.test"
@@ -131,6 +145,30 @@ describe Deadfinder do
 
       Deadfinder.output["http://mock-sitemap.test/page1"]?.should_not be_nil
       Deadfinder.output["http://mock-sitemap.test/page1"].should contain "http://mock-sitemap.test/dead1"
+    end
+
+    it "terminates on a cyclic sitemap index without infinite recursion" do
+      # a.xml references b.xml, b.xml references a.xml — must not loop.
+      sitemap_a = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>http://cycle.test/b.xml</loc></sitemap>
+        </sitemapindex>
+      XML
+      sitemap_b = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>http://cycle.test/a.xml</loc></sitemap>
+        </sitemapindex>
+      XML
+
+      WebMock.stub(:get, "http://cycle.test/a.xml").to_return(body: sitemap_a)
+      WebMock.stub(:get, "http://cycle.test/b.xml").to_return(body: sitemap_b)
+
+      options = default_test_options
+      # Should return cleanly (no stack overflow, no hang).
+      Deadfinder.run_sitemap("http://cycle.test/a.xml", options)
+      Deadfinder.output.should be_empty
     end
 
     it "parses sitemap without namespace" do
