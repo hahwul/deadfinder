@@ -23,6 +23,23 @@ module Deadfinder
       end
     end
 
+    # Parse "Name: value" header strings. Accepts ":" or ": " as the
+    # separator and trims both sides — keeps initial-request and worker
+    # headers using the exact same semantics so users don't hit
+    # depending-on-which-flag surprises.
+    private def build_headers(raw : Array(String), user_agent : String) : HTTP::Headers
+      headers = HTTP::Headers.new
+      raw.each do |header|
+        name, sep, value = header.partition(':')
+        next if sep.empty?
+        name = name.strip
+        next if name.empty?
+        headers[name] = value.strip
+      end
+      headers["User-Agent"] = user_agent
+      headers
+    end
+
     def run(target : String, options : Options,
             output : Hash(String, Array(String)),
             coverage_data : Hash(String, TargetCoverage),
@@ -30,12 +47,7 @@ module Deadfinder
             mutex : Mutex)
       Deadfinder::Logger.apply_options(options)
 
-      headers = HTTP::Headers.new
-      options.headers.each do |header|
-        parts = header.split(": ", 2)
-        headers[parts[0]] = parts[1] if parts.size == 2
-      end
-      headers["User-Agent"] = options.user_agent
+      headers = build_headers(options.headers, options.user_agent)
 
       uri = URI.parse(target)
       client = HttpClient.create(uri, options)
@@ -154,14 +166,7 @@ module Deadfinder
     private def check_url(url : String, options : Options) : Int32
       uri = URI.parse(url)
       client = HttpClient.create(uri, options)
-      headers = HTTP::Headers.new
-      headers["User-Agent"] = options.user_agent
-      options.worker_headers.each do |header|
-        parts = header.split(":", 2)
-        if parts.size == 2
-          headers[parts[0].strip] = parts[1].strip
-        end
-      end
+      headers = build_headers(options.worker_headers, options.user_agent)
 
       path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
                HttpClient.absolute_uri(uri)

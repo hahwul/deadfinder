@@ -14,6 +14,8 @@ require "./deadfinder/visualizer"
 require "./deadfinder/completion"
 
 module Deadfinder
+  MAX_SITEMAP_DEPTH = 5
+
   @@output = {} of String => Array(String)
   @@coverage_data = {} of String => TargetCoverage
   @@cache_set = {} of String => Bool
@@ -23,16 +25,8 @@ module Deadfinder
     @@output
   end
 
-  def self.output=(val)
-    @@output = val
-  end
-
   def self.coverage_data
     @@coverage_data
-  end
-
-  def self.coverage_data=(val)
-    @@coverage_data = val
   end
 
   def self.cache_set
@@ -41,6 +35,16 @@ module Deadfinder
 
   def self.mutex
     @@mutex
+  end
+
+  # Clears module-level accumulator state so back-to-back runs in the
+  # same process (e.g. tests, embedded usage) start from a clean slate.
+  def self.reset_state : Nil
+    @@mutex.synchronize do
+      @@output.clear
+      @@coverage_data.clear
+      @@cache_set.clear
+    end
   end
 
   def self.run_pipe(options : Options)
@@ -78,8 +82,21 @@ module Deadfinder
     gen_output(options)
   end
 
-  private def self.parse_sitemap(sitemap_url : String, options : Options) : Array(String)
+  private def self.parse_sitemap(sitemap_url : String, options : Options,
+                                 depth : Int32 = 0,
+                                 visited : Set(String) = Set(String).new) : Array(String)
     urls = [] of String
+
+    if depth >= MAX_SITEMAP_DEPTH
+      Deadfinder::Logger.error "Sitemap depth limit (#{MAX_SITEMAP_DEPTH}) reached at #{sitemap_url}"
+      return urls
+    end
+    if visited.includes?(sitemap_url)
+      Deadfinder::Logger.error "Sitemap cycle detected at #{sitemap_url}"
+      return urls
+    end
+    visited << sitemap_url
+
     begin
       uri = URI.parse(sitemap_url)
       client = HttpClient.create(uri, options)
@@ -120,7 +137,7 @@ module Deadfinder
       end
 
       sitemap_locs.each do |sub_sitemap|
-        urls.concat(parse_sitemap(sub_sitemap, options))
+        urls.concat(parse_sitemap(sub_sitemap, options, depth + 1, visited))
       end
     rescue ex
       Deadfinder::Logger.error "Failed to parse sitemap: #{ex.message}"

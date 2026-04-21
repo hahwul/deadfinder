@@ -13,6 +13,20 @@ describe Deadfinder do
     end
   end
 
+  describe ".reset_state" do
+    it "clears output, coverage_data, and cache_set accumulators" do
+      Deadfinder.output["foo"] = ["bar"]
+      Deadfinder.coverage_data["foo"] = Deadfinder::TargetCoverage.new(total: 1, dead: 1)
+      Deadfinder.cache_set["foo"] = true
+
+      Deadfinder.reset_state
+
+      Deadfinder.output.should be_empty
+      Deadfinder.coverage_data.should be_empty
+      Deadfinder.cache_set.should be_empty
+    end
+  end
+
   describe "#run_url" do
     it "scans a single URL and collects broken links" do
       target = "http://mock-site.test"
