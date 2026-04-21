@@ -120,79 +120,103 @@ module Deadfinder
                cache_set : Hash(String, Bool),
                mutex : Mutex)
       loop do
-        j = jobs.receive? || break
+        url = jobs.receive? || break
 
-        already_cached = mutex.synchronize { cache_set[j]? }
-        if already_cached
-          results.send(j)
+        unless claim_url(url, cache_set, mutex)
+          results.send(url)
           next
         end
 
-        mutex.synchronize { cache_set[j] = true }
-
-        # Track total URLs tested for coverage
-        if options.coverage
-          mutex.synchronize do
-            coverage_data[target] ||= TargetCoverage.new
-            coverage_data[target].total += 1
-          end
-        end
+        record_total(target, options, coverage_data, mutex)
 
         begin
-          uri = URI.parse(j)
-          client = HttpClient.create(uri, options)
-
-          request_headers = HTTP::Headers.new
-          request_headers["User-Agent"] = options.user_agent
-          options.worker_headers.each do |header|
-            parts = header.split(":", 2)
-            if parts.size == 2
-              request_headers[parts[0].strip] = parts[1].strip
-            end
-          end
-
-          worker_path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
-                          HttpClient.absolute_uri(uri)
-                        else
-                          request_path(uri)
-                        end
-          response = client.get(worker_path, headers: request_headers)
-          client.close
-          status_code = response.status_code
-
-          if status_code >= 400 || (status_code >= 300 && options.include30x)
-            Deadfinder::Logger.found "[#{status_code}] #{j}"
-            mutex.synchronize do
-              output[target] ||= [] of String
-              output[target] << j
-              if options.coverage
-                coverage_data[target].dead += 1
-                coverage_data[target].status_counts[status_code.to_s] =
-                  (coverage_data[target].status_counts[status_code.to_s]? || 0) + 1
-              end
-            end
-          else
-            Deadfinder::Logger.verbose_ok "[#{status_code}] #{j}" if options.verbose
-            if options.coverage
-              mutex.synchronize do
-                coverage_data[target].status_counts[status_code.to_s] =
-                  (coverage_data[target].status_counts[status_code.to_s]? || 0) + 1
-              end
-            end
-          end
+          status_code = check_url(url, options)
+          record_status(target, url, status_code, options, output, coverage_data, mutex)
         rescue ex
-          Deadfinder::Logger.verbose "[#{ex}] #{j}" if options.verbose
-          if options.coverage
-            mutex.synchronize do
-              coverage_data[target] ||= TargetCoverage.new
-              coverage_data[target].dead += 1
-              coverage_data[target].status_counts["error"] =
-                (coverage_data[target].status_counts["error"]? || 0) + 1
-            end
-          end
+          Deadfinder::Logger.verbose "[#{ex}] #{url}" if options.verbose
+          record_error(target, options, coverage_data, mutex)
         end
 
-        results.send(j)
+        results.send(url)
+      end
+    end
+
+    # Returns true if this worker now owns `url` (first-time check),
+    # false if another worker already claimed it.
+    private def claim_url(url : String, cache_set : Hash(String, Bool), mutex : Mutex) : Bool
+      mutex.synchronize do
+        return false if cache_set[url]?
+        cache_set[url] = true
+        true
+      end
+    end
+
+    private def check_url(url : String, options : Options) : Int32
+      uri = URI.parse(url)
+      client = HttpClient.create(uri, options)
+      headers = HTTP::Headers.new
+      headers["User-Agent"] = options.user_agent
+      options.worker_headers.each do |header|
+        parts = header.split(":", 2)
+        if parts.size == 2
+          headers[parts[0].strip] = parts[1].strip
+        end
+      end
+
+      path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
+               HttpClient.absolute_uri(uri)
+             else
+               request_path(uri)
+             end
+      response = client.get(path, headers: headers)
+      client.close
+      response.status_code
+    end
+
+    private def record_total(target : String, options : Options,
+                             coverage_data : Hash(String, TargetCoverage),
+                             mutex : Mutex) : Nil
+      return unless options.coverage
+      mutex.synchronize do
+        coverage_data[target] ||= TargetCoverage.new
+        coverage_data[target].total += 1
+      end
+    end
+
+    private def record_status(target : String, url : String, status_code : Int32,
+                              options : Options,
+                              output : Hash(String, Array(String)),
+                              coverage_data : Hash(String, TargetCoverage),
+                              mutex : Mutex) : Nil
+      dead = status_code >= 400 || (status_code >= 300 && options.include30x)
+      if dead
+        Deadfinder::Logger.found "[#{status_code}] #{url}"
+      else
+        Deadfinder::Logger.verbose_ok "[#{status_code}] #{url}" if options.verbose
+      end
+
+      mutex.synchronize do
+        if dead
+          output[target] ||= [] of String
+          output[target] << url
+        end
+        if options.coverage
+          coverage_data[target].dead += 1 if dead
+          coverage_data[target].status_counts[status_code.to_s] =
+            (coverage_data[target].status_counts[status_code.to_s]? || 0) + 1
+        end
+      end
+    end
+
+    private def record_error(target : String, options : Options,
+                             coverage_data : Hash(String, TargetCoverage),
+                             mutex : Mutex) : Nil
+      return unless options.coverage
+      mutex.synchronize do
+        coverage_data[target] ||= TargetCoverage.new
+        coverage_data[target].dead += 1
+        coverage_data[target].status_counts["error"] =
+          (coverage_data[target].status_counts["error"]? || 0) + 1
       end
     end
 
