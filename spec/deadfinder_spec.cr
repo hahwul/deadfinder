@@ -147,6 +147,30 @@ describe Deadfinder do
       Deadfinder.output["http://mock-sitemap.test/page1"].should contain "http://mock-sitemap.test/dead1"
     end
 
+    it "terminates on a cyclic sitemap index without infinite recursion" do
+      # a.xml references b.xml, b.xml references a.xml — must not loop.
+      sitemap_a = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>http://cycle.test/b.xml</loc></sitemap>
+        </sitemapindex>
+      XML
+      sitemap_b = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>http://cycle.test/a.xml</loc></sitemap>
+        </sitemapindex>
+      XML
+
+      WebMock.stub(:get, "http://cycle.test/a.xml").to_return(body: sitemap_a)
+      WebMock.stub(:get, "http://cycle.test/b.xml").to_return(body: sitemap_b)
+
+      options = default_test_options
+      # Should return cleanly (no stack overflow, no hang).
+      Deadfinder.run_sitemap("http://cycle.test/a.xml", options)
+      Deadfinder.output.should be_empty
+    end
+
     it "parses sitemap without namespace" do
       sitemap_xml = <<-XML
         <?xml version="1.0" encoding="UTF-8"?>
