@@ -3,6 +3,7 @@ require "json"
 require "yaml"
 require "csv"
 require "xml"
+require "sarif"
 require "./deadfinder/version"
 require "./deadfinder/types"
 require "./deadfinder/utils"
@@ -218,6 +219,8 @@ module Deadfinder
                   generate_csv(output_data, coverage_info)
                 when "toml"
                   generate_toml(output_data, coverage_info)
+                when "sarif"
+                  generate_sarif(output_data, coverage_info)
                 else
                   generate_json(output_data, coverage_info)
                 end
@@ -424,6 +427,39 @@ module Deadfinder
     end
 
     lines.join("\n") + "\n"
+  end
+
+  # Produce a SARIF 2.1.0 report where each dead link is a `Result` with
+  # rule id "DEAD_LINK". The scanned target is attached as a related
+  # location so downstream tools (GitHub code scanning, editors) can link
+  # back to the page on which the broken URL was found.
+  private def self.generate_sarif(output_data : Hash(String, Array(String)), coverage_info : CoverageResult?) : String
+    log = Sarif::Builder.build do |b|
+      b.run("deadfinder", Deadfinder::VERSION) do |r|
+        r.information_uri("https://github.com/hahwul/deadfinder")
+        r.rule(
+          "DEAD_LINK",
+          name: "DeadLink",
+          short_description: "Broken or unreachable link",
+          full_description: "A link on the scanned page returned an HTTP error status or failed to resolve.",
+          help_uri: "https://github.com/hahwul/deadfinder",
+          level: Sarif::Level::Warning,
+        )
+
+        output_data.each do |target, urls|
+          urls.each do |url|
+            r.result do |rb|
+              rb.message("Dead link detected: #{url} (found on #{target})")
+              rb.rule_id("DEAD_LINK")
+              rb.level(Sarif::Level::Warning)
+              rb.location(uri: url)
+              rb.related_location(uri: target, message_text: "Referenced from this page")
+            end
+          end
+        end
+      end
+    end
+    log.to_pretty_json
   end
 
   private def self.toml_key(key : String) : String

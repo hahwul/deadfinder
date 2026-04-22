@@ -14,6 +14,9 @@ dependencies:
   stumpy_png:
     github: stumpycr/stumpy_png
     version: "~> 5.0"
+  sarif:
+    github: hahwul/sarif.cr
+    version: "~> 0.2.0"
 
 development_dependencies:
   webmock:
