@@ -1,0 +1,1 @@
+This is documentation for DeadFinder, an open-source CLI that finds broken links in web pages, URL lists, and sitemaps. Content is MIT-licensed.
