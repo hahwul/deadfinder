@@ -25,7 +25,7 @@ module Deadfinder
         parser.on("-c CONCURRENCY", "--concurrency=CONCURRENCY", "Number of concurrency (default: 50)") { |v| options.concurrency = v.to_i }
         parser.on("-t TIMEOUT", "--timeout=TIMEOUT", "Timeout in seconds (default: 10)") { |v| options.timeout = v.to_i }
         parser.on("-o OUTPUT", "--output=OUTPUT", "File to write result") { |v| options.output = v }
-        parser.on("-f FORMAT", "--output_format=FORMAT", "Output format: json, yaml, toml, csv (default: json)") { |v| options.output_format = v }
+        parser.on("-f FORMAT", "--output_format=FORMAT", "Output format: json, yaml, toml, csv, sarif (default: json)") { |v| options.output_format = v }
         parser.on("-H HEADER", "--headers=HEADER", "Custom HTTP headers for initial request") { |v| options.headers << v }
         parser.on("--worker_headers=HEADER", "Custom HTTP headers for worker requests") { |v| options.worker_headers << v }
         parser.on("--user_agent=UA", "User-Agent string") { |v| options.user_agent = v }

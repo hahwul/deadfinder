@@ -28,7 +28,7 @@ Commands:
 | `-c` | `--concurrency=N` | `50` | Number of concurrent workers. |
 | `-t` | `--timeout=N` | `10` | Per-request timeout (seconds). |
 | `-o` | `--output=FILE` | `""` | Write structured results to FILE. |
-| `-f` | `--output_format=FORMAT` | `json` | `json` / `yaml` / `toml` / `csv`. |
+| `-f` | `--output_format=FORMAT` | `json` | `json` / `yaml` / `toml` / `csv` / `sarif`. |
 | `-H` | `--headers=HEADER` | `[]` | Header for the **initial** page fetch. Repeat for multiple. Format: `"Name: Value"`. |
 | | `--worker_headers=HEADER` | `[]` | Header for every **link-check** request. Repeat for multiple. |
 | | `--user_agent=UA` | `Mozilla/5.0 (compatible; DeadFinder/<VERSION>;)` | Override User-Agent. |

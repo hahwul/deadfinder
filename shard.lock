@@ -4,6 +4,10 @@ shards:
     git: https://github.com/kostya/lexbor.git
     version: 3.4.2
 
+  sarif:
+    git: https://github.com/hahwul/sarif.cr.git
+    version: 0.2.0
+
   stumpy_core:
     git: https://github.com/stumpycr/stumpy_core.git
     version: 1.9.1

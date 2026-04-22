@@ -296,6 +296,66 @@ describe Deadfinder do
       end
     end
 
+    context "when output_format is sarif" do
+      it "writes a valid SARIF 2.1.0 document with a DEAD_LINK result per broken URL" do
+        tempfile = File.tempfile("deadfinder_output", ".sarif")
+        begin
+          options = default_test_options
+          options.output = tempfile.path
+          options.output_format = "sarif"
+
+          Deadfinder.output["http://example.com"] = ["http://example.com/page1", "http://example.com/page2"]
+          Deadfinder.gen_output(options)
+
+          content = File.read(tempfile.path)
+          parsed = JSON.parse(content)
+
+          parsed["version"].as_s.should eq "2.1.0"
+          parsed["$schema"].as_s.should contain "sarif-schema-2.1.0"
+
+          run = parsed["runs"].as_a.first
+          run["tool"]["driver"]["name"].as_s.should eq "deadfinder"
+          run["tool"]["driver"]["version"].as_s.should eq Deadfinder::VERSION
+
+          rules = run["tool"]["driver"]["rules"].as_a
+          rules.size.should eq 1
+          rules[0]["id"].as_s.should eq "DEAD_LINK"
+
+          results = run["results"].as_a
+          results.size.should eq 2
+          result_uris = results.map { |r| r["locations"].as_a.first["physicalLocation"]["artifactLocation"]["uri"].as_s }
+          result_uris.should contain "http://example.com/page1"
+          result_uris.should contain "http://example.com/page2"
+          results.each do |r|
+            r["ruleId"].as_s.should eq "DEAD_LINK"
+            r["level"].as_s.should eq "warning"
+            r["relatedLocations"].as_a.first["physicalLocation"]["artifactLocation"]["uri"].as_s.should eq "http://example.com"
+          end
+        ensure
+          tempfile.delete
+        end
+      end
+
+      it "produces an empty results array when there are no dead links" do
+        tempfile = File.tempfile("deadfinder_output", ".sarif")
+        begin
+          options = default_test_options
+          options.output = tempfile.path
+          options.output_format = "sarif"
+
+          Deadfinder.gen_output(options)
+
+          content = File.read(tempfile.path)
+          parsed = JSON.parse(content)
+          parsed["version"].as_s.should eq "2.1.0"
+          run = parsed["runs"].as_a.first
+          run["tool"]["driver"]["name"].as_s.should eq "deadfinder"
+        ensure
+          tempfile.delete
+        end
+      end
+    end
+
     context "when output is empty" do
       it "does nothing if output file is not specified" do
         options = default_test_options

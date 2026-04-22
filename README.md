@@ -118,7 +118,7 @@ Options:
   -c, --concurrency=N              Number of concurrent workers (default: 50)
   -t, --timeout=N                  Timeout in seconds (default: 10)
   -o, --output=FILE                File to write results
-  -f, --output_format=FORMAT       Output format: json, yaml, toml, csv (default: json)
+  -f, --output_format=FORMAT       Output format: json, yaml, toml, csv, sarif (default: json)
   -H, --headers=HEADER             Custom HTTP headers for initial request
       --worker_headers=HEADER      Custom HTTP headers for worker requests
       --user_agent=UA              User-Agent string

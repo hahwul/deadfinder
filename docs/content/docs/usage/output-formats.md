@@ -1,6 +1,6 @@
 +++
 title = "Output Formats"
-description = "JSON, YAML, TOML, CSV, coverage reports, and PNG visualization."
+description = "JSON, YAML, TOML, CSV, SARIF, coverage reports, and PNG visualization."
 weight = 2
 +++
 
@@ -12,6 +12,7 @@ DeadFinder writes results only when `-o <FILE>` is set (stdout stays human-reada
 | `-f yaml` / `-f yml` | YAML |
 | `-f toml` | TOML |
 | `-f csv` | CSV with `target,url` columns |
+| `-f sarif` | SARIF 2.1.0 JSON (one `DEAD_LINK` result per broken URL) |
 
 ## Basic shape
 
@@ -65,6 +66,16 @@ deadfinder sitemap https://www.example.com/sitemap.xml --coverage -o out.json
   }
 }
 ```
+
+## SARIF
+
+`-f sarif` produces a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) document you can upload to GitHub code scanning (`github/codeql-action/upload-sarif`) or feed into any SARIF-aware tooling:
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml -f sarif -o deadfinder.sarif
+```
+
+Each dead link becomes a `result` under the `DEAD_LINK` rule. The broken URL is the primary location; the page it was discovered on is attached as a related location.
 
 ## PNG visualization
 

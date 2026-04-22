@@ -39,7 +39,7 @@ cat output.json
 }
 ```
 
-YAML, TOML, CSV are available via `-f <format>`. See [Output formats](/docs/usage/output-formats/).
+YAML, TOML, CSV, and SARIF are available via `-f <format>`. See [Output formats](/docs/usage/output-formats/).
 
 ## Scan a sitemap
 
