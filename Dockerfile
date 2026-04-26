@@ -9,7 +9,7 @@ COPY src/ ./src/
 RUN shards install
 RUN crystal build src/cli_main.cr -o /build/deadfinder --release --static --no-debug
 
-FROM alpine:3.21
+FROM alpine:3.23
 
 LABEL org.opencontainers.image.title="DeadFinder"
 LABEL org.opencontainers.image.description="Find dead links (broken links)."
