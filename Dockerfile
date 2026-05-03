@@ -1,4 +1,4 @@
-FROM crystallang/crystal:1.20.0-alpine AS builder
+FROM crystallang/crystal:1.20.1-alpine AS builder
 
 RUN apk add --no-cache cmake make g++ git
 
