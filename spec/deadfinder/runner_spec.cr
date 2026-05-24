@@ -349,6 +349,31 @@ describe Deadfinder::Runner do
 
       (args[:output][target]? || [] of String).should be_empty
     end
+
+    it "does not deadlock when scanning a page with more links than the channel buffer size (1000)" do
+      target = "http://example.com/large"
+      
+      # Generate 1050 links
+      links_html = (1..1050).map { |i| "<a href='http://example.com/link-#{i}'>L#{i}</a>" }.join("\n")
+      html = "<html><body>#{links_html}</body></html>"
+
+      WebMock.stub(:get, target).to_return(body: html)
+      
+      # Mock all 1050 link targets to return 200 OK quickly
+      (1..1050).each do |i|
+        WebMock.stub(:get, "http://example.com/link-#{i}").to_return(status: 200)
+      end
+
+      runner = Deadfinder::Runner.new
+      options = default_test_options
+      options.concurrency = 10
+      args = make_runner_args
+
+      # This should finish successfully and NOT deadlock
+      runner.run(target, options, **args)
+      
+      (args[:output][target]? || [] of String).should be_empty
+    end
   end
 
   describe "#worker" do
@@ -554,6 +579,51 @@ describe Deadfinder::Runner do
 
       # Should not be in dead links (200 response with correct headers)
       (args[:output][target]? || [] of String).should_not contain url
+    end
+
+    it "detects socket/connection exceptions as broken links" do
+      target = "http://example.com"
+      url = "http://example.com/timeout"
+
+      WebMock.stub(:get, url).to_return { raise IO::TimeoutError.new("Connection timeout") }
+
+      runner = Deadfinder::Runner.new
+      options = default_test_options
+      args = make_runner_args
+
+      jobs = Channel(String).new(10)
+      results = Channel(String).new(10)
+      jobs.send(url)
+      jobs.close
+
+      runner.worker(1, jobs, results, target, options, **args)
+
+      # Should be flagged as broken and present in the output
+      args[:output][target].should contain url
+    end
+
+    it "tracks error/exception coverage when coverage is enabled" do
+      target = "http://example.com"
+      url = "http://example.com/connrefused"
+
+      WebMock.stub(:get, url).to_return { raise Socket::Error.new("Connection refused") }
+
+      runner = Deadfinder::Runner.new
+      options = default_test_options
+      options.coverage = true
+      args = make_runner_args
+
+      jobs = Channel(String).new(10)
+      results = Channel(String).new(10)
+      jobs.send(url)
+      jobs.close
+
+      runner.worker(1, jobs, results, target, options, **args)
+
+      cov = args[:coverage_data][target]
+      cov.total.should eq 1
+      cov.dead.should eq 1
+      cov.status_counts["error"].should eq 1
     end
   end
 end

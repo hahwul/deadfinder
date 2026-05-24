@@ -53,7 +53,12 @@ module Deadfinder
         end
       end
 
-      global_parser.parse(args)
+      begin
+        global_parser.parse(args)
+      rescue ex : OptionParser::Exception | ArgumentError
+        STDERR.puts "Error: #{ex.message}"
+        exit 1
+      end
 
       # Auto-enable coverage if visualize is set
       if !options.visualize.empty?

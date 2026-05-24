@@ -101,18 +101,26 @@ module Deadfinder
     begin
       uri = URI.parse(sitemap_url)
       client = HttpClient.create(uri, options)
-      headers = HTTP::Headers.new
-      headers["User-Agent"] = options.user_agent
-      req_path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
-                   HttpClient.absolute_uri(uri)
-                 else
-                   path = uri.path.presence || "/"
-                   uri.query.presence ? "#{path}?#{uri.query}" : path
-                 end
-      response = client.get(req_path, headers: headers)
-      client.close
+      begin
+        headers = HTTP::Headers.new
+        headers["User-Agent"] = options.user_agent
+        req_path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
+                     HttpClient.absolute_uri(uri)
+                   else
+                     path = uri.path.presence || "/"
+                     uri.query.presence ? "#{path}?#{uri.query}" : path
+                   end
+        response = client.get(req_path, headers: headers)
 
-      doc = XML.parse(response.body)
+        if response.status_code != 200
+          Deadfinder::Logger.error "Failed to fetch sitemap #{sitemap_url}: HTTP #{response.status_code}"
+          return urls
+        end
+
+        doc = XML.parse(response.body)
+      ensure
+        client.close
+      end
 
       # Try with namespace
       doc.xpath_nodes("//xmlns:loc", {"xmlns" => "http://www.sitemaps.org/schemas/sitemap/0.9"}).each do |node|

@@ -74,6 +74,14 @@ describe "Deadfinder.generate_url" do
   it "preserves non-default port when base path is a directory" do
     Deadfinder.generate_url("page.html", "http://127.0.0.1:8080/dir/").should eq "http://127.0.0.1:8080/dir/page.html"
   end
+
+  it "resolves relative query parameters correctly without losing the filename" do
+    Deadfinder.generate_url("?page=2", "http://example.com/dir/index.html").should eq "http://example.com/dir/index.html?page=2"
+  end
+
+  it "resolves parent directory traversals correctly" do
+    Deadfinder.generate_url("../sibling.html", "http://example.com/dir/subdir/index.html").should eq "http://example.com/dir/sibling.html"
+  end
 end
 
 describe "Deadfinder.ignore_scheme?" do

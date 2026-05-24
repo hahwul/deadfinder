@@ -51,42 +51,50 @@ module Deadfinder
 
     def self.log(prefix : String, text : String, color : Symbol)
       return if silent?
-      case color
-      when :yellow
-        print prefix.colorize(:yellow)
-      when :blue
-        print prefix.colorize(:blue)
-      when :red
-        print prefix.colorize(:red)
-      when :green
-        print prefix.colorize(:green)
-      else
-        print prefix
+      line = String.build do |io|
+        case color
+        when :yellow
+          io << prefix.colorize(:yellow)
+        when :blue
+          io << prefix.colorize(:blue)
+        when :red
+          io << prefix.colorize(:red)
+        when :green
+          io << prefix.colorize(:green)
+        else
+          io << prefix
+        end
+        io << text
+        io << '\n'
       end
-      puts text
+      @@mutex.synchronize { STDOUT.print line }
     end
 
     def self.sub_log(prefix : String, is_end : Bool, text : String, color : Symbol)
       return if silent?
       indent = is_end ? "  \u2514\u2500\u2500 " : "  \u251C\u2500\u2500 "
-      case color
-      when :yellow
-        print indent.colorize(:yellow)
-        print prefix.colorize(:yellow)
-      when :blue
-        print indent.colorize(:blue)
-        print prefix.colorize(:blue)
-      when :red
-        print indent.colorize(:red)
-        print prefix.colorize(:red)
-      when :green
-        print indent.colorize(:green)
-        print prefix.colorize(:green)
-      else
-        print indent
-        print prefix
+      line = String.build do |io|
+        case color
+        when :yellow
+          io << indent.colorize(:yellow)
+          io << prefix.colorize(:yellow)
+        when :blue
+          io << indent.colorize(:blue)
+          io << prefix.colorize(:blue)
+        when :red
+          io << indent.colorize(:red)
+          io << prefix.colorize(:red)
+        when :green
+          io << indent.colorize(:green)
+          io << prefix.colorize(:green)
+        else
+          io << indent
+          io << prefix
+        end
+        io << text
+        io << '\n'
       end
-      puts text
+      @@mutex.synchronize { STDOUT.print line }
     end
 
     def self.debug(text : String)

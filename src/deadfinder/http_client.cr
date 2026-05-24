@@ -10,7 +10,10 @@ module Deadfinder
     @@proxy_cache_mutex = Mutex.new
 
     def self.create(uri : URI, options : Options) : HTTP::Client
-      host = uri.host.not_nil!
+      host = uri.host
+      if host.nil?
+        raise ArgumentError.new("URI is missing a host")
+      end
       port = uri.port
       use_ssl = uri.scheme == "https"
 
@@ -43,26 +46,30 @@ module Deadfinder
             # HTTPS through proxy: use CONNECT tunnel
             target_port = port || 443
             socket = TCPSocket.new(proxy_host, proxy_port)
-            socket.read_timeout = options.timeout.seconds
+            begin
+              socket.read_timeout = options.timeout.seconds
 
-            connect_request = "CONNECT #{host}:#{target_port} HTTP/1.1\r\nHost: #{host}:#{target_port}\r\n"
-            connect_request += "Proxy-Authorization: #{auth_header}\r\n" if auth_header
-            connect_request += "\r\n"
-            socket.print(connect_request)
+              connect_request = "CONNECT #{host}:#{target_port} HTTP/1.1\r\nHost: #{host}:#{target_port}\r\n"
+              connect_request += "Proxy-Authorization: #{auth_header}\r\n" if auth_header
+              connect_request += "\r\n"
+              socket.print(connect_request)
 
-            response_line = socket.gets
-            unless response_line && response_line.includes?("200")
+              response_line = socket.gets
+              unless response_line && response_line.includes?("200")
+                raise "Proxy CONNECT to #{host}:#{target_port} via #{proxy_host}:#{proxy_port} failed: #{response_line.try(&.strip) || "no response"}"
+              end
+              # Consume remaining headers
+              while (line = socket.gets) && !line.strip.empty?
+              end
+
+              tls_socket = OpenSSL::SSL::Socket::Client.new(socket, context: ssl_context(options), hostname: host)
+              client = HTTP::Client.new(io: tls_socket, host: host, port: target_port)
+              client.read_timeout = options.timeout.seconds
+              return client
+            rescue ex
               socket.close
-              raise "Proxy CONNECT to #{host}:#{target_port} via #{proxy_host}:#{proxy_port} failed: #{response_line.try(&.strip) || "no response"}"
+              raise ex
             end
-            # Consume remaining headers
-            while (line = socket.gets) && !line.strip.empty?
-            end
-
-            tls_socket = OpenSSL::SSL::Socket::Client.new(socket, context: ssl_context(options), hostname: host)
-            client = HTTP::Client.new(io: tls_socket, host: host, port: target_port)
-            client.read_timeout = options.timeout.seconds
-            return client
           else
             # HTTP through proxy: connect to proxy, use absolute URI in requests
             client = HTTP::Client.new(proxy_host, port: proxy_port)

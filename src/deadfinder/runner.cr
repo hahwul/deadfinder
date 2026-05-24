@@ -51,15 +51,17 @@ module Deadfinder
 
       uri = URI.parse(target)
       client = HttpClient.create(uri, options)
-      path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
-               HttpClient.absolute_uri(uri)
-             else
-               request_path(uri)
-             end
-      response = client.get(path, headers: headers)
-      client.close
-
-      page = Lexbor::Parser.new(response.body)
+      begin
+        path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
+                 HttpClient.absolute_uri(uri)
+               else
+                 request_path(uri)
+               end
+        response = client.get(path, headers: headers)
+        page = Lexbor::Parser.new(response.body)
+      ensure
+        client.close
+      end
       links = extract_links(page)
 
       if !options.match.empty?
@@ -102,9 +104,12 @@ module Deadfinder
         end
       end
 
-      resolved_urls.each { |url| jobs.send(url) }
       jobs_size = resolved_urls.size
-      jobs.close
+
+      spawn do
+        resolved_urls.each { |url| jobs.send(url) }
+        jobs.close
+      end
 
       jobs_size.times { results.receive }
 
@@ -146,7 +151,7 @@ module Deadfinder
           record_status(target, url, status_code, options, output, coverage_data, mutex)
         rescue ex
           Deadfinder::Logger.verbose "[#{ex}] #{url}" if options.verbose
-          record_error(target, options, coverage_data, mutex)
+          record_error(target, url, options, output, coverage_data, mutex)
         end
 
         results.send(url)
@@ -166,16 +171,19 @@ module Deadfinder
     private def check_url(url : String, options : Options) : Int32
       uri = URI.parse(url)
       client = HttpClient.create(uri, options)
-      headers = build_headers(options.worker_headers, options.user_agent)
+      begin
+        headers = build_headers(options.worker_headers, options.user_agent)
 
-      path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
-               HttpClient.absolute_uri(uri)
-             else
-               request_path(uri)
-             end
-      response = client.get(path, headers: headers)
-      client.close
-      response.status_code
+        path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
+                 HttpClient.absolute_uri(uri)
+               else
+                 request_path(uri)
+               end
+        response = client.get(path, headers: headers)
+        response.status_code
+      ensure
+        client.close
+      end
     end
 
     private def record_total(target : String, options : Options,
@@ -210,6 +218,7 @@ module Deadfinder
           output[target] << url
         end
         if options.coverage
+          coverage_data[target] ||= TargetCoverage.new
           coverage_data[target].dead += 1 if dead
           coverage_data[target].status_counts[status_code.to_s] =
             (coverage_data[target].status_counts[status_code.to_s]? || 0) + 1
@@ -217,15 +226,20 @@ module Deadfinder
       end
     end
 
-    private def record_error(target : String, options : Options,
+    private def record_error(target : String, url : String, options : Options,
+                             output : Hash(String, Array(String)),
                              coverage_data : Hash(String, TargetCoverage),
                              mutex : Mutex) : Nil
-      return unless options.coverage
       mutex.synchronize do
-        coverage_data[target] ||= TargetCoverage.new
-        coverage_data[target].dead += 1
-        coverage_data[target].status_counts["error"] =
-          (coverage_data[target].status_counts["error"]? || 0) + 1
+        output[target] ||= [] of String
+        output[target] << url
+
+        if options.coverage
+          coverage_data[target] ||= TargetCoverage.new
+          coverage_data[target].dead += 1
+          coverage_data[target].status_counts["error"] =
+            (coverage_data[target].status_counts["error"]? || 0) + 1
+        end
       end
     end
 
