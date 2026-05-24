@@ -352,13 +352,13 @@ describe Deadfinder::Runner do
 
     it "does not deadlock when scanning a page with more links than the channel buffer size (1000)" do
       target = "http://example.com/large"
-      
+
       # Generate 1050 links
       links_html = (1..1050).map { |i| "<a href='http://example.com/link-#{i}'>L#{i}</a>" }.join("\n")
       html = "<html><body>#{links_html}</body></html>"
 
       WebMock.stub(:get, target).to_return(body: html)
-      
+
       # Mock all 1050 link targets to return 200 OK quickly
       (1..1050).each do |i|
         WebMock.stub(:get, "http://example.com/link-#{i}").to_return(status: 200)
@@ -371,7 +371,7 @@ describe Deadfinder::Runner do
 
       # This should finish successfully and NOT deadlock
       runner.run(target, options, **args)
-      
+
       (args[:output][target]? || [] of String).should be_empty
     end
   end
