@@ -80,6 +80,27 @@ describe Deadfinder::UrlPatternMatcher do
       end
     end
 
+    it "rejects brace-quantifier nested shapes like (\\w{2,5})+" do
+      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
+        Deadfinder::UrlPatternMatcher.match?("aaaaaa", "(\\w{2,5})+")
+      end
+    end
+
+    it "does not flag a bounded fixed-count group like (ab){2,5}" do
+      # (ab){2,5} repeats a fixed-length group a bounded number of times — not
+      # catastrophic, so it must still compile and match.
+      Deadfinder::UrlPatternMatcher.match?("abab", "(ab){2,5}").should be_true
+    end
+
+    it "converts a match-time backtracking blowup into an ArgumentError" do
+      # (a|a)* bypasses the static guard but PCRE2 raises a match-limit error at
+      # match time; it must surface as UnsafePatternError (an ArgumentError) so
+      # the runner catches it instead of aborting the whole target scan.
+      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
+        Deadfinder::UrlPatternMatcher.match?("a" * 80 + "!", "(a|a)*$")
+      end
+    end
+
     it "UnsafePatternError is-a ArgumentError so runner rescue still catches" do
       (Deadfinder::UrlPatternMatcher::UnsafePatternError < ArgumentError).should be_true
     end

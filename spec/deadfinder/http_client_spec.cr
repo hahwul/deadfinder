@@ -28,12 +28,29 @@ describe Deadfinder::HttpClient do
       client.should be_a(HTTP::Client)
     end
 
-    it "falls back to direct connection when proxy has no host" do
+    it "returns a usable client for a scheme-less proxy string" do
       uri = URI.parse("http://example.com")
       options = default_test_options
       options.proxy = "not-a-valid-proxy"
       client = Deadfinder::HttpClient.create(uri, options)
       client.should be_a(HTTP::Client)
+    end
+
+    it "accepts a bare host:port proxy by defaulting to http" do
+      uri = URI.parse("http://example.com")
+      options = default_test_options
+      options.proxy = "127.0.0.1:8080"
+      client = Deadfinder::HttpClient.create(uri, options)
+      client.should be_a(HTTP::Client)
+    end
+
+    it "raises for an unsupported (non-http) proxy scheme" do
+      uri = URI.parse("https://example.com")
+      options = default_test_options
+      options.proxy = "socks5://127.0.0.1:1080"
+      expect_raises(ArgumentError, /Unsupported proxy scheme/) do
+        Deadfinder::HttpClient.create(uri, options)
+      end
     end
 
     it "creates client without proxy when proxy is empty" do

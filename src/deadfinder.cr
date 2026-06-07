@@ -19,7 +19,10 @@ module Deadfinder
 
   @@output = {} of String => Array(String)
   @@coverage_data = {} of String => TargetCoverage
-  @@cache_set = {} of String => Bool
+  # Global URL -> HTTP status code cache. A URL is fetched at most once across
+  # the whole run; every page that references it is still attributed the cached
+  # status. A value of `Runner::ERROR_STATUS` (-1) records a connection failure.
+  @@status_cache = {} of String => Int32
   @@mutex = Mutex.new
 
   def self.output
@@ -30,8 +33,8 @@ module Deadfinder
     @@coverage_data
   end
 
-  def self.cache_set
-    @@cache_set
+  def self.status_cache
+    @@status_cache
   end
 
   def self.mutex
@@ -44,7 +47,7 @@ module Deadfinder
     @@mutex.synchronize do
       @@output.clear
       @@coverage_data.clear
-      @@cache_set.clear
+      @@status_cache.clear
     end
   end
 
@@ -73,7 +76,7 @@ module Deadfinder
   def self.run_sitemap(sitemap_url : String, options : Options)
     Deadfinder::Logger.apply_options(options)
     app = Runner.new
-    urls = parse_sitemap(sitemap_url, options)
+    urls = parse_sitemap(sitemap_url, options).uniq
     urls = urls.first(options.limit) if options.limit > 0
     Deadfinder::Logger.info "Found #{urls.size} URLs from #{sitemap_url}"
     urls.each do |url|
@@ -122,26 +125,27 @@ module Deadfinder
         client.close
       end
 
-      # Try with namespace
-      doc.xpath_nodes("//xmlns:loc", {"xmlns" => "http://www.sitemaps.org/schemas/sitemap/0.9"}).each do |node|
+      # Namespace-agnostic extraction via local-name(): handles the standard
+      # 0.9 namespace, the legacy Google 0.84 namespace, and namespace-free
+      # documents uniformly. Page URLs are scoped under <url> and child
+      # sitemaps under <sitemap> so a sitemap-index's <sitemap><loc> entries are
+      # NOT mis-collected as page targets (which previously double-fetched them).
+      doc.xpath_nodes("//*[local-name()='url']/*[local-name()='loc']").each do |node|
         urls << node.text.strip unless node.text.strip.empty?
-      end
-
-      # Try without namespace if no results
-      if urls.empty?
-        doc.xpath_nodes("//loc").each do |node|
-          urls << node.text.strip unless node.text.strip.empty?
-        end
       end
 
       # Check for sitemap index (recursive sitemaps)
       sitemap_locs = [] of String
-      doc.xpath_nodes("//xmlns:sitemap/xmlns:loc", {"xmlns" => "http://www.sitemaps.org/schemas/sitemap/0.9"}).each do |node|
+      doc.xpath_nodes("//*[local-name()='sitemap']/*[local-name()='loc']").each do |node|
         sitemap_locs << node.text.strip unless node.text.strip.empty?
       end
-      if sitemap_locs.empty?
-        doc.xpath_nodes("//sitemap/loc").each do |node|
-          sitemap_locs << node.text.strip unless node.text.strip.empty?
+
+      # Tolerate malformed sitemaps that put <loc> at the top level (no <url>
+      # wrapper). Only used when neither a urlset nor a sitemap index matched,
+      # so it cannot reintroduce the index double-processing bug.
+      if urls.empty? && sitemap_locs.empty?
+        doc.xpath_nodes("//*[local-name()='loc']").each do |node|
+          urls << node.text.strip unless node.text.strip.empty?
         end
       end
 
@@ -158,7 +162,9 @@ module Deadfinder
     Deadfinder::Logger.apply_options(options)
     Deadfinder::Logger.info "Reading input"
     app = Runner.new
-    targets = yield
+    # Dedupe input targets: scanning the same page twice is wasted work and
+    # would double-count it in coverage totals.
+    targets = (yield).uniq
     targets = targets.first(options.limit) if options.limit > 0
     targets.each do |target|
       run_with_target(target, options, app)
@@ -168,7 +174,7 @@ module Deadfinder
 
   def self.run_with_target(target : String, options : Options, app : Runner = Runner.new)
     Deadfinder::Logger.target "Fetching #{target}"
-    app.run(target, options, @@output, @@coverage_data, @@cache_set, @@mutex)
+    app.run(target, options, @@output, @@coverage_data, @@status_cache, @@mutex)
   end
 
   def self.calculate_coverage : CoverageResult
@@ -211,7 +217,9 @@ module Deadfinder
   end
 
   def self.gen_output(options : Options)
-    output_data = @@output
+    # Dedupe per-target URLs so a page that references the same link twice
+    # (or is scanned more than once) never lists it twice in the report.
+    output_data = @@output.transform_values(&.uniq)
     format = options.output_format.downcase
 
     coverage_info : CoverageResult? = nil
@@ -475,12 +483,38 @@ module Deadfinder
     if key.matches?(/^[a-zA-Z0-9_-]+$/)
       key
     else
-      "\"#{key.gsub("\\", "\\\\").gsub("\"", "\\\"")}\""
+      "\"#{toml_escape(key)}\""
     end
   end
 
   private def self.toml_array(arr : Array(String)) : String
-    items = arr.map { |s| "\"#{s.gsub("\\", "\\\\").gsub("\"", "\\\"")}\"" }
+    items = arr.map { |s| "\"#{toml_escape(s)}\"" }
     "[#{items.join(", ")}]"
+  end
+
+  # Escape a string for a TOML basic string. In addition to backslash and
+  # double-quote, TOML forbids raw control characters (U+0000..U+001F and
+  # U+007F) inside basic strings, so they must be emitted as escapes — otherwise
+  # a URL containing an embedded newline/CR would produce unparseable TOML.
+  private def self.toml_escape(s : String) : String
+    String.build do |io|
+      s.each_char do |c|
+        case c
+        when '\\' then io << "\\\\"
+        when '"'  then io << "\\\""
+        when '\b' then io << "\\b"
+        when '\t' then io << "\\t"
+        when '\n' then io << "\\n"
+        when '\f' then io << "\\f"
+        when '\r' then io << "\\r"
+        else
+          if c.ord < 0x20 || c.ord == 0x7F
+            io << "\\u" << c.ord.to_s(16).rjust(4, '0').upcase
+          else
+            io << c
+          end
+        end
+      end
+    end
   end
 end

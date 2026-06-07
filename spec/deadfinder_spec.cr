@@ -14,16 +14,16 @@ describe Deadfinder do
   end
 
   describe ".reset_state" do
-    it "clears output, coverage_data, and cache_set accumulators" do
+    it "clears output, coverage_data, and status_cache accumulators" do
       Deadfinder.output["foo"] = ["bar"]
       Deadfinder.coverage_data["foo"] = Deadfinder::TargetCoverage.new(total: 1, dead: 1)
-      Deadfinder.cache_set["foo"] = true
+      Deadfinder.status_cache["foo"] = 200
 
       Deadfinder.reset_state
 
       Deadfinder.output.should be_empty
       Deadfinder.coverage_data.should be_empty
-      Deadfinder.cache_set.should be_empty
+      Deadfinder.status_cache.should be_empty
     end
   end
 
@@ -119,6 +119,29 @@ describe Deadfinder do
         urlfile.delete
       end
     end
+
+    it "does not double-count coverage when a target is listed more than once" do
+      target = "http://dup-target.test"
+      html = %(<html><body><a href="http://dup-target.test/dead">d</a></body></html>)
+      WebMock.stub(:get, target).to_return(body: html)
+      WebMock.stub(:get, "http://dup-target.test/dead").to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_dups", ".txt")
+      begin
+        File.write(urlfile.path, "#{target}\n#{target}\n")
+
+        options = default_test_options
+        options.coverage = true
+        Deadfinder.run_file(urlfile.path, options)
+
+        cov = Deadfinder.coverage_data[target]
+        cov.total.should eq 1
+        cov.dead.should eq 1
+        Deadfinder.output[target].count("http://dup-target.test/dead").should eq 1
+      ensure
+        urlfile.delete
+      end
+    end
   end
 
   describe "#run_sitemap" do
@@ -190,6 +213,60 @@ describe Deadfinder do
 
       Deadfinder.output["http://mock-sitemap2.test/page1"]?.should_not be_nil
       Deadfinder.output["http://mock-sitemap2.test/page1"].should contain "http://mock-sitemap2.test/broken"
+    end
+
+    it "does not scan child sitemap files as page targets (sitemap index)" do
+      index_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>http://idx.test/sub.xml</loc></sitemap>
+        </sitemapindex>
+      XML
+      sub_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>http://idx.test/page1</loc></url>
+        </urlset>
+      XML
+
+      WebMock.stub(:get, "http://idx.test/index.xml").to_return(body: index_xml)
+
+      sub_fetch = 0
+      WebMock.stub(:get, "http://idx.test/sub.xml").to_return do
+        sub_fetch += 1
+        HTTP::Client::Response.new(200, sub_xml)
+      end
+
+      WebMock.stub(:get, "http://idx.test/page1").to_return(body: %(<html><body><a href="http://idx.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://idx.test/dead").to_return(status: 404)
+
+      options = default_test_options
+      Deadfinder.run_sitemap("http://idx.test/index.xml", options)
+
+      # sub.xml is fetched once (to recurse into it), never scanned as a page.
+      sub_fetch.should eq 1
+      Deadfinder.output["http://idx.test/sub.xml"]?.should be_nil
+      Deadfinder.output["http://idx.test/page1"]?.should_not be_nil
+      Deadfinder.output["http://idx.test/page1"].should contain "http://idx.test/dead"
+    end
+
+    it "parses a sitemap using the legacy Google 0.84 namespace" do
+      sitemap_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.google.com/schemas/sitemap/0.84">
+          <url><loc>http://legacy.test/page1</loc></url>
+        </urlset>
+      XML
+
+      WebMock.stub(:get, "http://legacy.test/sitemap.xml").to_return(body: sitemap_xml)
+      WebMock.stub(:get, "http://legacy.test/page1").to_return(body: %(<html><body><a href="http://legacy.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://legacy.test/dead").to_return(status: 404)
+
+      options = default_test_options
+      Deadfinder.run_sitemap("http://legacy.test/sitemap.xml", options)
+
+      Deadfinder.output["http://legacy.test/page1"]?.should_not be_nil
+      Deadfinder.output["http://legacy.test/page1"].should contain "http://legacy.test/dead"
     end
   end
 
@@ -290,6 +367,28 @@ describe Deadfinder do
           content = File.read(tempfile.path)
           content.should contain "\"http://example.com\""
           content.should contain "\"http://example.com/page1\""
+        ensure
+          tempfile.delete
+        end
+      end
+
+      it "escapes control characters so the output stays valid single-line TOML" do
+        tempfile = File.tempfile("deadfinder_toml_ctrl", ".toml")
+        begin
+          options = default_test_options
+          options.output = tempfile.path
+          options.output_format = "toml"
+
+          # A URL with an embedded newline/tab (e.g. from malformed scanned HTML)
+          # must not emit raw control chars, which would be unparseable TOML.
+          Deadfinder.output["http://example.com"] = ["http://example.com/a\nb\tc"]
+          Deadfinder.gen_output(options)
+
+          content = File.read(tempfile.path)
+          content.should contain "\\n"
+          content.should contain "\\t"
+          # No raw newline inside the value -> the array stays on a single line.
+          content.lines.size.should eq 1
         ensure
           tempfile.delete
         end

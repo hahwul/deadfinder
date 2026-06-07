@@ -4,6 +4,19 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Changed
+- Multi-target scans (`pipe`/`file`/`sitemap`) now attribute a shared broken link to **every** page that references it, not just the first page scanned, and per-target coverage counts each page's own links. Internally the global "already-seen" URL set became a URL→status cache, so each link is still fetched at most once. Previously a 404 referenced by pages A and B was reported only under A and skewed B's coverage.
+
+### Fixed
+- `--concurrency 0` (or any value `< 1`) no longer hangs forever. The CLI rejects it up front and the runner defensively clamps to at least one worker. `--timeout`, `--limit`, and `--output_format` are likewise validated instead of silently hanging, failing every request, or emitting an unexpected format.
+- `file` subcommand prints a clear "file not found" error instead of dumping a Crystal stack trace for a missing path.
+- Sitemap parsing no longer scans child-sitemap `.xml` files as if they were HTML pages (sitemap-index double-processing), and extracts `<loc>` namespace-agnostically so the legacy Google `0.84` sitemap namespace is no longer silently dropped.
+- TOML output escapes raw control characters (newline/CR/etc.), so a URL containing embedded control bytes no longer produces unparseable TOML.
+- Proxy handling: a bare `host:port` (e.g. `127.0.0.1:8080`) is now used as a proxy instead of silently connecting directly; unsupported proxy schemes (e.g. `socks5://`) are rejected with a clear error; the HTTPS-CONNECT tunnel's DNS/connect/write are bounded by `--timeout` so an unreachable proxy can't hang past the configured timeout; and the CONNECT success check matches the real `200` status token instead of any line merely containing "200".
+- A `--match`/`--ignore` pattern that backtracks catastrophically at match time (e.g. `(a|a)*`) is caught and reported as an invalid pattern instead of aborting the whole target scan; the static ReDoS guard also covers `{n,m}`-quantifier nested shapes like `(\w{2,5})+`.
+- A user-supplied `User-Agent` via `-H`/`--worker_headers` is honored instead of being overwritten by the default.
+- Obfuscated pseudo-scheme links with embedded tab/newline (e.g. `java<TAB>script:`) are filtered like browsers do, instead of being turned into bogus request targets.
+
 ## [2.0.2]
 
 ### Fixed

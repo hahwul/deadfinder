@@ -6,7 +6,7 @@ require "../src/deadfinder/cli"
 def reset_deadfinder_state
   Deadfinder.output.clear
   Deadfinder.coverage_data.clear
-  Deadfinder.cache_set.clear
+  Deadfinder.status_cache.clear
   Deadfinder::Logger.unset_silent
   Deadfinder::Logger.unset_verbose
   Deadfinder::Logger.unset_debug
@@ -23,7 +23,7 @@ def make_runner_args
   {
     output:        {} of String => Array(String),
     coverage_data: {} of String => Deadfinder::TargetCoverage,
-    cache_set:     {} of String => Bool,
+    status_cache:  {} of String => Int32,
     mutex:         Mutex.new,
   }
 end

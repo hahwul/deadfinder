@@ -22,6 +22,11 @@ module Deadfinder
         proxy_uri = resolve_proxy(proxy_str)
 
         if proxy_uri && proxy_uri.host
+          scheme = proxy_uri.scheme
+          if scheme && scheme != "http" && scheme != "https"
+            raise ArgumentError.new("Unsupported proxy scheme: #{scheme} (only http and https proxies are supported)")
+          end
+
           proxy_host = proxy_uri.host.not_nil!
           proxy_port = proxy_uri.port || (proxy_uri.scheme == "https" ? 443 : 8080)
           proxy_user = proxy_uri.user
@@ -43,11 +48,18 @@ module Deadfinder
                         end
 
           if use_ssl
-            # HTTPS through proxy: use CONNECT tunnel
+            # HTTPS through proxy: use CONNECT tunnel.
+            # Bound DNS resolution and the TCP connect by the configured timeout
+            # so an unreachable/firewalled proxy raises instead of hanging for
+            # the full kernel TCP timeout (these are unset on TCPSocket.new by
+            # default, unlike the direct and HTTP-proxy paths).
             target_port = port || 443
-            socket = TCPSocket.new(proxy_host, proxy_port)
+            socket = TCPSocket.new(proxy_host, proxy_port,
+              dns_timeout: options.timeout.seconds,
+              connect_timeout: options.timeout.seconds)
             begin
               socket.read_timeout = options.timeout.seconds
+              socket.write_timeout = options.timeout.seconds
 
               connect_request = "CONNECT #{host}:#{target_port} HTTP/1.1\r\nHost: #{host}:#{target_port}\r\n"
               connect_request += "Proxy-Authorization: #{auth_header}\r\n" if auth_header
@@ -55,7 +67,12 @@ module Deadfinder
               socket.print(connect_request)
 
               response_line = socket.gets
-              unless response_line && response_line.includes?("200")
+              # Accept only a real "200" status token, not any status line that
+              # merely contains the substring "200" (e.g. a 502 reason phrase or
+              # a trace id) — which would otherwise proceed to a TLS handshake
+              # over an un-tunneled socket and surface a misleading error.
+              status_parts = response_line.try(&.split)
+              unless status_parts && status_parts.size >= 2 && status_parts[1] == "200"
                 raise "Proxy CONNECT to #{host}:#{target_port} via #{proxy_host}:#{proxy_port} failed: #{response_line.try(&.strip) || "no response"}"
               end
               # Consume remaining headers
@@ -109,8 +126,12 @@ module Deadfinder
         if @@proxy_cache.has_key?(proxy_str)
           @@proxy_cache[proxy_str]
         else
+          # Accept a bare "host:port" (e.g. Burp's default 127.0.0.1:8080):
+          # without a scheme URI.parse yields a nil host and the proxy would be
+          # silently ignored, sending traffic directly. Default to an http proxy.
+          normalized = proxy_str.includes?("://") ? proxy_str : "http://#{proxy_str}"
           begin
-            parsed = URI.parse(proxy_str)
+            parsed = URI.parse(normalized)
             @@proxy_cache[proxy_str] = parsed
             parsed
           rescue ex

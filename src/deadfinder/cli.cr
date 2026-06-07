@@ -60,6 +60,30 @@ module Deadfinder
         exit 1
       end
 
+      # Validate numeric and enum options up front so invalid values fail fast
+      # with a clear message rather than hanging or silently misbehaving. Only
+      # the scanning subcommands consume these, so `version`/`completion` aren't
+      # rejected for an (irrelevant) bad option value.
+      if subcommand && ["pipe", "file", "url", "sitemap"].includes?(subcommand)
+        if options.concurrency < 1
+          STDERR.puts "Error: concurrency must be >= 1 (got #{options.concurrency})"
+          exit 1
+        end
+        if options.timeout < 1
+          STDERR.puts "Error: timeout must be >= 1 (got #{options.timeout})"
+          exit 1
+        end
+        if options.limit < 0
+          STDERR.puts "Error: limit must be >= 0 (got #{options.limit})"
+          exit 1
+        end
+        allowed_formats = ["json", "yaml", "yml", "csv", "toml", "sarif"]
+        unless allowed_formats.includes?(options.output_format.downcase)
+          STDERR.puts "Error: unsupported output format: #{options.output_format} (allowed: #{allowed_formats.join(", ")})"
+          exit 1
+        end
+      end
+
       # Auto-enable coverage if visualize is set
       if !options.visualize.empty?
         options.coverage = true
@@ -70,7 +94,12 @@ module Deadfinder
         Deadfinder.run_pipe(options)
       when "file"
         if positional_arg
-          Deadfinder.run_file(positional_arg.not_nil!, options)
+          filename = positional_arg.not_nil!
+          unless File.file?(filename)
+            STDERR.puts "Error: file not found: #{filename}"
+            exit 1
+          end
+          Deadfinder.run_file(filename, options)
         else
           STDERR.puts "Error: file command requires a filename argument"
           STDERR.puts "Usage: deadfinder file <FILE> [options]"

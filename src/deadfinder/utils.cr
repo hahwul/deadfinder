@@ -6,7 +6,11 @@ module Deadfinder
   end
 
   def self.generate_url(text : String, base_url : String) : String?
-    node = text.strip
+    # Browsers strip ASCII tab/newline/CR from inside a URL before navigating,
+    # so `java\tscript:alert(1)` is a javascript: link to them. Mirror that here
+    # so such obfuscated pseudo-schemes are caught by ignore_scheme? below
+    # instead of being resolved into a bogus request target.
+    node = text.delete("\t\n\r").strip
     return nil if node.empty?
     return node if node.starts_with?("http://") || node.starts_with?("https://")
     return nil if ignore_scheme?(node)

@@ -374,6 +374,70 @@ describe Deadfinder::Runner do
 
       (args[:output][target]? || [] of String).should be_empty
     end
+
+    it "does not hang when concurrency is 0 (clamps to at least one worker)" do
+      target = "http://example.com/zero"
+      html = %(<html><body><a href="http://example.com/x">x</a></body></html>)
+      WebMock.stub(:get, target).to_return(body: html)
+      WebMock.stub(:get, "http://example.com/x").to_return(status: 200)
+
+      runner = Deadfinder::Runner.new
+      options = default_test_options
+      options.concurrency = 0
+      args = make_runner_args
+
+      # With the unclamped code this blocked forever on results.receive.
+      runner.run(target, options, **args)
+
+      (args[:output][target]? || [] of String).should be_empty
+    end
+
+    it "attributes a shared dead link to every referencing page and fetches it once" do
+      page_a = "http://multi.test/a"
+      page_b = "http://multi.test/b"
+      dead = "http://multi.test/dead"
+
+      WebMock.stub(:get, page_a).to_return(body: %(<html><body><a href="#{dead}">x</a></body></html>))
+      WebMock.stub(:get, page_b).to_return(body: %(<html><body><a href="#{dead}">y</a></body></html>))
+
+      fetch_count = 0
+      WebMock.stub(:get, dead).to_return do
+        fetch_count += 1
+        HTTP::Client::Response.new(404, "")
+      end
+
+      options = default_test_options
+      args = make_runner_args
+
+      # Same output/status_cache shared across both target runs (as in real runs).
+      Deadfinder::Runner.new.run(page_a, options, **args)
+      Deadfinder::Runner.new.run(page_b, options, **args)
+
+      args[:output][page_a].should contain dead
+      args[:output][page_b].should contain dead # previously only page_a got it
+      fetch_count.should eq 1                   # but the URL is fetched only once
+    end
+
+    it "records a URL once per page when distinct links resolve to the same URL" do
+      target = "http://dedup.test/"
+      html = <<-HTML
+        <html><body>
+          <a href="/dead">absolute</a>
+          <a href="dead">relative</a>
+          <a href="./dead">dot-relative</a>
+        </body></html>
+      HTML
+      WebMock.stub(:get, target).to_return(body: html)
+      WebMock.stub(:get, "http://dedup.test/dead").to_return(status: 404)
+
+      runner = Deadfinder::Runner.new
+      options = default_test_options
+      args = make_runner_args
+
+      runner.run(target, options, **args)
+
+      args[:output][target].count("http://dedup.test/dead").should eq 1
+    end
   end
 
   describe "#worker" do
@@ -479,17 +543,16 @@ describe Deadfinder::Runner do
       args[:output][target].should contain url
     end
 
-    it "skips already cached URLs" do
+    it "reuses a cached status without re-fetching, still attributing it to the target" do
       target = "http://example.com"
       url = "http://example.com/cached"
 
-      WebMock.stub(:get, url).to_return(status: 404)
-
+      # No WebMock stub on purpose: if the worker tried to fetch, WebMock raises.
       runner = Deadfinder::Runner.new
       options = default_test_options
       args = make_runner_args
-      # Pre-populate cache
-      args[:cache_set][url] = true
+      # Pre-populate the status cache as if a previous page already checked it.
+      args[:status_cache][url] = 404
 
       jobs = Channel(String).new(10)
       results = Channel(String).new(10)
@@ -498,8 +561,8 @@ describe Deadfinder::Runner do
 
       runner.worker(1, jobs, results, target, options, **args)
 
-      # Should NOT appear in output because it was cached
-      (args[:output][target]? || [] of String).should_not contain url
+      # The cached dead status is attributed to this target without a 2nd request.
+      args[:output][target].should contain url
     end
 
     it "processes multiple jobs sequentially" do
@@ -578,6 +641,31 @@ describe Deadfinder::Runner do
       runner.worker(1, jobs, results, target, options, **args)
 
       # Should not be in dead links (200 response with correct headers)
+      (args[:output][target]? || [] of String).should_not contain url
+    end
+
+    it "honors a User-Agent supplied via headers instead of the default" do
+      target = "http://example.com"
+      url = "http://example.com/ua"
+      WebMock.stub(:get, url)
+        .with(headers: {"User-Agent" => "my-custom-agent"})
+        .to_return(status: 200)
+
+      runner = Deadfinder::Runner.new
+      options = default_test_options
+      options.worker_headers = ["User-Agent: my-custom-agent"]
+      args = make_runner_args
+
+      jobs = Channel(String).new(10)
+      results = Channel(String).new(10)
+      jobs.send(url)
+      jobs.close
+
+      runner.worker(1, jobs, results, target, options, **args)
+
+      # 200 only matches when the custom UA is sent; if the default UA overrode
+      # it, WebMock would not match, the request would raise, and url would be
+      # recorded as dead.
       (args[:output][target]? || [] of String).should_not contain url
     end
 

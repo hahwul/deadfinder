@@ -67,7 +67,7 @@ module Deadfinder
         io << text
         io << '\n'
       end
-      @@mutex.synchronize { STDOUT.print line }
+      print_line(line)
     end
 
     def self.sub_log(prefix : String, is_end : Bool, text : String, color : Symbol)
@@ -94,7 +94,19 @@ module Deadfinder
         io << text
         io << '\n'
       end
-      @@mutex.synchronize { STDOUT.print line }
+      print_line(line)
+    end
+
+    # Centralized writer. A closed/broken output stream (e.g. STDOUT piped to a
+    # process that exited, like `... | head`) raises IO::Error; swallow it so
+    # logging can never crash a scan or leave the worker accounting unbalanced.
+    private def self.print_line(line : String)
+      @@mutex.synchronize do
+        begin
+          STDOUT.print line
+        rescue IO::Error
+        end
+      end
     end
 
     def self.debug(text : String)

@@ -76,7 +76,7 @@ spec/
 ## Conventions
 
 - Output surface is stable: CLI flags, subcommands, and JSON/YAML/TOML/CSV shapes match v1 Ruby. The golden files in `spec/compat/golden/` lock this contract.
-- Resolved URLs must preserve the base URL's port (see `utils.cr::origin`). This was a v1 pain point; don't regress.
+- Resolved URLs must preserve the base URL's port. Port preservation is delegated to `base_uri.resolve` in `utils.cr::generate_url`; the regression specs live in `spec/deadfinder/utils_spec.cr` ("preserves non-default port…"). This was a v1 pain point; don't regress.
 - Silent default is `false` — the CLI emits logs by default. `-s` / `--silent` opts in.
 
 ## CI

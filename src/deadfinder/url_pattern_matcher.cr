@@ -11,13 +11,25 @@ module Deadfinder
     @@regex_cache_mutex = Mutex.new
 
     def self.match?(url : String, pattern : String) : Bool
-      regex = compile(pattern)
-      regex.matches?(url)
+      matches?(url, pattern)
     end
 
     def self.ignore?(url : String, pattern : String) : Bool
+      matches?(url, pattern)
+    end
+
+    private def self.matches?(url : String, pattern : String) : Bool
       regex = compile(pattern)
-      regex.matches?(url)
+      begin
+        regex.matches?(url)
+      rescue ex : Regex::Error
+        # PCRE2 enforces an internal match limit and raises Regex::Error (which
+        # is NOT an ArgumentError) when a guard-bypassing pattern backtracks
+        # catastrophically at match time. Re-raise as UnsafePatternError so the
+        # runner's `rescue ArgumentError` handles it gracefully instead of
+        # aborting the entire target scan.
+        raise UnsafePatternError.new("Pattern caused excessive backtracking while matching: #{pattern.inspect} (#{ex.message})")
+      end
     end
 
     # Exposed for tests / diagnostics.
@@ -36,21 +48,25 @@ module Deadfinder
       end
     end
 
-    # Conservative static check for the two classic ReDoS shapes:
-    #   (a+)+ , (a*)* , (a|a)* , (.+)* , etc.
-    # Crystal's stdlib exposes no PCRE2 match-limit, and a fiber `timeout`
-    # cannot interrupt a CPU-bound regex (fibers are cooperative), so we
-    # reject the pattern up-front instead of pretending a timeout protects us.
+    # Conservative static check for the classic nested-quantifier ReDoS shapes:
+    #   (a+)+ , (a*)* , (.+){2,} , (\w{2,5})+ , (a{1,}){2,} , etc.
+    # An inner quantifier here is `+`, `*`, or a *variable* brace repetition
+    # `{n,}`/`{n,m}` (which has a comma) — a fixed `{n}` count is bounded and
+    # not catastrophic, so it is intentionally not flagged.
+    #
+    # This static check cannot enumerate every catastrophic shape (e.g.
+    # alternation overlap like `(a|a)*`); those are caught at match time by the
+    # `rescue Regex::Error` backstop in `matches?` above.
     #
     # The `(?<!\\)` lookbehinds skip escaped literal parens so patterns
     # like `\(a+\)+` (literal `(`, one-or-more a, literal `)`, one-or-more)
     # are not flagged — they have no real nested group.
     private def self.reject_catastrophic_backtracking!(pattern : String) : Nil
-      # Any quantifier (`+`, `*`, or `{n,}`) immediately following a closing
-      # group that itself contains a quantifier — e.g. `(a+)+`, `(a*)*`,
-      # `(a+){2,}`. Non-capturing groups and alternations match the same way.
-      if pattern.matches?(/(?<!\\)\([^()]*[+*][^()]*(?<!\\)\)[+*]/) ||
-         pattern.matches?(/(?<!\\)\([^()]*[+*][^()]*(?<!\\)\)\{\d*,\d*\}/)
+      # A variable quantifier (`+`, `*`, or `{n,}`) immediately following a
+      # closing group whose body itself contains a variable quantifier — e.g.
+      # `(a+)+`, `(a*)*`, `(a+){2,}`, `(\w{2,5})+`.
+      if pattern.matches?(/(?<!\\)\([^()]*(?:[+*]|\{\d*,\d*\})[^()]*(?<!\\)\)[+*]/) ||
+         pattern.matches?(/(?<!\\)\([^()]*(?:[+*]|\{\d*,\d*\})[^()]*(?<!\\)\)\{\d*,\d*\}/)
         raise UnsafePatternError.new("Pattern has nested quantifiers that can cause catastrophic backtracking: #{pattern.inspect}")
       end
     end

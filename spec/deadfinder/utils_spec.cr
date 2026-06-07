@@ -82,6 +82,11 @@ describe "Deadfinder.generate_url" do
   it "resolves parent directory traversals correctly" do
     Deadfinder.generate_url("../sibling.html", "http://example.com/dir/subdir/index.html").should eq "http://example.com/dir/sibling.html"
   end
+
+  it "strips embedded tab/newline so obfuscated pseudo-schemes are ignored" do
+    Deadfinder.generate_url("java\tscript:alert(1)", base_url).should be_nil
+    Deadfinder.generate_url("ja\nva\rscript:alert(1)", base_url).should be_nil
+  end
 end
 
 describe "Deadfinder.ignore_scheme?" do
