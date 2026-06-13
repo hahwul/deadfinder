@@ -87,6 +87,22 @@ describe "Deadfinder.generate_url" do
     Deadfinder.generate_url("java\tscript:alert(1)", base_url).should be_nil
     Deadfinder.generate_url("ja\nva\rscript:alert(1)", base_url).should be_nil
   end
+
+  it "treats an uppercase HTTP scheme as an absolute URL and normalizes the scheme" do
+    Deadfinder.generate_url("HTTP://example.com/Path", base_url).should eq "http://example.com/Path"
+  end
+
+  it "treats an uppercase HTTPS scheme as an absolute URL and normalizes the scheme" do
+    Deadfinder.generate_url("HTTPS://example.com/Path", base_url).should eq "https://example.com/Path"
+  end
+
+  it "normalizes a mixed-case scheme while preserving the rest of the URL verbatim" do
+    Deadfinder.generate_url("HtTpS://Example.COM/a?b=C#d", base_url).should eq "https://Example.COM/a?b=C#d"
+  end
+
+  it "still drops uppercase pseudo-schemes (e.g. JAVASCRIPT:)" do
+    Deadfinder.generate_url("JAVASCRIPT:alert(1)", base_url).should be_nil
+  end
 end
 
 describe "Deadfinder.ignore_scheme?" do

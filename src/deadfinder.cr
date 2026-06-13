@@ -63,7 +63,15 @@ module Deadfinder
 
   def self.run_file(filename : String, options : Options)
     run_with_input(options) do
-      File.read_lines(filename).map(&.chomp)
+      # The CLI pre-checks existence, but the file can still be unreadable
+      # (permissions), vanish between check and read (TOCTOU), or contain
+      # invalid encoding. Report cleanly and scan nothing rather than crash.
+      begin
+        File.read_lines(filename).map(&.chomp)
+      rescue ex : IO::Error
+        Deadfinder::Logger.error "Failed to read input file #{filename}: #{ex.message}"
+        [] of String
+      end
     end
   end
 
@@ -240,7 +248,14 @@ module Deadfinder
                 else
                   generate_json(output_data, coverage_info)
                 end
-      File.write(options.output, content)
+      # A bad --output path (missing parent dir, no write permission, a path
+      # that is actually a directory, …) would otherwise raise after the whole
+      # scan has run and crash with a stack trace. Degrade to a clear message.
+      begin
+        File.write(options.output, content)
+      rescue ex : IO::Error
+        Deadfinder::Logger.error "Failed to write output file #{options.output}: #{ex.message}"
+      end
     end
 
     if !options.visualize.empty? && coverage_info

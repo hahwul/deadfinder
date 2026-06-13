@@ -54,7 +54,13 @@ module Deadfinder
       # Corners: quarter circles
       draw_corners(canvas, x1, y1, x2, y2, r, outline)
 
-      StumpyPNG.write(canvas, output_path)
+      # An unwritable --visualize path must not crash the run after the scan
+      # has already completed and (optionally) the report has been written.
+      begin
+        StumpyPNG.write(canvas, output_path)
+      rescue ex : IO::Error
+        Deadfinder::Logger.error "Failed to write visualization to #{output_path}: #{ex.message}"
+      end
     end
 
     private def self.status_color(status : String) : StumpyPNG::RGBA

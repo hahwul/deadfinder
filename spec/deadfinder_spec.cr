@@ -120,6 +120,17 @@ describe Deadfinder do
       end
     end
 
+    it "does not crash when the input file cannot be read" do
+      # No file at this path -> File.read_lines raises IO::Error, which must be
+      # handled gracefully (scan nothing) rather than crash with a stack trace.
+      missing = File.join(Dir.tempdir, "deadfinder_missing_#{Time.utc.to_unix_ns}.txt")
+
+      options = default_test_options
+      Deadfinder.run_file(missing, options)
+
+      Deadfinder.output.should be_empty
+    end
+
     it "does not double-count coverage when a target is listed more than once" do
       target = "http://dup-target.test"
       html = %(<html><body><a href="http://dup-target.test/dead">d</a></body></html>)
@@ -462,6 +473,20 @@ describe Deadfinder do
         options.output_format = "json"
         # Should not raise
         Deadfinder.gen_output(options)
+      end
+    end
+
+    context "when the output path is not writable" do
+      it "logs an error instead of crashing" do
+        options = default_test_options
+        # Parent directory does not exist -> File.write raises IO::Error.
+        options.output = File.join(Dir.tempdir, "deadfinder_no_such_dir_#{Time.utc.to_unix_ns}", "out.json")
+        options.output_format = "json"
+
+        Deadfinder.output["http://example.com"] = ["http://example.com/dead"]
+        # Should not raise; the bad path is reported and the run finishes.
+        Deadfinder.gen_output(options)
+        File.exists?(options.output).should be_false
       end
     end
   end

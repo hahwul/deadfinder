@@ -238,5 +238,22 @@ describe Deadfinder::Visualizer do
         FileUtils.rm_rf(output_path)
       end
     end
+
+    it "does not crash when the output path is not writable" do
+      data = Deadfinder::CoverageResult.new(
+        targets: {} of String => Deadfinder::CoverageTarget,
+        summary: Deadfinder::CoverageSummary.new(
+          total_tested: 10,
+          total_dead: 5,
+          overall_coverage_percentage: 50.0,
+          overall_status_counts: {"200" => 5, "404" => 5}
+        )
+      )
+      # Parent directory does not exist -> StumpyPNG.write raises IO::Error,
+      # which must be handled gracefully rather than crashing the run.
+      bad_path = File.join(Dir.tempdir, "deadfinder_no_such_dir_#{Time.utc.to_unix_ns}", "viz.png")
+      Deadfinder::Visualizer.generate(data, bad_path)
+      File.exists?(bad_path).should be_false
+    end
   end
 end
