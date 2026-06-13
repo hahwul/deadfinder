@@ -64,8 +64,8 @@ module Deadfinder
   def self.run_file(filename : String, options : Options)
     run_with_input(options) do
       # The CLI pre-checks existence, but the file can still be unreadable
-      # (permissions), vanish between check and read (TOCTOU), or contain
-      # invalid encoding. Report cleanly and scan nothing rather than crash.
+      # (permissions) or vanish between that check and this read (TOCTOU).
+      # Report cleanly and scan nothing rather than crash.
       begin
         File.read_lines(filename).map(&.chomp)
       rescue ex : IO::Error
