@@ -9,7 +9,7 @@ jobs:
   compat:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Ruby (harness driver)
         uses: ruby/setup-ruby@v1

@@ -23,7 +23,7 @@ jobs:
             runs-on: ubuntu-24.04-arm
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build static binary (Alpine / musl)
         run: |
@@ -73,7 +73,7 @@ jobs:
             runs-on: macos-latest
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Crystal and cmake
         run: brew install crystal cmake

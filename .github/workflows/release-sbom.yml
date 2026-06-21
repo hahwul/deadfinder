@@ -12,7 +12,7 @@ jobs:
   generate-sbom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Generate SBOM (CycloneDX, Crystal)
         uses: hahwul/cyclonedx-cr@v1.3.0
