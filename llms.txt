@@ -1,0 +1,31 @@
+# DeadFinder
+
+> Find dead (broken) links in web pages, URL lists, and sitemaps.
+
+This is documentation for DeadFinder, an open-source CLI that finds broken links in web pages, URL lists, and sitemaps. Content is MIT-licensed.
+
+## Pages
+
+- [DeadFinder](https://deadfinder.hahwul.com/): Find dead (broken) links in web pages, URL lists, and sitemaps.
+- [About](https://deadfinder.hahwul.com/about/): About DeadFinder
+
+## Getting Started
+
+- [Installation](https://deadfinder.hahwul.com/docs/getting-started/installation/): Install DeadFinder via Homebrew, Docker, prebuilt binary, Nix, or from source.
+- [Quick Start](https://deadfinder.hahwul.com/docs/getting-started/quickstart/): Run your first DeadFinder scan and read its output.
+
+## Integration
+
+- [Docker](https://deadfinder.hahwul.com/docs/integration/docker/): ghcr.io/hahwul/deadfinder — multi-arch, cosign-signed, tiny Alpine base.
+- [GitHub Action](https://deadfinder.hahwul.com/docs/integration/github-action/): hahwul/deadfinder composite action — inputs, outputs, examples.
+
+## Reference
+
+- [CLI Flags](https://deadfinder.hahwul.com/docs/reference/cli-flags/): Complete reference for every deadfinder option.
+
+## Usage
+
+- [Filtering](https://deadfinder.hahwul.com/docs/usage/filtering/): Regex match/ignore, 3xx inclusion, URL limit.
+- [Output Formats](https://deadfinder.hahwul.com/docs/usage/output-formats/): JSON, YAML, TOML, CSV, SARIF, coverage reports, and PNG visualization.
+- [Subcommands](https://deadfinder.hahwul.com/docs/usage/subcommands/): url / file / pipe / sitemap / completion / version
+

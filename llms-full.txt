@@ -1,0 +1,722 @@
+# DeadFinder
+Find dead (broken) links in web pages, URL lists, and sitemaps.
+
+Base URL: https://deadfinder.hahwul.com
+
+This is documentation for DeadFinder, an open-source CLI that finds broken links in web pages, URL lists, and sitemaps. Content is MIT-licensed.
+
+---
+
+Title: DeadFinder
+URL: https://deadfinder.hahwul.com/
+Source: content/index.md
+
+Find dead (broken) links in web pages, URL lists, and sitemaps. Fast native CLI written in Crystal with fiber-based concurrency.
+
+## Why DeadFinder
+
+- **Fast**: fiber-based concurrent workers scan hundreds of links in parallel.
+- **Ergonomic**: one binary, no runtime dependencies.
+- **Structured output**: JSON / YAML / TOML / CSV — or attach as a GitHub Action output.
+- **Coverage report**: track dead-link ratio per target with `--coverage`.
+
+## Install
+
+```bash
+# Homebrew
+brew install deadfinder
+
+# Docker
+docker run ghcr.io/hahwul/deadfinder:latest deadfinder url https://example.com
+
+# Prebuilt binary — pick your platform on the Releases page
+# https://github.com/hahwul/deadfinder/releases/latest
+```
+
+See [Installation](/docs/getting-started/installation/) for every channel (Nix, build from source, etc).
+
+## First scan
+
+```bash
+deadfinder url https://your-site.example
+deadfinder sitemap https://your-site.example/sitemap.xml
+cat urls.txt | deadfinder pipe
+```
+
+See [Quick Start](/docs/getting-started/quickstart/) for more.
+
+## Continuous integration
+
+Run DeadFinder on every push via the official GitHub Action:
+
+```yaml
+- uses: hahwul/deadfinder@v2
+  with:
+    command: sitemap
+    target: https://www.example.com/sitemap.xml
+```
+
+See [GitHub Action](/docs/integration/github-action/) for the full input reference.
+
+---
+
+DeadFinder 2.0+ is written in Crystal. v1.x (Ruby gem) lives on the [`legacy/v1`](https://github.com/hahwul/deadfinder/tree/legacy/v1) branch and receives bug-fix updates only.
+
+---
+
+Title: About
+URL: https://deadfinder.hahwul.com/about/
+Source: content/about.md
+
+DeadFinder detects broken links — 4xx, 5xx, optionally 3xx — on any page, URL list, or sitemap. It's built for automation: one static binary, machine-readable output, and a GitHub Action wrapper so CI pipelines can gate on link health.
+
+## Status
+
+- **Current line**: 2.x, Crystal rewrite.
+- **Legacy**: 1.x, original Ruby gem — frozen except for bug fixes on the [`legacy/v1`](https://github.com/hahwul/deadfinder/tree/legacy/v1) branch.
+
+## Source
+
+- Repository: [github.com/hahwul/deadfinder](https://github.com/hahwul/deadfinder)
+- License: MIT
+- Maintainer: [HAHWUL](https://www.hahwul.com)
+
+## Reporting issues
+
+Please use the [GitHub issue tracker](https://github.com/hahwul/deadfinder/issues). Security-sensitive reports go through the [GitHub security page](https://github.com/hahwul/deadfinder/security).
+
+---
+
+Title: Documentation
+URL: https://deadfinder.hahwul.com/docs/
+Source: content/docs/_index.md
+
+Start with [Installation](/docs/getting-started/installation/) and the [Quick Start](/docs/getting-started/quickstart/). The **Usage** section covers every subcommand, output format, and filter. **Integration** shows how to call DeadFinder from GitHub Actions or Docker. **Reference** is the full CLI flag table.
+
+---
+
+Title: Getting Started
+URL: https://deadfinder.hahwul.com/docs/getting-started/
+Source: content/docs/getting-started/_index.md
+
+Two steps:
+
+1. [Install](/docs/getting-started/installation/) the binary.
+2. [Run your first scan](/docs/getting-started/quickstart/).
+
+---
+
+Title: Installation
+URL: https://deadfinder.hahwul.com/docs/getting-started/installation/
+Source: content/docs/getting-started/installation.md
+
+Pick the channel that fits your environment. All paths produce the same CLI.
+
+## Homebrew (macOS / Linux)
+
+```bash
+brew install deadfinder
+```
+
+## Docker
+
+Image: [`ghcr.io/hahwul/deadfinder`](https://github.com/hahwul/deadfinder/pkgs/container/deadfinder). Multi-arch (linux/amd64, linux/arm64). Each published tag is cosign-signed.
+
+```bash
+docker run ghcr.io/hahwul/deadfinder:latest deadfinder url https://example.com
+```
+
+## Prebuilt binary
+
+Download the tarball for your platform from [Releases](https://github.com/hahwul/deadfinder/releases/latest) (a `.sha256` sidecar ships alongside each tarball):
+
+| OS | Arch | Asset |
+|---|---|---|
+| Linux | x86_64 | `deadfinder-linux-x86_64.tar.gz` |
+| Linux | aarch64 | `deadfinder-linux-aarch64.tar.gz` |
+| macOS | arm64 | `deadfinder-macos-arm64.tar.gz` |
+
+> Intel macOS (`x86_64`) doesn't have a prebuilt binary — use `brew install deadfinder` (builds from source) or run the Apple Silicon binary under Rosetta.
+
+Extract and put `deadfinder` on your `PATH`:
+
+```bash
+curl -fsSL https://github.com/hahwul/deadfinder/releases/latest/download/deadfinder-linux-x86_64.tar.gz \
+  | tar xz
+sudo mv deadfinder /usr/local/bin/
+```
+
+## Linux package managers
+
+| Distro | Package |
+|---|---|
+| Debian / Ubuntu | `deadfinder_X.Y.Z_{amd64,arm64}.deb` from Releases |
+| RHEL / Fedora | `deadfinder-X.Y.Z.{x86_64,aarch64}.rpm` from Releases |
+| Alpine | `deadfinder-X.Y.Z-r0.{x86_64,aarch64}.apk` from Releases |
+| Arch Linux | `yay -S deadfinder` (AUR) |
+| Snap | `sudo snap install deadfinder` |
+
+## Nix
+
+```bash
+nix run github:hahwul/deadfinder
+nix profile install github:hahwul/deadfinder
+nix develop github:hahwul/deadfinder
+```
+
+## Build from source
+
+Prerequisites:
+
+- Crystal >= 1.19.1
+- `cmake` — required by the `lexbor` HTML parser's postinstall step. Without it, `shards install` fails with `Error executing process: 'cmake': No such file or directory`.
+
+```bash
+# macOS
+brew install crystal cmake
+
+# Debian / Ubuntu
+sudo apt install crystal cmake
+
+# Arch Linux
+sudo pacman -S crystal cmake
+```
+
+Then build:
+
+```bash
+git clone https://github.com/hahwul/deadfinder
+cd deadfinder
+shards install
+crystal build src/cli_main.cr -o deadfinder --release --no-debug
+```
+
+Or use the [`justfile`](https://github.com/hahwul/deadfinder/blob/main/justfile) recipes:
+
+```bash
+just build        # release binary
+just build-debug  # fast debug build
+just test         # run specs
+```
+
+---
+
+Title: Quick Start
+URL: https://deadfinder.hahwul.com/docs/getting-started/quickstart/
+Source: content/docs/getting-started/quickstart.md
+
+## Scan a single URL
+
+```bash
+deadfinder url https://www.example.com
+```
+
+The terminal shows discovered links and their status:
+
+```
+▶ Fetching https://www.example.com
+  ● Discovered 12 URLs, currently checking them. [anchor:8 / link:4]
+  ├── ✓ [200] https://www.example.com/about
+  ├── ✘ [404] https://www.example.com/old-page
+  └── ● Task completed
+```
+
+Exit code is `0` even when dead links exist — parse the output to make a build pass/fail decision.
+
+## Structured output
+
+Write JSON to a file:
+
+```bash
+deadfinder url https://www.example.com -o output.json
+cat output.json
+```
+
+```json
+{
+  "https://www.example.com": [
+    "https://www.example.com/old-page"
+  ]
+}
+```
+
+YAML, TOML, CSV, and SARIF are available via `-f <format>`. See [Output formats](/docs/usage/output-formats/).
+
+## Scan a sitemap
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml -o results.json
+```
+
+## Scan many URLs
+
+From a file:
+
+```bash
+cat > urls.txt <<'EOF'
+https://www.example.com
+https://docs.example.com
+EOF
+
+deadfinder file urls.txt -o results.json
+```
+
+From STDIN:
+
+```bash
+printf 'https://www.example.com\nhttps://docs.example.com\n' \
+  | deadfinder pipe -o results.json
+```
+
+## Coverage report
+
+`--coverage` adds a per-target summary with dead-link percentage:
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml --coverage -o results.json
+```
+
+Optionally render a PNG chart:
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml --coverage --visualize report.png
+```
+
+## Next
+
+- [Subcommands](/docs/usage/subcommands/)
+- [Output formats](/docs/usage/output-formats/)
+- [CLI flags reference](/docs/reference/cli-flags/)
+
+---
+
+Title: Integration
+URL: https://deadfinder.hahwul.com/docs/integration/
+Source: content/docs/integration/_index.md
+
+- [GitHub Action](/docs/integration/github-action/) — official composite action that downloads the release binary and verifies its sha256.
+- [Docker](/docs/integration/docker/) — multi-arch image with cosign-signed tags.
+
+---
+
+Title: Docker
+URL: https://deadfinder.hahwul.com/docs/integration/docker/
+Source: content/docs/integration/docker.md
+
+Image: [`ghcr.io/hahwul/deadfinder`](https://github.com/hahwul/deadfinder/pkgs/container/deadfinder)
+
+- Multi-arch: `linux/amd64`, `linux/arm64`
+- Runtime base: `alpine:3.21` + static binary (~15 MB total)
+- Tags on release: `<VERSION>`, `<MAJOR>.<MINOR>`, `latest`
+- Every published tag is **cosign-signed** (keyless, Sigstore)
+
+## Run
+
+The image's `CMD` is `["deadfinder"]`. Append arguments after the image name — `docker run` passes them through:
+
+```bash
+docker run ghcr.io/hahwul/deadfinder:latest deadfinder url https://www.example.com
+docker run ghcr.io/hahwul/deadfinder:latest deadfinder sitemap https://www.example.com/sitemap.xml
+```
+
+Writing results out? Bind-mount a host directory:
+
+```bash
+docker run --rm -v "$PWD":/out \
+  ghcr.io/hahwul/deadfinder:latest \
+  deadfinder url https://www.example.com -o /out/results.json -s
+```
+
+## Pin a version
+
+```bash
+docker pull ghcr.io/hahwul/deadfinder:2.0.0
+docker pull ghcr.io/hahwul/deadfinder:2.0
+docker pull ghcr.io/hahwul/deadfinder:latest
+```
+
+## Verify the signature
+
+```bash
+cosign verify ghcr.io/hahwul/deadfinder:2.0.0 \
+  --certificate-identity-regexp 'https://github.com/hahwul/deadfinder/.+' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+```
+
+Substitute the tag you pulled. The command succeeds only if the image was signed by this repo's GitHub Actions.
+
+---
+
+Title: GitHub Action
+URL: https://deadfinder.hahwul.com/docs/integration/github-action/
+Source: content/docs/integration/github-action.md
+
+`hahwul/deadfinder` is a composite action that downloads the matching release binary, verifies its sha256, and executes the scan. Runs on Linux (x86_64/aarch64) and macOS (arm64). Intel macOS runners (`macos-13`) are not supported — use `macos-latest`.
+
+## Pin a version
+
+Always pin a released ref. `@latest` is **not** a valid Actions ref (GitHub has no auto-resolver for it).
+
+```yaml
+- uses: hahwul/deadfinder@v2       # tracks latest 2.x — gets bug-fix patches automatically
+# or
+- uses: hahwul/deadfinder@2.0.2    # exact pin — fully reproducible
+```
+
+The `version` input can override the binary independently of the action ref:
+
+```yaml
+- uses: hahwul/deadfinder@v2
+  with:
+    version: "2.0.2"   # download binary from this release tag
+```
+
+## Full example
+
+```yaml
+steps:
+  - name: Run DeadFinder
+    uses: hahwul/deadfinder@v2
+    id: scan
+    with:
+      command: sitemap
+      target: https://www.example.com/sitemap.xml
+      # Optional:
+      # timeout: 10
+      # concurrency: 50
+      # include30x: false
+      # headers: "X-API-Key: secret"
+      # worker_headers: "User-Agent: Deadfinder Bot"
+      # user_agent: "MyBot/1.0"
+      # proxy: "http://localhost:8080"
+      # proxy_auth: "user:pass"
+      # match: "^https://example\\.com/"
+      # ignore: "\\.png$"
+      # coverage: true
+      # visualize: report.png
+      # silent: false
+      # verbose: false
+
+  - name: Handle results
+    run: echo '${{ steps.scan.outputs.output }}' | jq '.'
+```
+
+## Inputs
+
+| Input | Required | Default | Notes |
+|---|---|---|---|
+| `command` | ✓ | — | `url` / `file` / `pipe` / `sitemap` |
+| `target` | ✓ | — | URL, file path, or sitemap URL |
+| `version` | | `latest` | Release tag; `latest` resolves to most recent release |
+| `timeout` | | `10` | seconds |
+| `concurrency` | | `50` | workers |
+| `silent` | | `false` | string `"true"` to enable |
+| `verbose` | | `false` | |
+| `include30x` | | `false` | |
+| `headers` | | `""` | comma-separated `"Key: Value"` pairs |
+| `worker_headers` | | `""` | headers for link-check requests |
+| `user_agent` | | `""` | overrides default UA |
+| `proxy` | | `""` | HTTP/HTTPS proxy URL |
+| `proxy_auth` | | `""` | `user:pass` |
+| `match` | | `""` | regex |
+| `ignore` | | `""` | regex |
+| `coverage` | | `false` | |
+| `visualize` | | `""` | file path (implies coverage) |
+
+## Outputs
+
+| Output | Shape |
+|---|---|
+| `output` | Compact JSON string of the scan result (same shape as `-f json` output). |
+
+Consume with `fromJSON()`:
+
+```yaml
+- run: |
+    echo "Dead links: ${{ fromJSON(steps.scan.outputs.output).summary }}"
+```
+
+## Migrating from v1
+
+The v1 action was Docker-based and bundled the Ruby gem. v2 is a composite action that downloads the Crystal binary directly. All v1 inputs are preserved. `worker_headers` was previously undeclared but wired through args — it's now a formal input. `version` is new. No inputs were renamed or removed.
+
+Pin to `@1.10.0` to keep the v1 behavior; use `@v2` (or pin a specific 2.x tag like `@2.0.2`) for v2.
+
+---
+
+Title: Reference
+URL: https://deadfinder.hahwul.com/docs/reference/
+Source: content/docs/reference/_index.md
+
+- [CLI flags](/docs/reference/cli-flags/) — every option accepted by `deadfinder`.
+
+---
+
+Title: CLI Flags
+URL: https://deadfinder.hahwul.com/docs/reference/cli-flags/
+Source: content/docs/reference/cli-flags.md
+
+Run `deadfinder --help` for the live help text. This page is the documented contract.
+
+## Synopsis
+
+```
+deadfinder <command> [options]
+
+Commands:
+  pipe                        Scan the URLs from STDIN
+  file <FILE>                 Scan the URLs from File
+  url <URL>                   Scan the Single URL
+  sitemap <SITEMAP-URL>       Scan the URLs from sitemap
+  completion <SHELL>          Generate completion script (bash/zsh/fish)
+  version                     Show version
+```
+
+## Options
+
+| Short | Long | Default | Description |
+|---|---|---|---|
+| `-r` | `--include30x` | `false` | Treat 3xx responses as dead links. |
+| `-c` | `--concurrency=N` | `50` | Number of concurrent workers. |
+| `-t` | `--timeout=N` | `10` | Per-request timeout (seconds). |
+| `-o` | `--output=FILE` | `""` | Write structured results to FILE. |
+| `-f` | `--output_format=FORMAT` | `json` | `json` / `yaml` / `toml` / `csv` / `sarif`. |
+| `-H` | `--headers=HEADER` | `[]` | Header for the **initial** page fetch. Repeat for multiple. Format: `"Name: Value"`. |
+| | `--worker_headers=HEADER` | `[]` | Header for every **link-check** request. Repeat for multiple. |
+| | `--user_agent=UA` | `Mozilla/5.0 (compatible; DeadFinder/<VERSION>;)` | Override User-Agent. |
+| `-p` | `--proxy=URL` | `""` | HTTP/HTTPS proxy (HTTPS uses CONNECT tunneling). |
+| | `--proxy_auth=USER:PASS` | `""` | Proxy credentials (Basic). |
+| `-m` | `--match=PATTERN` | `""` | Regex: only scan URLs that match. |
+| `-i` | `--ignore=PATTERN` | `""` | Regex: skip URLs that match. |
+| `-s` | `--silent` | `false` | Suppress the live log on stdout. |
+| `-v` | `--verbose` | `false` | Log every checked URL, not just dead ones. |
+| | `--debug` | `false` | Internal state / cache diagnostics. |
+| | `--limit=N` | `0` | Cap input URLs (`0` = unlimited). |
+| | `--coverage` | `false` | Emit per-target coverage stats. |
+| | `--visualize=PATH` | `""` | Write a PNG status-code chart (implies `--coverage`). |
+
+## Notes
+
+- Structured output is **file-only**: you must set `-o`. stdout is reserved for the live log.
+- `match` / `ignore` regexes each run under a 1-second timeout to block ReDoS.
+- The initial page fetch receives `--headers`; worker link-check requests receive `--worker_headers`. `--user_agent` applies to both.
+- `--visualize` auto-enables `--coverage`.
+
+---
+
+Title: Usage
+URL: https://deadfinder.hahwul.com/docs/usage/
+Source: content/docs/usage/_index.md
+
+DeadFinder is a single CLI with four scan subcommands and a handful of global flags.
+
+- [Subcommands](/docs/usage/subcommands/) — `url`, `file`, `pipe`, `sitemap`, plus `completion` and `version`.
+- [Output formats](/docs/usage/output-formats/) — JSON / YAML / TOML / CSV / SARIF, coverage, PNG visualization.
+- [Filtering](/docs/usage/filtering/) — `--match` / `--ignore` regex, `--include30x`, `--limit`.
+
+---
+
+Title: Filtering
+URL: https://deadfinder.hahwul.com/docs/usage/filtering/
+Source: content/docs/usage/filtering.md
+
+## `--match=PATTERN` / `--ignore=PATTERN`
+
+Regex applied to every discovered URL before it's fetched. Each pattern has a 1-second timeout to prevent ReDoS.
+
+```bash
+# Only check internal links
+deadfinder sitemap https://www.example.com/sitemap.xml \
+  --match='^https://(www\.)?example\.com/'
+
+# Skip media files
+deadfinder url https://www.example.com \
+  --ignore='\.(png|jpg|gif|webp|mp4)$'
+```
+
+Using both: `--match` is applied first, then `--ignore`.
+
+## `--include30x`
+
+By default, 3xx redirects are treated as healthy (the destination is what matters). Enable this flag to mark them as dead too:
+
+```bash
+deadfinder url https://www.example.com --include30x
+```
+
+Use this when your policy is "redirects are technical debt" rather than "follow the redirect chain".
+
+## `--limit=N`
+
+Cap the number of URLs scanned per invocation (useful for quick smoke tests of a large sitemap):
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml --limit=50
+```
+
+Applies to the input list (file lines, STDIN lines, or sitemap `<loc>` entries). Not to discovered child links on each page.
+
+## `--concurrency=N` / `--timeout=N`
+
+Not filters per se, but the other knobs you'll reach for:
+
+- `--concurrency=50` (default) — number of parallel workers.
+- `--timeout=10` (default, seconds) — per-request connect + read timeout.
+
+Ramp concurrency down on rate-limited targets; up on fast internal scans.
+
+---
+
+Title: Output Formats
+URL: https://deadfinder.hahwul.com/docs/usage/output-formats/
+Source: content/docs/usage/output-formats.md
+
+DeadFinder writes results only when `-o <FILE>` is set (stdout stays human-readable log). Pick the format with `-f <format>`.
+
+| Flag | Format |
+|---|---|
+| `-f json` (default) | pretty JSON |
+| `-f yaml` / `-f yml` | YAML |
+| `-f toml` | TOML |
+| `-f csv` | CSV with `target,url` columns |
+| `-f sarif` | SARIF 2.1.0 JSON (one `DEAD_LINK` result per broken URL) |
+
+## Basic shape
+
+Same across JSON / YAML / TOML:
+
+```json
+{
+  "https://www.example.com": [
+    "https://www.example.com/broken-link-1",
+    "https://www.example.com/broken-link-2"
+  ]
+}
+```
+
+CSV:
+
+```csv
+target,url
+https://www.example.com,https://www.example.com/broken-link-1
+https://www.example.com,https://www.example.com/broken-link-2
+```
+
+## Coverage mode
+
+Add `--coverage` to include per-target statistics:
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml --coverage -o out.json
+```
+
+```json
+{
+  "dead_links": {
+    "https://www.example.com": ["https://www.example.com/broken-link-1"]
+  },
+  "coverage": {
+    "targets": {
+      "https://www.example.com": {
+        "total_tested": 100,
+        "dead_links": 5,
+        "coverage_percentage": 5.0,
+        "status_counts": {"404": 3, "500": 2}
+      }
+    },
+    "summary": {
+      "total_tested": 100,
+      "total_dead": 5,
+      "overall_coverage_percentage": 5.0,
+      "overall_status_counts": {"404": 3, "500": 2}
+    }
+  }
+}
+```
+
+## SARIF
+
+`-f sarif` produces a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) document you can upload to GitHub code scanning (`github/codeql-action/upload-sarif`) or feed into any SARIF-aware tooling:
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml -f sarif -o deadfinder.sarif
+```
+
+Each dead link becomes a `result` under the `DEAD_LINK` rule. The broken URL is the primary location; the page it was discovered on is attached as a related location.
+
+## PNG visualization
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml --visualize report.png
+```
+
+`--visualize` implies `--coverage`. Output is a stacked bar chart of status codes per target.
+
+## Stdout vs file
+
+Structured output requires `-o`. Without it the tool emits a live log to stdout only. Use `-s` / `--silent` to suppress the log entirely (for example when you're only interested in the file output).
+
+```bash
+deadfinder url https://www.example.com -o out.json -s
+```
+
+---
+
+Title: Subcommands
+URL: https://deadfinder.hahwul.com/docs/usage/subcommands/
+Source: content/docs/usage/subcommands.md
+
+## `url <URL>`
+
+Scan a single page. Extract links from the HTML and check each one.
+
+```bash
+deadfinder url https://www.example.com
+```
+
+## `file <FILE>`
+
+Read newline-separated URLs from a file and scan each one. Each URL is scanned independently; results are keyed by the source URL.
+
+```bash
+deadfinder file urls.txt
+```
+
+## `pipe`
+
+Read URLs from STDIN (one per line). Useful in shell pipelines.
+
+```bash
+grep '^https://' access.log | sort -u | deadfinder pipe
+```
+
+## `sitemap <SITEMAP-URL>`
+
+Parse an XML sitemap, follow sitemap indexes recursively, and scan every `<loc>`.
+
+```bash
+deadfinder sitemap https://www.example.com/sitemap.xml
+```
+
+## `completion <SHELL>`
+
+Emit shell completion for bash, zsh, or fish.
+
+```bash
+# Bash
+deadfinder completion bash > /etc/bash_completion.d/deadfinder
+
+# Zsh
+deadfinder completion zsh > ~/.zsh/completion/_deadfinder
+
+# Fish
+deadfinder completion fish > ~/.config/fish/completions/deadfinder.fish
+```
+
+## `version`
+
+Print the DeadFinder version.
+
+```bash
+deadfinder version
+```
