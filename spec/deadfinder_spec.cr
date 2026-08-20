@@ -71,6 +71,10 @@ describe Deadfinder do
         tempfile.delete
       end
     end
+    it "reports a scheme-less target instead of scanning" do
+      Deadfinder.run_url("bad.test/index.html", default_test_options)
+      Deadfinder.output.should be_empty
+    end
   end
 
   describe "#run_file" do
@@ -387,6 +391,119 @@ describe Deadfinder do
       Deadfinder.output["http://idx.test/sub.xml"]?.should be_nil
       Deadfinder.output["http://idx.test/page1"]?.should_not be_nil
       Deadfinder.output["http://idx.test/page1"].should contain "http://idx.test/dead"
+    end
+
+    it "follows a redirect to the real sitemap document" do
+      sitemap_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>http://sm-redirect.test/page1</loc></url>
+        </urlset>
+      XML
+
+      WebMock.stub(:get, "http://sm-redirect.test/sitemap.xml")
+        .to_return(status: 301, headers: {"Location" => "/sitemap_index.xml"})
+      WebMock.stub(:get, "http://sm-redirect.test/sitemap_index.xml").to_return(body: sitemap_xml)
+      WebMock.stub(:get, "http://sm-redirect.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-redirect.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-redirect.test/dead").to_return(status: 404)
+
+      Deadfinder.run_sitemap("http://sm-redirect.test/sitemap.xml", default_test_options)
+
+      Deadfinder.output["http://sm-redirect.test/page1"].should contain "http://sm-redirect.test/dead"
+    end
+
+    it "resolves relative <loc> values against the sitemap location" do
+      sitemap_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>/page1</loc></url>
+        </urlset>
+      XML
+
+      WebMock.stub(:get, "http://sm-rel.test/sitemap.xml").to_return(body: sitemap_xml)
+      WebMock.stub(:get, "http://sm-rel.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-rel.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-rel.test/dead").to_return(status: 404)
+
+      Deadfinder.run_sitemap("http://sm-rel.test/sitemap.xml", default_test_options)
+
+      Deadfinder.output["http://sm-rel.test/page1"].should contain "http://sm-rel.test/dead"
+    end
+
+    it "resolves a relative child sitemap in a sitemap index" do
+      index_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>/sub.xml</loc></sitemap>
+        </sitemapindex>
+      XML
+      sub_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>http://sm-relidx.test/page1</loc></url>
+        </urlset>
+      XML
+
+      WebMock.stub(:get, "http://sm-relidx.test/index.xml").to_return(body: index_xml)
+      WebMock.stub(:get, "http://sm-relidx.test/sub.xml").to_return(body: sub_xml)
+      WebMock.stub(:get, "http://sm-relidx.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-relidx.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-relidx.test/dead").to_return(status: 404)
+
+      Deadfinder.run_sitemap("http://sm-relidx.test/index.xml", default_test_options)
+
+      Deadfinder.output["http://sm-relidx.test/page1"].should contain "http://sm-relidx.test/dead"
+    end
+
+    it "parses a gzip-compressed sitemap body" do
+      sitemap_xml = <<-XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>http://sm-gz.test/page1</loc></url>
+        </urlset>
+      XML
+      io = IO::Memory.new
+      Compress::Gzip::Writer.open(io) { |gz| gz.print sitemap_xml }
+
+      WebMock.stub(:get, "http://sm-gz.test/sitemap.xml.gz").to_return(body: String.new(io.to_slice))
+      WebMock.stub(:get, "http://sm-gz.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-gz.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-gz.test/dead").to_return(status: 404)
+
+      Deadfinder.run_sitemap("http://sm-gz.test/sitemap.xml.gz", default_test_options)
+
+      Deadfinder.output["http://sm-gz.test/page1"].should contain "http://sm-gz.test/dead"
+    end
+
+    it "stops downloading child sitemaps once --limit is satisfied" do
+      index_xml = String.build do |io|
+        io << %(<?xml version="1.0" encoding="UTF-8"?>)
+        io << %(<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">)
+        3.times { |i| io << "<sitemap><loc>http://sm-limit.test/sub#{i}.xml</loc></sitemap>" }
+        io << "</sitemapindex>"
+      end
+
+      WebMock.stub(:get, "http://sm-limit.test/index.xml").to_return(body: index_xml)
+      fetched = [] of String
+      3.times do |i|
+        WebMock.stub(:get, "http://sm-limit.test/sub#{i}.xml").to_return do
+          fetched << "sub#{i}"
+          HTTP::Client::Response.new(200, body: %(<urlset><url><loc>http://sm-limit.test/page#{i}</loc></url></urlset>))
+        end
+        WebMock.stub(:get, "http://sm-limit.test/page#{i}").to_return(body: "<html></html>")
+      end
+
+      options = default_test_options
+      options.limit = 1
+      Deadfinder.run_sitemap("http://sm-limit.test/index.xml", options)
+
+      fetched.should eq ["sub0"]
+    end
+
+    it "reports a scheme-less sitemap target instead of scanning" do
+      Deadfinder.run_sitemap("sm-bad.test/sitemap.xml", default_test_options)
+      Deadfinder.output.should be_empty
     end
 
     it "parses a sitemap using the legacy Google 0.84 namespace" do

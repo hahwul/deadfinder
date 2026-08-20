@@ -133,7 +133,12 @@ module Deadfinder
         end
       when "url"
         if positional_arg
-          Deadfinder.run_url(positional_arg.not_nil!, options)
+          target = positional_arg.not_nil!
+          if reason = Deadfinder.http_target_error(target)
+            STDERR.puts "Error: #{reason}"
+            exit 1
+          end
+          Deadfinder.run_url(target, options)
         else
           STDERR.puts "Error: url command requires a URL argument"
           STDERR.puts "Usage: deadfinder url <URL> [options]"
@@ -141,7 +146,12 @@ module Deadfinder
         end
       when "sitemap"
         if positional_arg
-          Deadfinder.run_sitemap(positional_arg.not_nil!, options)
+          target = positional_arg.not_nil!
+          if reason = Deadfinder.http_target_error(target)
+            STDERR.puts "Error: #{reason}"
+            exit 1
+          end
+          Deadfinder.run_sitemap(target, options)
         else
           STDERR.puts "Error: sitemap command requires a URL argument"
           STDERR.puts "Usage: deadfinder sitemap <SITEMAP-URL> [options]"

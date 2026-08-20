@@ -27,3 +27,9 @@ def make_runner_args
     mutex:         Mutex.new,
   }
 end
+
+# Worker jobs are `{request URL, links that resolved to it}` pairs: one request
+# serves every link that differs only by fragment.
+def job_for(url : String)
+  {url, [url]}
+end

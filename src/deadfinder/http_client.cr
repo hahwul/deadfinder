@@ -3,18 +3,48 @@ require "openssl"
 require "uri"
 require "base64"
 require "socket"
+require "compress/gzip"
 
 module Deadfinder
   module HttpClient
+    # Redirect hops followed when fetching a *document* (a scan target page or a
+    # sitemap). Link status checks deliberately pass 0: there the 30x status is
+    # the answer being reported (see `--include30x`).
+    MAX_REDIRECTS = 5
+
+    # Headers that must not be replayed to a different origin after a redirect.
+    # Mirrors curl's default behaviour: following a redirect off-host with a
+    # user-supplied `Authorization`/`Cookie` would leak the credential.
+    CROSS_ORIGIN_SENSITIVE_HEADERS = ["Authorization", "Cookie", "Proxy-Authorization"]
+
     @@proxy_cache = {} of String => URI?
     @@proxy_cache_mutex = Mutex.new
+
+    # Parse "Name: value" header strings. Accepts ":" or ": " as the
+    # separator and trims both sides — every request the tool makes (target
+    # page, sitemap document, link check) builds its headers here so users
+    # don't hit depending-on-which-flag surprises.
+    def self.build_headers(raw : Array(String), user_agent : String) : HTTP::Headers
+      headers = HTTP::Headers.new
+      raw.each do |header|
+        name, sep, value = header.partition(':')
+        next if sep.empty?
+        name = name.strip
+        next if name.empty?
+        headers[name] = value.strip
+      end
+      # Honor a user-supplied User-Agent (HTTP::Headers is case-insensitive);
+      # only fall back to the default when none was provided.
+      headers["User-Agent"] = user_agent unless headers.has_key?("User-Agent")
+      headers
+    end
 
     def self.create(uri : URI, options : Options) : HTTP::Client
       # `presence` (not just `nil?`): `file:///etc/hosts` parses to an *empty*
       # host, which passed a nil-check and then tried to connect to ":80".
       host = uri.host.presence
       if host.nil?
-        raise ArgumentError.new("URI is missing a host")
+        raise ArgumentError.new("missing host - did you include the scheme (http:// or https://)?")
       end
       scheme = uri.scheme
       # Anything other than http/https cannot be fetched here; without this
@@ -120,6 +150,110 @@ module Deadfinder
 
     def self.proxy_configured?(options : Options) : Bool
       !options.proxy.empty?
+    end
+
+    # Request-line target for `uri`: an absolute URI when talking plain HTTP to
+    # a forward proxy, an origin-form path otherwise.
+    def self.request_path(uri : URI, options : Options) : String
+      if proxy_configured?(options) && uri.scheme == "http"
+        absolute_uri(uri)
+      else
+        path = uri.path.presence || "/"
+        if q = uri.query.presence
+          "#{path}?#{q}"
+        else
+          path
+        end
+      end
+    end
+
+    # Fetches `uri` and returns the response together with the URI it was
+    # finally served from. `max_redirects` hops of 30x `Location` are followed;
+    # with the default of 0 the redirect response itself is returned untouched.
+    #
+    # Callers need the final URI because relative links (and relative sitemap
+    # `<loc>` entries) must resolve against the post-redirect location, not
+    # against the address the user originally typed.
+    def self.fetch(uri : URI, options : Options, headers : HTTP::Headers,
+                   max_redirects : Int32 = 0) : {HTTP::Client::Response, URI}
+      current = uri
+      current_headers = headers
+      seen = Set(String).new
+      hops = 0
+
+      loop do
+        client = create(current, options)
+        response = begin
+          client.get(request_path(current, options), headers: current_headers)
+        ensure
+          client.close
+        end
+
+        return {response, current} if hops >= max_redirects || !response.status.redirection?
+
+        location = response.headers["Location"]?.try(&.strip).presence
+        # A 3xx without a usable Location (300 Multiple Choices, 304 Not
+        # Modified, or a malformed response) is the final answer.
+        return {response, current} unless location
+
+        next_uri = begin
+          current.resolve(location)
+        rescue
+          return {response, current}
+        end
+        return {response, current} unless next_uri.scheme == "http" || next_uri.scheme == "https"
+        return {response, current} unless next_uri.host
+
+        # Stop on a redirect loop rather than burning every remaining hop.
+        seen << current.to_s
+        return {response, current} if seen.includes?(next_uri.to_s)
+
+        current_headers = strip_cross_origin_headers(current_headers, current, next_uri)
+        current = next_uri
+        hops += 1
+      end
+    end
+
+    # Sitemaps are routinely published gzipped (`sitemap.xml.gz`). When the file
+    # is served as an opaque `application/gzip` body there is no
+    # `Content-Encoding` for HTTP::Client to transparently undo, so detect the
+    # gzip magic bytes and inflate here. Returns the body unchanged when it is
+    # not gzip, or when it cannot be inflated.
+    def self.decompress_if_gzip(body : String) : String
+      bytes = body.to_slice
+      return body unless bytes.size >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b
+
+      begin
+        Compress::Gzip::Reader.open(IO::Memory.new(bytes)) do |gz|
+          gz.gets_to_end
+        end
+      rescue ex
+        Deadfinder::Logger.debug "Gzip decompression failed: #{ex.message}"
+        body
+      end
+    end
+
+    private def self.strip_cross_origin_headers(headers : HTTP::Headers, from : URI, to : URI) : HTTP::Headers
+      return headers if same_origin?(from, to)
+      return headers unless CROSS_ORIGIN_SENSITIVE_HEADERS.any? { |name| headers.has_key?(name) }
+
+      # Build a fresh instance rather than duplicating: HTTP::Headers is a
+      # struct wrapping a Hash, so `dup` would share that Hash and deleting
+      # from the copy would strip the caller's headers too.
+      stripped = HTTP::Headers.new
+      headers.each do |name, values|
+        next if CROSS_ORIGIN_SENSITIVE_HEADERS.any? { |sensitive| name.compare(sensitive, case_insensitive: true) == 0 }
+        values.each { |value| stripped.add(name, value) }
+      end
+      stripped
+    end
+
+    private def self.same_origin?(a : URI, b : URI) : Bool
+      a.scheme == b.scheme && a.host == b.host && effective_port(a) == effective_port(b)
+    end
+
+    private def self.effective_port(uri : URI) : Int32
+      uri.port || (uri.scheme == "https" ? 443 : 80)
     end
 
     private def self.create_direct(host : String, port : Int32?, use_ssl : Bool, options : Options) : HTTP::Client

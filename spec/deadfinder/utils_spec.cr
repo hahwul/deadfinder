@@ -146,3 +146,31 @@ describe "Deadfinder.ignore_scheme?" do
     Deadfinder.ignore_scheme?("page.html").should be_false
   end
 end
+
+describe "Deadfinder.http_target_error" do
+  it "accepts absolute http and https URLs" do
+    Deadfinder.http_target_error("http://example.com").should be_nil
+    Deadfinder.http_target_error("https://example.com/a?b=1").should be_nil
+    Deadfinder.http_target_error("  https://example.com  ").should be_nil
+  end
+
+  it "rejects an empty target" do
+    Deadfinder.http_target_error("   ").should eq "empty URL"
+  end
+
+  it "suggests a scheme when one is missing" do
+    reason = Deadfinder.http_target_error("example.com/sitemap.xml")
+    reason.should_not be_nil
+    reason.not_nil!.should contain "https://example.com/sitemap.xml"
+  end
+
+  it "rejects a non-http scheme" do
+    reason = Deadfinder.http_target_error("ftp://example.com/a")
+    reason.not_nil!.should contain "unsupported scheme"
+  end
+
+  it "rejects an http URL with no host" do
+    reason = Deadfinder.http_target_error("http:///a")
+    reason.not_nil!.should contain "missing host"
+  end
+end

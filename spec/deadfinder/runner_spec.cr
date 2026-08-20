@@ -451,9 +451,9 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -471,9 +471,9 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -491,9 +491,9 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -512,9 +512,9 @@ describe Deadfinder::Runner do
       options.include30x = false
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -533,9 +533,9 @@ describe Deadfinder::Runner do
       options.include30x = true
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -554,9 +554,9 @@ describe Deadfinder::Runner do
       # Pre-populate the status cache as if a previous page already checked it.
       args[:status_cache][url] = 404
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -576,11 +576,11 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send("http://example.com/a")
-      jobs.send("http://example.com/b")
-      jobs.send("http://example.com/c")
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for("http://example.com/a"))
+      jobs.send(job_for("http://example.com/b"))
+      jobs.send(job_for("http://example.com/c"))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -603,11 +603,11 @@ describe Deadfinder::Runner do
       options.coverage = true
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send("http://example.com/ok")
-      jobs.send("http://example.com/not-found")
-      jobs.send("http://example.com/server-err")
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for("http://example.com/ok"))
+      jobs.send(job_for("http://example.com/not-found"))
+      jobs.send(job_for("http://example.com/server-err"))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -633,9 +633,9 @@ describe Deadfinder::Runner do
       options.worker_headers = ["Authorization: Bearer token123"]
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -656,9 +656,9 @@ describe Deadfinder::Runner do
       options.worker_headers = ["User-Agent: my-custom-agent"]
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -679,9 +679,9 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -701,9 +701,9 @@ describe Deadfinder::Runner do
       options.coverage = true
       args = make_runner_args
 
-      jobs = Channel(String).new(10)
-      results = Channel(String).new(10)
-      jobs.send(url)
+      jobs = Channel(Tuple(String, Array(String))).new(10)
+      results = Channel(Nil).new(10)
+      jobs.send(job_for(url))
       jobs.close
 
       runner.worker(1, jobs, results, target, options, **args)
@@ -712,6 +712,122 @@ describe Deadfinder::Runner do
       cov.total.should eq 1
       cov.dead.should eq 1
       cov.status_counts["error"].should eq 1
+    end
+  end
+end
+
+describe Deadfinder::Runner do
+  before_each { WebMock.reset }
+
+  describe "#run redirect handling" do
+    it "follows a redirected target page instead of parsing an empty body" do
+      WebMock.stub(:get, "http://moved.test/")
+        .to_return(status: 301, headers: {"Location" => "http://moved.test/home"})
+      WebMock.stub(:get, "http://moved.test/home")
+        .to_return(body: %(<html><body><a href="http://moved.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://moved.test/dead").to_return(status: 404)
+
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://moved.test/", default_test_options, **args)
+
+      # Output stays keyed by the target the user asked for.
+      args[:output]["http://moved.test/"].should contain "http://moved.test/dead"
+    end
+
+    it "resolves relative links against the post-redirect location" do
+      WebMock.stub(:get, "http://rel.test/old")
+        .to_return(status: 302, headers: {"Location" => "http://rel.test/new/page"})
+      WebMock.stub(:get, "http://rel.test/new/page")
+        .to_return(body: %(<html><body><a href="sibling">s</a></body></html>))
+      WebMock.stub(:get, "http://rel.test/new/sibling").to_return(status: 404)
+
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://rel.test/old", default_test_options, **args)
+
+      args[:output]["http://rel.test/old"].should eq ["http://rel.test/new/sibling"]
+    end
+
+    it "still reports link redirects verbatim without following them" do
+      followed = false
+      WebMock.stub(:get, "http://link.test/")
+        .to_return(body: %(<html><body><a href="http://link.test/moved">m</a></body></html>))
+      WebMock.stub(:get, "http://link.test/moved")
+        .to_return(status: 301, headers: {"Location" => "http://link.test/final"})
+      WebMock.stub(:get, "http://link.test/final").to_return do
+        followed = true
+        HTTP::Client::Response.new(200, body: "")
+      end
+
+      options = default_test_options
+      options.include30x = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://link.test/", options, **args)
+
+      followed.should be_false
+      args[:output]["http://link.test/"].should contain "http://link.test/moved"
+    end
+  end
+
+  describe "#run base href handling" do
+    it "resolves relative links against <base href>" do
+      html = %(<html><head><base href="http://base.test/docs/"></head><body><a href="guide">g</a></body></html>)
+      WebMock.stub(:get, "http://base.test/index.html").to_return(body: html)
+      WebMock.stub(:get, "http://base.test/docs/guide").to_return(status: 404)
+
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://base.test/index.html", default_test_options, **args)
+
+      args[:output]["http://base.test/index.html"].should eq ["http://base.test/docs/guide"]
+    end
+
+    it "accepts a relative <base href>" do
+      html = %(<html><head><base href="/docs/"></head><body><a href="guide">g</a></body></html>)
+      WebMock.stub(:get, "http://relbase.test/a/index.html").to_return(body: html)
+      WebMock.stub(:get, "http://relbase.test/docs/guide").to_return(status: 404)
+
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://relbase.test/a/index.html", default_test_options, **args)
+
+      args[:output]["http://relbase.test/a/index.html"].should eq ["http://relbase.test/docs/guide"]
+    end
+
+    it "ignores an empty <base href> and falls back to the page URL" do
+      html = %(<html><head><base href=""></head><body><a href="guide">g</a></body></html>)
+      WebMock.stub(:get, "http://emptybase.test/a/index.html").to_return(body: html)
+      WebMock.stub(:get, "http://emptybase.test/a/guide").to_return(status: 404)
+
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://emptybase.test/a/index.html", default_test_options, **args)
+
+      args[:output]["http://emptybase.test/a/index.html"].should eq ["http://emptybase.test/a/guide"]
+    end
+  end
+
+  describe "#run fragment handling" do
+    it "requests a URL once for links that differ only by fragment" do
+      requests = 0
+      html = %(<html><body>
+        <a href="http://frag.test/guide#install">i</a>
+        <a href="http://frag.test/guide#usage">u</a>
+      </body></html>)
+      WebMock.stub(:get, "http://frag.test/index.html").to_return(body: html)
+      WebMock.stub(:get, "http://frag.test/guide").to_return do
+        requests += 1
+        HTTP::Client::Response.new(404, body: "")
+      end
+
+      options = default_test_options
+      options.coverage = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://frag.test/index.html", options, **args)
+
+      requests.should eq 1
+      # Both link instances are still reported, so the user can find each one.
+      args[:output]["http://frag.test/index.html"].sort.should eq [
+        "http://frag.test/guide#install",
+        "http://frag.test/guide#usage",
+      ]
+      args[:coverage_data]["http://frag.test/index.html"].total.should eq 2
     end
   end
 end

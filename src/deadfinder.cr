@@ -135,93 +135,163 @@ module Deadfinder
 
   def self.run_url(url : String, options : Options)
     Deadfinder::Logger.apply_options(options)
-    run_with_target(url, options)
+    if reason = http_target_error(url)
+      Deadfinder::Logger.error "Cannot scan target: #{reason}"
+      return
+    end
+    run_with_target(url.strip, options)
     gen_output(options)
   end
 
   def self.run_sitemap(sitemap_url : String, options : Options)
     Deadfinder::Logger.apply_options(options)
+    if reason = http_target_error(sitemap_url)
+      Deadfinder::Logger.error "Cannot fetch sitemap: #{reason}"
+      return
+    end
+
     app = Runner.new
-    urls = parse_sitemap(sitemap_url, options).uniq
-    urls = urls.first(options.limit) if options.limit > 0
-    Deadfinder::Logger.info "Found #{urls.size} URLs from #{sitemap_url}"
+    collector = SitemapCollector.new(options.limit)
+    parse_sitemap(sitemap_url.strip, options, collector)
+    urls = collector.urls
+
+    if collector.truncated?
+      Deadfinder::Logger.info "Found #{urls.size} URLs from #{sitemap_url} (stopped early at --limit #{options.limit})"
+    else
+      Deadfinder::Logger.info "Found #{urls.size} URLs from #{sitemap_url}"
+    end
+
     urls.each do |url|
-      turl = generate_url(url, sitemap_url)
-      run_with_target(turl, options, app) if turl
+      run_with_target(url, options, app)
     end
     gen_output(options)
   end
 
-  private def self.parse_sitemap(sitemap_url : String, options : Options,
-                                 depth : Int32 = 0,
-                                 visited : Set(String) = Set(String).new) : Array(String)
-    urls = [] of String
+  # Accumulates state across the recursive sitemap walk: the ordered, unique
+  # page URLs found so far, the sitemap documents already fetched (cycle
+  # guard), and the `--limit` cutoff. Threading the limit through the walk lets
+  # a huge sitemap index stop downloading children as soon as enough URLs are
+  # in hand, instead of fetching every child and throwing the surplus away.
+  private class SitemapCollector
+    getter urls = [] of String
+    getter? truncated : Bool = false
 
+    def initialize(@limit : Int32 = 0)
+      @seen = Set(String).new
+      @visited = Set(String).new
+    end
+
+    def add(url : String) : Nil
+      return if @seen.includes?(url)
+      if full?
+        @truncated = true
+        return
+      end
+      @seen << url
+      @urls << url
+    end
+
+    def full? : Bool
+      @limit > 0 && @urls.size >= @limit
+    end
+
+    def mark_truncated : Nil
+      @truncated = true
+    end
+
+    # Returns false when this sitemap document has already been fetched.
+    def visit(sitemap_url : String) : Bool
+      @visited.add?(sitemap_url)
+    end
+  end
+
+  private def self.parse_sitemap(sitemap_url : String, options : Options,
+                                 collector : SitemapCollector,
+                                 depth : Int32 = 0) : Nil
+    if collector.full?
+      collector.mark_truncated
+      return
+    end
     if depth >= MAX_SITEMAP_DEPTH
       Deadfinder::Logger.error "Sitemap depth limit (#{MAX_SITEMAP_DEPTH}) reached at #{sitemap_url}"
-      return urls
+      return
     end
-    if visited.includes?(sitemap_url)
+    unless collector.visit(sitemap_url)
       Deadfinder::Logger.error "Sitemap cycle detected at #{sitemap_url}"
-      return urls
+      return
     end
-    visited << sitemap_url
 
     begin
       uri = URI.parse(sitemap_url)
-      client = HttpClient.create(uri, options)
-      begin
-        headers = HTTP::Headers.new
-        headers["User-Agent"] = options.user_agent
-        req_path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
-                     HttpClient.absolute_uri(uri)
-                   else
-                     path = uri.path.presence || "/"
-                     uri.query.presence ? "#{path}?#{uri.query}" : path
-                   end
-        response = client.get(req_path, headers: headers)
+      headers = HttpClient.build_headers(options.headers, options.user_agent)
+      # Sitemaps very commonly sit behind a redirect (http -> https, apex -> www,
+      # /sitemap.xml -> /sitemap_index.xml). Follow it instead of reporting the
+      # 30x itself as a fetch failure.
+      response, final_uri = HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
 
-        if response.status_code != 200
-          Deadfinder::Logger.error "Failed to fetch sitemap #{sitemap_url}: HTTP #{response.status_code}"
-          return urls
-        end
-
-        doc = XML.parse(response.body)
-      ensure
-        client.close
+      unless response.status.success?
+        Deadfinder::Logger.error "Failed to fetch sitemap #{sitemap_url}: HTTP #{response.status_code}"
+        return
       end
+
+      # Relative <loc> values (and relative child-sitemap references) resolve
+      # against the document's final location, not the address originally
+      # requested.
+      base = final_uri.to_s
+      doc = XML.parse(HttpClient.decompress_if_gzip(response.body))
 
       # Namespace-agnostic extraction via local-name(): handles the standard
       # 0.9 namespace, the legacy Google 0.84 namespace, and namespace-free
       # documents uniformly. Page URLs are scoped under <url> and child
       # sitemaps under <sitemap> so a sitemap-index's <sitemap><loc> entries are
       # NOT mis-collected as page targets (which previously double-fetched them).
+      found_before = collector.urls.size
       doc.xpath_nodes("//*[local-name()='url']/*[local-name()='loc']").each do |node|
-        urls << node.text.strip unless node.text.strip.empty?
+        collect_sitemap_url(collector, node.text, base, sitemap_url)
       end
 
       # Check for sitemap index (recursive sitemaps)
       sitemap_locs = [] of String
       doc.xpath_nodes("//*[local-name()='sitemap']/*[local-name()='loc']").each do |node|
-        sitemap_locs << node.text.strip unless node.text.strip.empty?
+        text = node.text.strip
+        sitemap_locs << text unless text.empty?
       end
 
       # Tolerate malformed sitemaps that put <loc> at the top level (no <url>
-      # wrapper). Only used when neither a urlset nor a sitemap index matched,
-      # so it cannot reintroduce the index double-processing bug.
-      if urls.empty? && sitemap_locs.empty?
+      # wrapper). Only used when *this document* matched neither a urlset nor a
+      # sitemap index, so it cannot reintroduce the index double-processing bug.
+      if collector.urls.size == found_before && sitemap_locs.empty?
         doc.xpath_nodes("//*[local-name()='loc']").each do |node|
-          urls << node.text.strip unless node.text.strip.empty?
+          collect_sitemap_url(collector, node.text, base, sitemap_url)
         end
       end
 
-      sitemap_locs.each do |sub_sitemap|
-        urls.concat(parse_sitemap(sub_sitemap, options, depth + 1, visited))
+      sitemap_locs.each do |loc|
+        if collector.full?
+          collector.mark_truncated
+          break
+        end
+        sub_sitemap = generate_url(loc, base)
+        unless sub_sitemap
+          Deadfinder::Logger.error "Skipping unusable child sitemap #{loc.inspect} in #{sitemap_url}"
+          next
+        end
+        parse_sitemap(sub_sitemap, options, collector, depth + 1)
       end
     rescue ex
-      Deadfinder::Logger.error "Failed to parse sitemap: #{ex.message}"
+      Deadfinder::Logger.error "Failed to parse sitemap #{sitemap_url}: #{ex.message}"
     end
-    urls
+  end
+
+  private def self.collect_sitemap_url(collector : SitemapCollector, raw : String,
+                                       base : String, sitemap_url : String) : Nil
+    text = raw.strip
+    return if text.empty?
+    if url = generate_url(text, base)
+      collector.add(url)
+    else
+      Deadfinder::Logger.debug "Skipping unusable sitemap entry #{text.inspect} in #{sitemap_url}"
+    end
   end
 
   private def self.run_with_input(options : Options, &block : -> Array(String))

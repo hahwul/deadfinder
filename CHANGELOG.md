@@ -4,13 +4,23 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
-### Fixed
-- macOS release tarballs now bundle Homebrew-linked runtime libraries (OpenSSL, libyaml, pcre2, bdw-gc) next to the binary so direct-download installs work without a local Homebrew dependency tree.
+### Added
+- Sitemap fetching transparently inflates gzip-compressed documents, so a `sitemap.xml.gz` served as `application/gzip` (no `Content-Encoding`) is parsed instead of failing with an XML error.
+- `-H`/`--headers` now applies to the sitemap request too, so a sitemap behind auth or a custom edge header can be fetched.
 
 ### Changed
+- Scanning a page (`url`/`file`/`pipe` targets and sitemap documents) follows up to 5 redirect hops. Relative links resolve against the page's **final** location, while the report stays keyed by the target you asked for. Link status checks are unchanged — they still report the `30x` verbatim, which is what `--include30x` acts on. Credentials (`Authorization`, `Cookie`, `Proxy-Authorization`) are dropped when a redirect crosses origins.
 - Multi-target scans (`pipe`/`file`/`sitemap`) now attribute a shared broken link to **every** page that references it, not just the first page scanned, and per-target coverage counts each page's own links. Internally the global "already-seen" URL set became a URL→status cache, so each link is still fetched at most once. Previously a 404 referenced by pages A and B was reported only under A and skewed B's coverage.
 
 ### Fixed
+- macOS release tarballs now bundle Homebrew-linked runtime libraries (OpenSSL, libyaml, pcre2, bdw-gc) next to the binary so direct-download installs work without a local Homebrew dependency tree.
+- `url`/`sitemap` no longer silently report nothing when the target redirects. Previously the `30x` body was parsed as the page (zero links discovered, no message) and a redirected sitemap failed outright with `HTTP 301`.
+- Relative links are resolved against `<base href>` when the document declares one, matching browser behaviour, instead of always resolving against the page URL.
+- Links that differ only by fragment (`/guide#install`, `/guide#usage`) now cost a single request — the fragment is never sent to the server — while both still appear in the report.
+- A sitemap index containing relative `<loc>` entries resolves them against the parent sitemap instead of failing with "URI is missing a host".
+- `--limit` stops sitemap discovery as soon as enough URLs are collected, instead of downloading every child sitemap in a sitemap index and discarding the surplus. The "Found N URLs" line now says when discovery stopped early.
+- `deadfinder url example.com` (or `sitemap example.com/sitemap.xml`) fails immediately with an actionable message and a non-zero exit code instead of a cryptic `[URI is missing a host]` mid-scan.
+- A target page that answers with a non-2xx status is reported, so links extracted from an error page are no longer mistaken for the real page's links. A page with no links at all now says so rather than logging nothing.
 - `--concurrency 0` (or any value `< 1`) no longer hangs forever. The CLI rejects it up front and the runner defensively clamps to at least one worker. `--timeout`, `--limit`, and `--output_format` are likewise validated instead of silently hanging, failing every request, or emitting an unexpected format.
 - `file` subcommand prints a clear "file not found" error instead of dumping a Crystal stack trace for a missing path.
 - Sitemap parsing no longer scans child-sitemap `.xml` files as if they were HTML pages (sitemap-index double-processing), and extracts `<loc>` namespace-agnostically so the legacy Google `0.84` sitemap namespace is no longer silently dropped.
