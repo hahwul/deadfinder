@@ -107,7 +107,7 @@ Usage: deadfinder <command> [options]
 
 Commands:
   pipe                        Scan the URLs from STDIN
-  file <FILE>                 Scan the URLs from File
+  file <FILE>                 Scan the URLs from File (`-` for STDIN)
   url <URL>                   Scan the Single URL
   sitemap <SITEMAP-URL>       Scan the URLs from sitemap
   completion <SHELL>          Generate completion script (bash/zsh/fish)
@@ -142,11 +142,34 @@ cat urls.txt | deadfinder pipe
 # Scan the URLs from a file
 deadfinder file urls.txt
 
+# `-` and other non-regular files (process substitution, /dev/stdin, FIFOs) work too
+deadfinder file -  < urls.txt
+deadfinder file <(subfinder -d example.com -silent | httpx -silent)
+
 # Scan a single URL
 deadfinder url https://www.hahwul.com
 
 # Scan the URLs from a sitemap
 deadfinder sitemap https://www.hahwul.com/sitemap.xml
+```
+
+### URL list format (`pipe` / `file`)
+
+One URL per line. The list is normalized before scanning:
+
+- surrounding whitespace is trimmed, and a leading UTF-8 BOM is dropped
+- blank lines and `#` comments are skipped
+- duplicate URLs are scanned once
+- lines that are not absolute `http://` / `https://` URLs are reported and skipped
+- `--limit N` counts only real targets, and stops reading the input once it is reached
+
+```
+# production
+https://www.hahwul.com
+https://www.hahwul.com/cullinan/
+
+# staging
+https://staging.hahwul.com
 ```
 
 ## JSON Handling

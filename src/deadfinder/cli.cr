@@ -7,13 +7,14 @@ module Deadfinder
 
       subcommand : String? = nil
       positional_arg : String? = nil
+      extra_args = [] of String
 
       global_parser = OptionParser.new do |parser|
         parser.banner = "Usage: deadfinder <command> [options]"
         parser.separator ""
         parser.separator "Commands:"
         parser.separator "  pipe                        Scan the URLs from STDIN"
-        parser.separator "  file <FILE>                 Scan the URLs from File"
+        parser.separator "  file <FILE>                 Scan the URLs from File (`-` for STDIN)"
         parser.separator "  url <URL>                   Scan the Single URL"
         parser.separator "  sitemap <SITEMAP-URL>       Scan the URLs from sitemap"
         parser.separator "  completion <SHELL>           Generate completion script (bash/zsh/fish)"
@@ -49,6 +50,7 @@ module Deadfinder
           if remaining.size > 0
             subcommand = remaining[0]
             positional_arg = remaining[1]? if remaining.size > 1
+            extra_args = remaining[2..] if remaining.size > 2
           end
         end
       end
@@ -57,6 +59,19 @@ module Deadfinder
         global_parser.parse(args)
       rescue ex : OptionParser::Exception | ArgumentError
         STDERR.puts "Error: #{ex.message}"
+        exit 1
+      end
+
+      # Reject arguments the chosen subcommand cannot use instead of silently
+      # dropping them: `deadfinder file a.txt b.txt` used to scan only a.txt,
+      # and `deadfinder pipe urls.txt` used to ignore the file entirely and then
+      # block on an empty STDIN.
+      leftover = extra_args.dup
+      if (arg = positional_arg) && subcommand && ["pipe", "version"].includes?(subcommand)
+        leftover.unshift(arg)
+      end
+      unless leftover.empty?
+        STDERR.puts "Error: unexpected argument#{leftover.size > 1 ? "s" : ""} for `#{subcommand}`: #{leftover.join(" ")}"
         exit 1
       end
 
@@ -95,14 +110,25 @@ module Deadfinder
       when "file"
         if positional_arg
           filename = positional_arg.not_nil!
-          unless File.file?(filename)
-            STDERR.puts "Error: file not found: #{filename}"
-            exit 1
+          # `File.file?` is true only for regular files, which rejected every
+          # legitimate non-regular source: shell process substitution
+          # (`deadfinder file <(...)` -> /dev/fd/N), /dev/stdin, and named
+          # pipes all reported a bogus "file not found". Check existence
+          # instead, and name a directory for what it is.
+          if filename != Deadfinder::STDIN_FILENAME
+            if Dir.exists?(filename)
+              STDERR.puts "Error: #{filename} is a directory, not a file"
+              exit 1
+            end
+            unless File.exists?(filename)
+              STDERR.puts "Error: file not found: #{filename}"
+              exit 1
+            end
           end
           Deadfinder.run_file(filename, options)
         else
           STDERR.puts "Error: file command requires a filename argument"
-          STDERR.puts "Usage: deadfinder file <FILE> [options]"
+          STDERR.puts "Usage: deadfinder file <FILE> [options]  (use `-` to read from STDIN)"
           exit 1
         end
       when "url"

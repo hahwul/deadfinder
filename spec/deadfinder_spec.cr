@@ -153,6 +153,134 @@ describe Deadfinder do
         urlfile.delete
       end
     end
+
+    it "skips blank lines, whitespace padding and # comments" do
+      target = "http://mock-blank.test"
+      html = %(<html><body><a href="http://mock-blank.test/dead">X</a></body></html>)
+
+      WebMock.stub(:get, target).to_return(body: html)
+      WebMock.stub(:get, "http://mock-blank.test/dead").to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_blank", ".txt")
+      begin
+        File.write(urlfile.path, "\n   \n# a comment\n  #{target}  \n\n")
+
+        options = default_test_options
+        Deadfinder.run_file(urlfile.path, options)
+
+        # Padding is trimmed, so the report is keyed by the clean URL and the
+        # blank/comment lines never became (failing) targets of their own.
+        Deadfinder.output.keys.should eq [target]
+        Deadfinder.output[target].should contain "http://mock-blank.test/dead"
+      ensure
+        urlfile.delete
+      end
+    end
+
+    it "strips a leading UTF-8 BOM from the first line" do
+      target = "http://mock-bom.test"
+      html = %(<html><body><a href="http://mock-bom.test/dead">X</a></body></html>)
+
+      WebMock.stub(:get, target).to_return(body: html)
+      WebMock.stub(:get, "http://mock-bom.test/dead").to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_bom", ".txt")
+      begin
+        File.write(urlfile.path, "#{Deadfinder::UTF8_BOM}#{target}\n")
+
+        options = default_test_options
+        Deadfinder.run_file(urlfile.path, options)
+
+        Deadfinder.output.keys.should eq [target]
+      ensure
+        urlfile.delete
+      end
+    end
+
+    it "counts only real targets against limit" do
+      html1 = %(<html><body><a href="http://lim1.test/page">P</a></body></html>)
+      html2 = %(<html><body><a href="http://lim2.test/page">P</a></body></html>)
+
+      WebMock.stub(:get, "http://lim1.test").to_return(body: html1)
+      WebMock.stub(:get, "http://lim1.test/page").to_return(status: 404)
+      WebMock.stub(:get, "http://lim2.test").to_return(body: html2)
+      WebMock.stub(:get, "http://lim2.test/page").to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_limit_blank", ".txt")
+      begin
+        # Blank lines between the two targets used to consume the limit, so
+        # `--limit 2` scanned only the first URL.
+        File.write(urlfile.path, "http://lim1.test\n\n\nhttp://lim2.test\n")
+
+        options = default_test_options
+        options.limit = 2
+        Deadfinder.run_file(urlfile.path, options)
+
+        Deadfinder.output.keys.sort.should eq ["http://lim1.test", "http://lim2.test"]
+      ensure
+        urlfile.delete
+      end
+    end
+
+    it "skips targets that are not absolute http(s) URLs" do
+      urlfile = File.tempfile("deadfinder_invalid", ".txt")
+      begin
+        # A bare domain has no host once parsed, `file://` parses to an empty
+        # host, and a non-http scheme would otherwise be fetched as plain HTTP.
+        File.write(urlfile.path, "example.com\nfile:///etc/hosts\nftp://example.com/a\n")
+
+        options = default_test_options
+        Deadfinder.run_file(urlfile.path, options)
+
+        Deadfinder.output.should be_empty
+      ensure
+        urlfile.delete
+      end
+    end
+  end
+
+  describe ".read_targets" do
+    it "normalizes, dedupes and preserves first-seen order" do
+      io = IO::Memory.new(<<-LIST)
+        #{Deadfinder::UTF8_BOM}http://a.test
+
+          http://b.test\t
+        # http://commented.test
+        http://a.test
+        LIST
+
+      Deadfinder.read_targets(io, 0).should eq ["http://a.test", "http://b.test"]
+    end
+
+    it "handles CRLF line endings" do
+      io = IO::Memory.new("http://a.test\r\nhttp://b.test\r\n")
+      Deadfinder.read_targets(io, 0).should eq ["http://a.test", "http://b.test"]
+    end
+
+    it "rejects targets that cannot be fetched over http(s)" do
+      Deadfinder::Logger.set_silent
+      io = IO::Memory.new("example.com\nfile:///etc/hosts\nftp://x.test/a\n://broken\n")
+      Deadfinder.read_targets(io, 0).should be_empty
+    end
+
+    it "stops reading as soon as the limit is reached" do
+      # A still-open stream: without an early break the read would block here
+      # instead of returning the single target the limit asked for.
+      reader, writer = IO.pipe
+      begin
+        writer.puts "http://a.test"
+        writer.puts "http://b.test"
+        Deadfinder.read_targets(reader, 1).should eq ["http://a.test"]
+      ensure
+        writer.close
+        reader.close
+      end
+    end
+
+    it "counts only valid targets against the limit" do
+      io = IO::Memory.new("\n# c\nhttp://a.test\n\nhttp://b.test\n")
+      Deadfinder.read_targets(io, 2).should eq ["http://a.test", "http://b.test"]
+    end
   end
 
   describe "#run_sitemap" do

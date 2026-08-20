@@ -17,6 +17,14 @@ require "./deadfinder/completion"
 module Deadfinder
   MAX_SITEMAP_DEPTH = 5
 
+  # `deadfinder file -` reads the list from STDIN, matching the convention of
+  # other CLI tools.
+  STDIN_FILENAME = "-"
+
+  # How many individually invalid input lines are reported before switching to
+  # a single summary line.
+  MAX_INVALID_TARGET_REPORTS = 10
+
   @@output = {} of String => Array(String)
   @@coverage_data = {} of String => TargetCoverage
   # Global URL -> HTTP status code cache. A URL is fetched at most once across
@@ -52,13 +60,7 @@ module Deadfinder
   end
 
   def self.run_pipe(options : Options)
-    run_with_input(options) do
-      lines = [] of String
-      while line = STDIN.gets
-        lines << line.chomp
-      end
-      lines
-    end
+    run_with_input(options) { read_targets(STDIN, options.limit) }
   end
 
   def self.run_file(filename : String, options : Options)
@@ -67,12 +69,68 @@ module Deadfinder
       # (permissions) or vanish between that check and this read (TOCTOU).
       # Report cleanly and scan nothing rather than crash.
       begin
-        File.read_lines(filename).map(&.chomp)
+        if filename == STDIN_FILENAME
+          read_targets(STDIN, options.limit)
+        else
+          File.open(filename) { |file| read_targets(file, options.limit) }
+        end
       rescue ex : IO::Error
         Deadfinder::Logger.error "Failed to read input file #{filename}: #{ex.message}"
         [] of String
       end
     end
+  end
+
+  # Reads scan targets from `io`, one per line, applying the input rules shared
+  # by the `pipe` and `file` commands:
+  #
+  #   * a leading UTF-8 BOM is dropped, so a list exported from Windows/Excel
+  #     doesn't lose its first URL
+  #   * surrounding whitespace is trimmed, so a padded line doesn't become a
+  #     distinct target (and a distinct key) in the report
+  #   * blank lines and `#` comments are skipped instead of being fetched —
+  #     neither can be a valid target, and both previously logged an error
+  #   * duplicates are dropped, keeping first-seen order
+  #   * lines that aren't absolute http(s) URLs are reported and skipped rather
+  #     than handed to the fetcher to fail on
+  #   * reading stops once `limit` targets are collected, so `--limit` no longer
+  #     drains a huge list (or a live stream) first — and, because only real
+  #     targets are counted, blank/comment lines can't eat into the limit
+  def self.read_targets(io : IO, limit : Int32) : Array(String)
+    targets = [] of String
+    seen = Set(String).new
+    invalid = 0
+    first_line = true
+
+    io.each_line(chomp: true) do |raw|
+      line = raw
+      if first_line
+        line = line.lchop(UTF8_BOM)
+        first_line = false
+      end
+      line = line.strip
+      next if line.empty? || line.starts_with?('#')
+
+      unless valid_target?(line)
+        invalid += 1
+        # Cap the per-line reports: a list of bare domains would otherwise
+        # bury everything else under one error per line.
+        if invalid <= MAX_INVALID_TARGET_REPORTS
+          Deadfinder::Logger.error "Skipping invalid target (expected an absolute http:// or https:// URL): #{line}"
+        end
+        next
+      end
+
+      next unless seen.add?(line)
+      targets << line
+      break if limit > 0 && targets.size >= limit
+    end
+
+    if invalid > MAX_INVALID_TARGET_REPORTS
+      Deadfinder::Logger.error "Skipped #{invalid} invalid targets in total"
+    end
+
+    targets
   end
 
   def self.run_url(url : String, options : Options)
@@ -169,13 +227,15 @@ module Deadfinder
   private def self.run_with_input(options : Options, &block : -> Array(String))
     Deadfinder::Logger.apply_options(options)
     Deadfinder::Logger.info "Reading input"
-    app = Runner.new
-    # Dedupe input targets: scanning the same page twice is wasted work and
-    # would double-count it in coverage totals.
-    targets = (yield).uniq
-    targets = targets.first(options.limit) if options.limit > 0
-    targets.each do |target|
-      run_with_target(target, options, app)
+    # `read_targets` has already trimmed, deduped and limited the list.
+    targets = yield
+    if targets.empty?
+      Deadfinder::Logger.info "No URLs to scan"
+    else
+      app = Runner.new
+      targets.each do |target|
+        run_with_target(target, options, app)
+      end
     end
     gen_output(options)
   end
