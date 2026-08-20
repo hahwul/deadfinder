@@ -1,8 +1,28 @@
 module Deadfinder
   IGNORED_SCHEMES = ["mailto:", "tel:", "sms:", "data:", "file:", "javascript:", "#"]
 
+  # Byte-order mark that Windows/Excel-exported URL lists carry on their first
+  # line. It is not whitespace, so `String#strip` leaves it attached to the URL
+  # and quietly corrupts the very first target.
+  UTF8_BOM = "\uFEFF"
+
   def self.ignore_scheme?(url : String) : Bool
     IGNORED_SCHEMES.any? { |scheme| url.starts_with?(scheme) }
+  end
+
+  # True when `target` can actually be scanned: an absolute URL with an
+  # http/https scheme and a non-empty host. Everything else only produces a
+  # confusing failure downstream — a bare domain and a stray shell token both
+  # raise "URI is missing a host", `file:///etc/hosts` parses to an empty host
+  # and tries to connect to `:80`, and `ftp://host/x` would be fetched as plain
+  # HTTP — so callers report such lines and skip them instead.
+  def self.valid_target?(target : String) : Bool
+    uri = URI.parse(target)
+    scheme = uri.scheme
+    return false unless scheme == "http" || scheme == "https"
+    !uri.host.presence.nil?
+  rescue
+    false
   end
 
   def self.generate_url(text : String, base_url : String) : String?

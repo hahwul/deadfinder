@@ -10,21 +10,29 @@ module Deadfinder
     @@proxy_cache_mutex = Mutex.new
 
     def self.create(uri : URI, options : Options) : HTTP::Client
-      host = uri.host
+      # `presence` (not just `nil?`): `file:///etc/hosts` parses to an *empty*
+      # host, which passed a nil-check and then tried to connect to ":80".
+      host = uri.host.presence
       if host.nil?
         raise ArgumentError.new("URI is missing a host")
       end
+      scheme = uri.scheme
+      # Anything other than http/https cannot be fetched here; without this
+      # guard `ftp://host/x` was silently requested as plain HTTP on port 80.
+      unless scheme == "http" || scheme == "https"
+        raise ArgumentError.new("Unsupported URL scheme: #{scheme || "(none)"} (only http and https are supported)")
+      end
       port = uri.port
-      use_ssl = uri.scheme == "https"
+      use_ssl = scheme == "https"
 
       proxy_str = options.proxy
       if !proxy_str.empty?
         proxy_uri = resolve_proxy(proxy_str)
 
         if proxy_uri && proxy_uri.host
-          scheme = proxy_uri.scheme
-          if scheme && scheme != "http" && scheme != "https"
-            raise ArgumentError.new("Unsupported proxy scheme: #{scheme} (only http and https proxies are supported)")
+          proxy_scheme = proxy_uri.scheme
+          if proxy_scheme && proxy_scheme != "http" && proxy_scheme != "https"
+            raise ArgumentError.new("Unsupported proxy scheme: #{proxy_scheme} (only http and https proxies are supported)")
           end
 
           proxy_host = proxy_uri.host.not_nil!
