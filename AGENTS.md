@@ -78,6 +78,7 @@ spec/
 - Output surface is stable: CLI flags, subcommands, and JSON/YAML/TOML/CSV shapes match v1 Ruby. The golden files in `spec/compat/golden/` lock this contract.
 - Resolved URLs must preserve the base URL's port. Port preservation is delegated to `base_uri.resolve` in `utils.cr::generate_url`; the regression specs live in `spec/deadfinder/utils_spec.cr` ("preserves non-default port…"). This was a v1 pain point; don't regress.
 - Silent default is `false` — the CLI emits logs by default. `-s` / `--silent` opts in.
+- Redirects are followed when fetching a **document** (a scan target page, a sitemap) but never when **checking a link** — there the `30x` is the result `--include30x` acts on. `HttpClient.fetch` takes the hop count per call site; `runner.cr::check_url` deliberately passes none. The regression spec is `spec/deadfinder/runner_spec.cr` ("still reports link redirects verbatim without following them").
 
 ## CI
 

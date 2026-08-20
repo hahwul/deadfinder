@@ -10,19 +10,41 @@ module Deadfinder
     IGNORED_SCHEMES.any? { |scheme| url.starts_with?(scheme) }
   end
 
-  # True when `target` can actually be scanned: an absolute URL with an
-  # http/https scheme and a non-empty host. Everything else only produces a
-  # confusing failure downstream — a bare domain and a stray shell token both
-  # raise "URI is missing a host", `file:///etc/hosts` parses to an empty host
-  # and tries to connect to `:80`, and `ftp://host/x` would be fetched as plain
-  # HTTP — so callers report such lines and skip them instead.
-  def self.valid_target?(target : String) : Bool
-    uri = URI.parse(target)
+  # Returns nil when `url` can be used as a scan target, or a human-readable
+  # reason why it cannot. Everything rejected here only produces a confusing
+  # failure downstream — a bare domain and a stray shell token both raise
+  # "URI is missing a host", `file:///etc/hosts` parses to an empty host and
+  # tries to connect to `:80`, and `ftp://host/x` would be fetched as plain
+  # HTTP — so callers report the reason and skip the target instead.
+  def self.http_target_error(url : String) : String?
+    trimmed = url.strip
+    return "empty URL" if trimmed.empty?
+
+    uri = begin
+      URI.parse(trimmed)
+    rescue ex
+      return "invalid URL #{url.inspect}: #{ex.message}"
+    end
+
     scheme = uri.scheme
-    return false unless scheme == "http" || scheme == "https"
-    !uri.host.presence.nil?
-  rescue
-    false
+    if scheme.nil?
+      return "invalid URL #{url.inspect}: missing scheme, did you mean https://#{trimmed}?"
+    end
+    unless scheme == "http" || scheme == "https"
+      return "invalid URL #{url.inspect}: unsupported scheme #{scheme.inspect} (only http and https are supported)"
+    end
+    if uri.host.presence.nil?
+      return "invalid URL #{url.inspect}: missing host"
+    end
+
+    nil
+  end
+
+  # True when `target` can actually be scanned: an absolute URL with an
+  # http/https scheme and a non-empty host. Same rules as
+  # `http_target_error`, for callers that only need the yes/no.
+  def self.valid_target?(target : String) : Bool
+    http_target_error(target).nil?
   end
 
   def self.generate_url(text : String, base_url : String) : String?

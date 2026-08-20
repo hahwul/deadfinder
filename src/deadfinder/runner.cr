@@ -19,32 +19,8 @@ module Deadfinder
     # always >= 0, so -1 unambiguously marks a connection error.
     ERROR_STATUS = -1
 
-    private def request_path(uri : URI) : String
-      path = uri.path.presence || "/"
-      if q = uri.query.presence
-        "#{path}?#{q}"
-      else
-        path
-      end
-    end
-
-    # Parse "Name: value" header strings. Accepts ":" or ": " as the
-    # separator and trims both sides — keeps initial-request and worker
-    # headers using the exact same semantics so users don't hit
-    # depending-on-which-flag surprises.
     private def build_headers(raw : Array(String), user_agent : String) : HTTP::Headers
-      headers = HTTP::Headers.new
-      raw.each do |header|
-        name, sep, value = header.partition(':')
-        next if sep.empty?
-        name = name.strip
-        next if name.empty?
-        headers[name] = value.strip
-      end
-      # Honor a user-supplied User-Agent (HTTP::Headers is case-insensitive);
-      # only fall back to the default when none was provided.
-      headers["User-Agent"] = user_agent unless headers.has_key?("User-Agent")
-      headers
+      HttpClient.build_headers(raw, user_agent)
     end
 
     def run(target : String, options : Options,
@@ -57,18 +33,16 @@ module Deadfinder
       headers = build_headers(options.headers, options.user_agent)
 
       uri = URI.parse(target)
-      client = HttpClient.create(uri, options)
-      begin
-        path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
-                 HttpClient.absolute_uri(uri)
-               else
-                 request_path(uri)
-               end
-        response = client.get(path, headers: headers)
-        page = Lexbor::Parser.new(response.body)
-      ensure
-        client.close
+      # Follow redirects for the page itself: a target that moves (http -> https,
+      # / -> /index.html, an apex -> www hop) would otherwise be parsed as an
+      # empty redirect body and silently report zero links.
+      response, final_uri = HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+
+      unless response.status.success?
+        Deadfinder::Logger.error "Target page returned HTTP #{response.status_code} (links below, if any, come from that response): #{target}"
       end
+
+      page = Lexbor::Parser.new(response.body)
       links = extract_links(page)
 
       if !options.match.empty?
@@ -96,20 +70,41 @@ module Deadfinder
       link_info = links.compact_map { |type, urls|
         "#{type}:#{urls.size}" if urls.size > 0
       }.join(" / ")
-      Deadfinder::Logger.sub_info "Discovered #{total_links_count} URLs, currently checking them. [#{link_info}]" unless link_info.empty?
+      if link_info.empty?
+        # Say so explicitly: silence here used to be indistinguishable from a
+        # page that was fetched but never parsed.
+        Deadfinder::Logger.sub_info "Discovered 0 URLs on this page, nothing to check."
+      else
+        Deadfinder::Logger.sub_info "Discovered #{total_links_count} URLs, currently checking them. [#{link_info}]"
+      end
+
+      # Relative links resolve against `<base href>` when the document declares
+      # one, and otherwise against the URL the page was *finally* served from
+      # (which differs from `target` whenever the request was redirected).
+      base_url = document_base(page, final_uri.to_s)
 
       # Resolve all URLs and dedupe: distinct link nodes can resolve to the same
       # absolute URL, and each unique URL should be checked/recorded once per
-      # target. This also guarantees no two workers race on the same URL.
-      resolved_urls = all_links.compact_map { |node| Deadfinder.generate_url(node, target) }.uniq
+      # target.
+      resolved_urls = all_links.compact_map { |node| Deadfinder.generate_url(node, base_url) }.uniq
 
       # Channel-based concurrent workers. Guard against a non-positive
       # concurrency (e.g. `-c 0`): with zero workers nothing would drain `jobs`
       # and the main fiber would block forever on `results.receive`.
       worker_count = options.concurrency < 1 ? 1 : options.concurrency
 
-      jobs = Channel(String).new(1000)
-      results = Channel(String).new(1000)
+      # Group by the URL that is actually requested. A fragment is a client-side
+      # anchor and is never transmitted, so `/guide#install` and `/guide#usage`
+      # are one request while both still appear in the report. Grouping (rather
+      # than relying on the status cache) also keeps the guarantee that no two
+      # workers ever fetch the same URL concurrently.
+      grouped = {} of String => Array(String)
+      resolved_urls.each do |url|
+        (grouped[request_url(url)] ||= [] of String) << url
+      end
+
+      jobs = Channel(Tuple(String, Array(String))).new(1000)
+      results = Channel(Nil).new(1000)
 
       worker_count.times do |w|
         spawn do
@@ -117,10 +112,10 @@ module Deadfinder
         end
       end
 
-      jobs_size = resolved_urls.size
+      jobs_size = grouped.size
 
       spawn do
-        resolved_urls.each { |url| jobs.send(url) }
+        grouped.each { |request, originals| jobs.send({request, originals}) }
         jobs.close
       end
 
@@ -143,32 +138,37 @@ module Deadfinder
       Deadfinder::Logger.error "[#{ex}] #{target}"
     end
 
-    def worker(id : Int32, jobs : Channel(String), results : Channel(String),
+    def worker(id : Int32, jobs : Channel(Tuple(String, Array(String))), results : Channel(Nil),
                target : String, options : Options,
                output : Hash(String, Array(String)),
                coverage_data : Hash(String, TargetCoverage),
                status_cache : Hash(String, Int32),
                mutex : Mutex)
       loop do
-        url = jobs.receive? || break
+        job = jobs.receive? || break
+        request, linked_urls = job
 
         begin
-          status_code = resolve_status(url, status_cache, mutex, options)
-          record_total(target, options, coverage_data, mutex)
-          if status_code == ERROR_STATUS
-            record_error(target, url, options, output, coverage_data, mutex)
-          else
-            record_status(target, url, status_code, options, output, coverage_data, mutex)
+          status_code = resolve_status(request, status_cache, mutex, options)
+          # One request, but every link that pointed at it is recorded, so
+          # fragment variants are neither lost nor re-fetched.
+          linked_urls.each do |url|
+            record_total(target, options, coverage_data, mutex)
+            if status_code == ERROR_STATUS
+              record_error(target, url, options, output, coverage_data, mutex)
+            else
+              record_status(target, url, status_code, options, output, coverage_data, mutex)
+            end
           end
         rescue ex
           # A recording/logging failure (e.g. a broken STDOUT pipe under
           # `... | head`) must never kill the worker fiber or skip the result
           # send below — otherwise the main fiber blocks forever waiting for a
           # result that never arrives.
-          Deadfinder::Logger.verbose "[record failed: #{ex}] #{url}" if options.verbose
+          Deadfinder::Logger.verbose "[record failed: #{ex}] #{request}" if options.verbose
         ensure
           # Always report job completion so jobs_size accounting stays balanced.
-          results.send(url)
+          results.send(nil)
         end
       end
     end
@@ -196,22 +196,35 @@ module Deadfinder
       status
     end
 
+    # Checks a single link. Redirects are deliberately *not* followed here: the
+    # 30x status is itself the reported result (`--include30x`).
     private def check_url(url : String, options : Options) : Int32
       uri = URI.parse(url)
-      client = HttpClient.create(uri, options)
-      begin
-        headers = build_headers(options.worker_headers, options.user_agent)
+      headers = build_headers(options.worker_headers, options.user_agent)
+      response, _ = HttpClient.fetch(uri, options, headers)
+      response.status_code
+    end
 
-        path = if HttpClient.proxy_configured?(options) && uri.scheme == "http"
-                 HttpClient.absolute_uri(uri)
-               else
-                 request_path(uri)
-               end
-        response = client.get(path, headers: headers)
-        response.status_code
-      ensure
-        client.close
+    # A fragment is a client-side anchor and never reaches the server, so it is
+    # dropped from the URL that is actually requested.
+    private def request_url(url : String) : String
+      idx = url.index('#')
+      return url if idx.nil? || idx == 0
+      url[0, idx]
+    end
+
+    # Honors `<base href>` (the first one wins, per the HTML spec) so relative
+    # links on pages that declare a document base resolve the way a browser
+    # would instead of against the page URL.
+    private def document_base(page : Lexbor::Parser, page_url : String) : String
+      page.css("base").each do |element|
+        href = element.attribute_by("href")
+        next unless href
+        href = href.strip
+        next if href.empty?
+        return Deadfinder.generate_url(href, page_url) || page_url
       end
+      page_url
     end
 
     private def record_total(target : String, options : Options,
