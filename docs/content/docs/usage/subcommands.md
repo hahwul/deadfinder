@@ -14,11 +14,13 @@ deadfinder url https://www.example.com
 
 ## `file <FILE>`
 
-Read newline-separated URLs from a file and scan each one. Each URL is scanned independently; results are keyed by the source URL.
+Read newline-separated URLs from a file and scan each one. Each URL is scanned independently; results are keyed by the source URL. Pass `-` as the filename to read from STDIN.
 
 ```bash
 deadfinder file urls.txt
 ```
+
+Blank lines and `#` comments are skipped, and duplicates are dropped.
 
 ## `pipe`
 

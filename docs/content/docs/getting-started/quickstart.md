@@ -10,12 +10,11 @@ weight = 2
 deadfinder url https://www.example.com
 ```
 
-The terminal shows discovered links and their status:
+The terminal shows discovered links and any dead ones found (add `-v` to also log healthy links):
 
 ```
 ▶ Fetching https://www.example.com
   ● Discovered 12 URLs, currently checking them. [anchor:8 / link:4]
-  ├── ✓ [200] https://www.example.com/about
   ├── ✘ [404] https://www.example.com/old-page
   └── ● Task completed
 ```

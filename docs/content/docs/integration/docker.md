@@ -1,15 +1,14 @@
 +++
 title = "Docker"
-description = "ghcr.io/hahwul/deadfinder — multi-arch, cosign-signed, tiny Alpine base."
+description = "ghcr.io/hahwul/deadfinder — multi-arch, tiny Alpine base."
 weight = 2
 +++
 
 Image: [`ghcr.io/hahwul/deadfinder`](https://github.com/hahwul/deadfinder/pkgs/container/deadfinder)
 
 - Multi-arch: `linux/amd64`, `linux/arm64`
-- Runtime base: `alpine:3.21` + static binary (~15 MB total)
+- Runtime base: Alpine + static binary (~15 MB total)
 - Tags on release: `<VERSION>`, `<MAJOR>.<MINOR>`, `latest`
-- Every published tag is **cosign-signed** (keyless, Sigstore)
 
 ## Run
 
@@ -35,13 +34,3 @@ docker pull ghcr.io/hahwul/deadfinder:2.0.0
 docker pull ghcr.io/hahwul/deadfinder:2.0
 docker pull ghcr.io/hahwul/deadfinder:latest
 ```
-
-## Verify the signature
-
-```bash
-cosign verify ghcr.io/hahwul/deadfinder:2.0.0 \
-  --certificate-identity-regexp 'https://github.com/hahwul/deadfinder/.+' \
-  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
-```
-
-Substitute the tag you pulled. The command succeeds only if the image was signed by this repo's GitHub Actions.

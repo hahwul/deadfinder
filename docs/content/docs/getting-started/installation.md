@@ -14,7 +14,7 @@ brew install deadfinder
 
 ## Docker
 
-Image: [`ghcr.io/hahwul/deadfinder`](https://github.com/hahwul/deadfinder/pkgs/container/deadfinder). Multi-arch (linux/amd64, linux/arm64). Each published tag is cosign-signed.
+Image: [`ghcr.io/hahwul/deadfinder`](https://github.com/hahwul/deadfinder/pkgs/container/deadfinder). Multi-arch (linux/amd64, linux/arm64).
 
 ```bash
 docker run ghcr.io/hahwul/deadfinder:latest deadfinder url https://example.com
@@ -46,7 +46,7 @@ sudo mv deadfinder /usr/local/bin/
 |---|---|
 | Debian / Ubuntu | `deadfinder_X.Y.Z_{amd64,arm64}.deb` from Releases |
 | RHEL / Fedora | `deadfinder-X.Y.Z.{x86_64,aarch64}.rpm` from Releases |
-| Alpine | `deadfinder-X.Y.Z-r0.{x86_64,aarch64}.apk` from Releases |
+| Alpine | `deadfinder-X.Y.Z-{x86_64,aarch64}.apk` from Releases |
 | Arch Linux | `yay -S deadfinder` (AUR) |
 | Snap | `sudo snap install deadfinder` |
 

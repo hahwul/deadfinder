@@ -9,7 +9,7 @@ Find dead (broken) links in web pages, URL lists, and sitemaps. Fast native CLI 
 
 - **Fast**: fiber-based concurrent workers scan hundreds of links in parallel.
 - **Ergonomic**: one binary, no runtime dependencies.
-- **Structured output**: JSON / YAML / TOML / CSV — or attach as a GitHub Action output.
+- **Structured output**: JSON / YAML / TOML / CSV / SARIF — or attach as a GitHub Action output.
 - **Coverage report**: track dead-link ratio per target with `--coverage`.
 
 ## Install

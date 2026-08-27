@@ -58,7 +58,7 @@ steps:
 
 | Input | Required | Default | Notes |
 |---|---|---|---|
-| `command` | ✓ | — | `url` / `file` / `pipe` / `sitemap` |
+| `command` | ✓ | — | `url` / `file` / `sitemap` (`pipe` is not usable here — the action always passes `target` as an argument) |
 | `target` | ✓ | — | URL, file path, or sitemap URL |
 | `version` | | `latest` | Release tag; `latest` resolves to most recent release |
 | `timeout` | | `10` | seconds |
@@ -82,11 +82,11 @@ steps:
 |---|---|
 | `output` | Compact JSON string of the scan result (same shape as `-f json` output). |
 
-Consume with `fromJSON()`:
+The JSON maps each scanned target to its list of dead links (with `coverage: true`, the map moves under a `dead_links` key and a `coverage` section is added). For example, fail the job when any dead link was found:
 
 ```yaml
-- run: |
-    echo "Dead links: ${{ fromJSON(steps.scan.outputs.output).summary }}"
+- name: Fail on dead links
+  run: echo '${{ steps.scan.outputs.output }}' | jq -e 'all(.[]; length == 0)'
 ```
 
 ## Migrating from v1

@@ -13,7 +13,7 @@ deadfinder <command> [options]
 
 Commands:
   pipe                        Scan the URLs from STDIN
-  file <FILE>                 Scan the URLs from File
+  file <FILE>                 Scan the URLs from File (`-` for STDIN)
   url <URL>                   Scan the Single URL
   sitemap <SITEMAP-URL>       Scan the URLs from sitemap
   completion <SHELL>          Generate completion script (bash/zsh/fish)
@@ -34,6 +34,7 @@ Commands:
 | | `--user_agent=UA` | `Mozilla/5.0 (compatible; DeadFinder/<VERSION>;)` | Override User-Agent. |
 | `-p` | `--proxy=URL` | `""` | HTTP/HTTPS proxy (HTTPS uses CONNECT tunneling). |
 | | `--proxy_auth=USER:PASS` | `""` | Proxy credentials (Basic). |
+| `-k` | `--insecure` | `false` | Skip TLS certificate verification (not recommended). |
 | `-m` | `--match=PATTERN` | `""` | Regex: only scan URLs that match. |
 | `-i` | `--ignore=PATTERN` | `""` | Regex: skip URLs that match. |
 | `-s` | `--silent` | `false` | Suppress the live log on stdout. |
@@ -46,6 +47,6 @@ Commands:
 ## Notes
 
 - Structured output is **file-only**: you must set `-o`. stdout is reserved for the live log.
-- `match` / `ignore` regexes each run under a 1-second timeout to block ReDoS.
+- `match` / `ignore` patterns are capped at 1024 characters, and patterns with nested quantifiers (e.g. `(a+)+`) are rejected up front to block ReDoS.
 - The initial page fetch receives `--headers`; worker link-check requests receive `--worker_headers`. `--user_agent` applies to both.
 - `--visualize` auto-enables `--coverage`.

@@ -6,7 +6,7 @@ weight = 3
 
 ## `--match=PATTERN` / `--ignore=PATTERN`
 
-Regex applied to every discovered URL before it's fetched. Each pattern has a 1-second timeout to prevent ReDoS.
+Regex applied to every discovered URL before it's fetched. To prevent ReDoS, patterns are capped at 1024 characters and nested-quantifier shapes (e.g. `(a+)+`) are rejected.
 
 ```bash
 # Only check internal links
@@ -22,13 +22,13 @@ Using both: `--match` is applied first, then `--ignore`.
 
 ## `--include30x`
 
-By default, 3xx redirects are treated as healthy (the destination is what matters). Enable this flag to mark them as dead too:
+Link checks don't follow redirects — the 3xx status itself is the result, and by default it's treated as healthy. Enable this flag to report redirecting links as dead too:
 
 ```bash
 deadfinder url https://www.example.com --include30x
 ```
 
-Use this when your policy is "redirects are technical debt" rather than "follow the redirect chain".
+Use this when your policy is "redirects are technical debt".
 
 ## `--limit=N`
 
