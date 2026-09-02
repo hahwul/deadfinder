@@ -8,6 +8,9 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - Sitemap fetching transparently inflates gzip-compressed documents, so a `sitemap.xml.gz` served as `application/gzip` (no `Content-Encoding`) is parsed instead of failing with an XML error.
 - `-H`/`--headers` now applies to the sitemap request too, so a sitemap behind auth or a custom edge header can be fetched.
 
+### Fixed
+- macOS release tarballs are re-signed ad hoc after `install_name_tool` rewrites their dylib load paths. The bundled OpenSSL dylibs were left with a stale signature, and Apple Silicon SIGKILLs any process that maps one, so the tarball died at launch with a bare `killed` and no diagnostic. Packaging now verifies every signature and runs the extracted tarball before publishing it. The published 2.0.2 tarball happened to bundle no dylibs and so was unaffected (#271).
+
 ### Changed
 - Scanning a page (`url`/`file`/`pipe` targets and sitemap documents) follows up to 5 redirect hops. Relative links resolve against the page's **final** location, while the report stays keyed by the target you asked for. Link status checks are unchanged — they still report the `30x` verbatim, which is what `--include30x` acts on. Credentials (`Authorization`, `Cookie`, `Proxy-Authorization`) are dropped when a redirect crosses origins.
 - Multi-target scans (`pipe`/`file`/`sitemap`) now attribute a shared broken link to **every** page that references it, not just the first page scanned, and per-target coverage counts each page's own links. Internally the global "already-seen" URL set became a URL→status cache, so each link is still fetched at most once. Previously a 404 referenced by pages A and B was reported only under A and skewed B's coverage.
