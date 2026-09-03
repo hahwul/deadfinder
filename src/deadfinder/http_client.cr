@@ -44,6 +44,15 @@ module Deadfinder
     # is confirmed with a GET before it can be reported.
     HEAD_UNTRUSTED_STATUS = 400
 
+    # Transport failures that mean the host was never reached at all. A GET
+    # cannot succeed where the TCP connect timed out, was refused, or the name
+    # did not resolve, so `auto` must not spend a second full timeout proving
+    # it — that turned one connect timeout per unreachable link into four
+    # (HEAD + GET on the first attempt, then one GET per retry). Any *other*
+    # failure (a reset mid-response, a read timeout after the connection was
+    # established) still earns a GET: those can be HEAD-specific.
+    UNREACHABLE_ERRORS = {Socket::ConnectError, Socket::Addrinfo::Error, IO::TimeoutError}
+
     @@proxy_cache = {} of String => URI?
     @@proxy_cache_mutex = Mutex.new
 
@@ -480,8 +489,12 @@ module Deadfinder
         head_response = begin
           fetch(uri, options, headers, 0, "HEAD").first
         rescue ex
-          # A server that refuses, resets or times out on HEAD has told us
-          # nothing about the link, so this is not yet a failure to report.
+          # The host was never reached, so there is nothing a GET could add and
+          # a great deal of time it could waste. Propagate; the caller's retry
+          # loop already re-attempts with GET (see `force_get`).
+          raise ex if UNREACHABLE_ERRORS.includes?(ex.class)
+          # Anything else told us nothing about the *link*, only about HEAD, so
+          # this is not yet a failure to report.
           Deadfinder::Logger.debug "HEAD failed for #{uri} (#{ex.message}); confirming with GET"
           nil
         end

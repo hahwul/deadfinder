@@ -28,7 +28,7 @@ Commands:
 | `-c` | `--concurrency=N` | `50` | Global cap on in-flight HTTP requests. |
 | | `--target-concurrency=N` | `10` | Targets scanned at once. Does **not** widen the request budget — `-c` still caps total in-flight requests. |
 | `-t` | `--timeout=N` | `10` | Per-request timeout (seconds). |
-| | `--method=METHOD` | `auto` | Link-check method: `auto` / `head` / `get`. `auto` sends HEAD first and confirms with GET on any 4xx/5xx or a failed HEAD, so no link is reported dead on a HEAD alone. Documents (the target page, a sitemap) are always fetched with GET. |
+| | `--method=METHOD` | `auto` | Link-check method: `auto` / `head` / `get`. `auto` sends HEAD first and confirms with GET on any 4xx/5xx (405/501 included), so no link is reported dead on a HEAD *status* alone. A HEAD that never reached the host (connect refused/timed out, DNS failure) is not re-checked — a GET cannot succeed where the TCP connect did not — so an unreachable link costs one connect timeout per attempt, not two. Documents (the target page, a sitemap) are always fetched with GET. |
 | | `--retry=N` | `2` | Extra attempts for a *transient* failure (connection error, timeout, 429, 5xx), with jittered exponential backoff. A 404 is never retried. |
 | | `--delay=MS` | `0` | Minimum interval between two requests to the same host. Per-host, so one slow host does not stall the others. |
 | | `--accept-status=LIST` | `""` | Statuses to treat as **alive** — bare codes and inclusive ranges (`200,204,403,999`, `400-499`). Wins over `--dead-status` and over the built-in rule. |

@@ -638,6 +638,35 @@ describe "request layer" do
       (args[:output][target]? || [] of String).should be_empty
     end
 
+    it "does not chase an unreachable HEAD with a pointless GET" do
+      target = "http://example.com"
+      html = %(<html><body><a href="http://unreachable.invalid/x">U</a></body></html>)
+      WebMock.stub(:get, target).to_return(body: html)
+      # Neither method is stubbed for the link, so both raise — standing in for
+      # a host that cannot be reached at all. WebMock records what was tried.
+      tried = [] of String
+      WebMock.stub(:head, "http://unreachable.invalid/x").to_return do
+        tried << "HEAD"
+        raise Socket::ConnectError.new("Connect timed out")
+      end
+      WebMock.stub(:get, "http://unreachable.invalid/x").to_return do
+        tried << "GET"
+        raise Socket::ConnectError.new("Connect timed out")
+      end
+
+      options = default_test_options
+      options.retries = 0
+      args = make_runner_args
+
+      Deadfinder::Runner.new.run(target, options, **args)
+
+      # One attempt, one method: a GET cannot succeed where the TCP connect
+      # itself failed, and spending a second full connect timeout proving that
+      # doubled the cost of every unreachable link.
+      tried.should eq ["HEAD"]
+      args[:status_cache]["http://unreachable.invalid/x"].should eq Deadfinder::Runner::ERROR_STATUS
+    end
+
     it "reports the HEAD status verbatim under --method=head" do
       target = "http://example.com"
       html = %(<html><body><a href="http://example.com/nohead">N</a></body></html>)

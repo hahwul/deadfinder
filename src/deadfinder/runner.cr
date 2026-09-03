@@ -387,7 +387,12 @@ module Deadfinder
           status = outcome.status
           retry_after = outcome.retry_after
         rescue ex
-          Deadfinder::Logger.verbose "[#{ex}] #{url}" if options.verbose
+          # Say which attempt this was: without it a retried link logged the
+          # same line two or three times and read as several distinct failures.
+          if options.verbose
+            suffix = attempts > 1 ? " (attempt #{attempt}/#{attempts})" : ""
+            Deadfinder::Logger.verbose "[#{ex}]#{suffix} #{url}"
+          end
           status = ERROR_STATUS
         end
 

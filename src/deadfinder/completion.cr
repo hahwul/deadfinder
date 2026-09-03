@@ -72,7 +72,7 @@ module Deadfinder
       Flag.new("-c CONCURRENCY", "--concurrency=CONCURRENCY", "Number of concurrency (default: 50)"),
       Flag.new(nil, "--target-concurrency=N", "Number of targets scanned in parallel; total in-flight requests stay capped at -c (default: 10)"),
       Flag.new("-t TIMEOUT", "--timeout=TIMEOUT", "Timeout in seconds (default: 10)"),
-      Flag.new(nil, "--method=METHOD", "Link check method: auto, head, get (default: auto). auto sends HEAD first and re-checks with GET on any 4xx/5xx (405/501 included) or a failed HEAD, so no link is reported dead on a HEAD alone"),
+      Flag.new(nil, "--method=METHOD", "Link check method: auto, head, get (default: auto). auto sends HEAD first and re-checks with GET on any 4xx/5xx (405/501 included), so no link is reported dead on a HEAD status alone. A HEAD that never reached the host is not re-checked"),
       Flag.new(nil, "--retry=N", "Retry a transient failure N times: connection error, timeout, 429 or 5xx. A 404 is never retried (default: 2)"),
       Flag.new(nil, "--delay=MS", "Minimum milliseconds between two requests to the same host; other hosts are unaffected (default: 0)"),
       Flag.new(nil, "--accept-status=LIST", "Treat these statuses as alive, e.g. '200,204,403,999' or '400-499'. Wins over --dead-status and over the built-in >= 400 rule"),
