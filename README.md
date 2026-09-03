@@ -97,6 +97,14 @@ steps:
     # output_format: json
     # coverage: true
     # visualize: report.png
+    # fail_on_dead: true       # fail the step when a dead link is found
+    # method: auto             # auto / head / get
+    # retry: 2
+    # delay: 0                 # ms between requests to the same host
+    # accept_status: "403,999"
+    # dead_status: ""
+    # target_concurrency: 10
+    # check_anchors: false
 
 - name: Output Handling
   run: echo '${{ steps.broken-link.outputs.output }}'
@@ -119,8 +127,16 @@ Commands:
 Options:
   -r, --include30x                 Include 30x redirections as dead links
   -c, --concurrency=N              Number of concurrent workers (default: 50)
+      --target-concurrency=N       Targets scanned in parallel; total in-flight
+                                   requests stay capped at -c (default: 10)
   -t, --timeout=N                  Timeout in seconds (default: 10)
-  -o, --output=FILE                File to write results
+      --method=METHOD              Link check method: auto, head, get (default: auto)
+      --retry=N                    Retry transient failures N times (default: 2)
+      --delay=MS                   Minimum ms between requests to the same host
+      --accept-status=LIST         Statuses to treat as alive (e.g. 200,403,999)
+      --dead-status=LIST           Statuses to treat as dead (e.g. 500-599)
+      --exclude-status=LIST        Alias of --dead-status
+  -o, --output=FILE                File to write results (`-` for stdout)
   -f, --output_format=FORMAT       Output format: json, yaml, toml, csv, sarif (default: json)
   -H, --headers=HEADER             Custom HTTP headers for initial request
       --worker_headers=HEADER      Custom HTTP headers for worker requests
@@ -134,7 +150,9 @@ Options:
   -v, --verbose                    Verbose mode
       --debug                      Debug mode
       --limit=N                    Limit number of URLs to scan
+      --check-anchors              Verify #fragment targets exist in the linked document
       --coverage                   Enable coverage tracking and reporting
+  -F, --fail-on-dead               Exit with code 2 when anything dead is found
       --visualize=PATH             Generate visualization PNG
   -h, --help                       Show help
 ```
@@ -219,6 +237,24 @@ deadfinder sitemap https://www.hahwul.com/sitemap.xml --coverage -o output.json
     }
   }
 }
+```
+
+## CI Usage
+
+By default a scan always exits `0`, so a broken link never fails a build. Opt in with
+`-F` / `--fail-on-dead`, which exits `2` when anything dead was found (`1` stays
+reserved for usage and I/O errors):
+
+```bash
+deadfinder sitemap https://example.com/sitemap.xml --fail-on-dead
+echo $?   # 2 when a dead link or a dead target was found
+```
+
+`-o -` streams the report to stdout — logs move to stderr in that mode, so the
+structured output is safe to pipe:
+
+```bash
+deadfinder url https://example.com -f json -o - | jq '.'
 ```
 
 ## Shell Completion

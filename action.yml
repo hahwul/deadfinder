@@ -71,6 +71,38 @@ inputs:
     description: "Result format: json, yaml, toml, csv, or sarif"
     required: false
     default: "json"
+  target_concurrency:
+    description: Number of targets scanned in parallel (total in-flight requests stay capped by `concurrency`)
+    required: false
+    default: ""
+  method:
+    description: "Link check method: auto, head, or get"
+    required: false
+    default: ""
+  retry:
+    description: Retry a transient failure (connection error, timeout, 429, 5xx) this many times
+    required: false
+    default: ""
+  delay:
+    description: Minimum milliseconds between two requests to the same host
+    required: false
+    default: ""
+  accept_status:
+    description: Statuses to treat as alive, e.g. "403,999" or "400-499"
+    required: false
+    default: ""
+  dead_status:
+    description: Statuses to treat as dead, e.g. "500-599"
+    required: false
+    default: ""
+  check_anchors:
+    description: Verify that #fragment link targets exist in the linked document
+    required: false
+    default: "false"
+  fail_on_dead:
+    description: Fail this step (exit 2) when any dead link or dead target is found
+    required: false
+    default: "false"
   coverage:
     description: Enable coverage reporting to show dead link ratios
     required: false
@@ -167,6 +199,14 @@ runs:
         DF_IGNORE:         ${{ inputs.ignore }}
         DF_LIMIT:          ${{ inputs.limit }}
         DF_OUTPUT_FORMAT:  ${{ inputs.output_format }}
+        DF_TARGET_CONCURRENCY: ${{ inputs.target_concurrency }}
+        DF_METHOD:         ${{ inputs.method }}
+        DF_RETRY:          ${{ inputs.retry }}
+        DF_DELAY:          ${{ inputs.delay }}
+        DF_ACCEPT_STATUS:  ${{ inputs.accept_status }}
+        DF_DEAD_STATUS:    ${{ inputs.dead_status }}
+        DF_CHECK_ANCHORS:  ${{ inputs.check_anchors }}
+        DF_FAIL_ON_DEAD:   ${{ inputs.fail_on_dead }}
         DF_COVERAGE:       ${{ inputs.coverage }}
         DF_VISUALIZE:      ${{ inputs.visualize }}
       run: |
@@ -189,6 +229,13 @@ runs:
         [ -n "${DF_MATCH}" ]          && args+=( --match="${DF_MATCH}" )
         [ -n "${DF_IGNORE}" ]         && args+=( --ignore="${DF_IGNORE}" )
         [ -n "${DF_LIMIT}" ]          && args+=( --limit="${DF_LIMIT}" )
+        [ -n "${DF_TARGET_CONCURRENCY}" ] && args+=( --target-concurrency="${DF_TARGET_CONCURRENCY}" )
+        [ -n "${DF_METHOD}" ]         && args+=( --method="${DF_METHOD}" )
+        [ -n "${DF_RETRY}" ]          && args+=( --retry="${DF_RETRY}" )
+        [ -n "${DF_DELAY}" ]          && args+=( --delay="${DF_DELAY}" )
+        [ -n "${DF_ACCEPT_STATUS}" ]  && args+=( --accept-status="${DF_ACCEPT_STATUS}" )
+        [ -n "${DF_DEAD_STATUS}" ]    && args+=( --dead-status="${DF_DEAD_STATUS}" )
+        [ "${DF_CHECK_ANCHORS}" = "true" ] && args+=( --check-anchors )
         [ "${DF_COVERAGE}" = "true" ] && args+=( --coverage )
         [ -n "${DF_VISUALIZE}" ]      && args+=( --visualize="${DF_VISUALIZE}" )
 
@@ -206,7 +253,15 @@ runs:
           done
         fi
 
-        /tmp/deadfinder "${args[@]}"
+        [ "${DF_FAIL_ON_DEAD}" = "true" ] && args+=( --fail-on-dead )
+
+        # `--fail-on-dead` makes deadfinder exit 2 when it finds something, and
+        # under `set -e` that would abort the step right here — before the report
+        # is published as a step output, which is the whole reason the caller ran
+        # the scan. So hold the status, publish the output, and re-raise it as
+        # this step's exit code at the very end.
+        scan_status=0
+        /tmp/deadfinder "${args[@]}" || scan_status=$?
 
         if [ ! -f /tmp/output.json ]; then
           echo "::error::/tmp/output.json was not produced"
@@ -230,3 +285,10 @@ runs:
             echo "DEADFINDER_OUTPUT_EOF"
           } >> "$GITHUB_OUTPUT"
         fi
+
+        # 2 = dead findings under `--fail-on-dead`; anything else non-zero is a
+        # real failure. Either way the report is already published above.
+        if [ "${scan_status}" -eq 2 ]; then
+          echo "::error title=Dead links found::deadfinder exited 2 (see the step output for the report)"
+        fi
+        exit "${scan_status}"

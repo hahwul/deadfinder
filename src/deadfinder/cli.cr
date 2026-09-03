@@ -17,7 +17,7 @@ module Deadfinder
         parser.separator "  file <FILE>                 Scan the URLs from File (`-` for STDIN)"
         parser.separator "  url <URL>                   Scan the Single URL"
         parser.separator "  sitemap <SITEMAP-URL>       Scan the URLs from sitemap"
-        parser.separator "  completion <SHELL>           Generate completion script (bash/zsh/fish)"
+        parser.separator "  completion <SHELL>          Generate completion script (bash/zsh/fish)"
         parser.separator "  version                     Show version"
         parser.separator ""
         parser.separator "Options:"
@@ -48,7 +48,10 @@ module Deadfinder
         parser.on("--limit=N", "Limit number of URLs to scan") { |v| options.limit = v.to_i }
         parser.on("--check-anchors", "Verify #fragment targets exist in the linked document") { options.check_anchors = true }
         parser.on("--coverage", "Enable coverage tracking and reporting") { options.coverage = true }
-        parser.on("-F", "--fail-on-dead", "Exit with code #{Deadfinder::EXIT_DEAD_FOUND} when any dead link or dead target is found (default: always exit 0)") { options.fail_on_dead = true }
+        # The literal 2 is `Deadfinder::EXIT_DEAD_FOUND`. Spelled out rather than
+        # interpolated so `Completion::FLAGS` can mirror this line verbatim and its
+        # drift spec stays an exact comparison.
+        parser.on("-F", "--fail-on-dead", "Exit with code 2 when any dead link or dead target is found (default: always exit 0)") { options.fail_on_dead = true }
         parser.on("--visualize=PATH", "Generate visualization PNG") { |v| options.visualize = v }
         parser.on("-h", "--help", "Show help") do
           puts parser
