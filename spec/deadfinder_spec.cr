@@ -884,8 +884,11 @@ describe Deadfinder do
           rows.should contain ["target", "url"]
           rows.should contain ["http://example.com", "http://example.com/dead1"]
           rows.any? { |r| r.includes?("Coverage Report") }.should be_true
-          rows.should contain ["target", "total_tested", "dead_links", "coverage_percentage"]
-          rows.should contain ["http://example.com", "5", "1", "20.0%"]
+          # The correctly-named percentage column is appended after the
+          # deprecated `coverage_percentage` one, so positional readers of the
+          # original four columns keep working.
+          rows.should contain ["target", "total_tested", "dead_links", "coverage_percentage", "dead_link_percentage"]
+          rows.should contain ["http://example.com", "5", "1", "20.0%", "20.0%"]
           rows.any? { |r| r.includes?("Overall Summary") }.should be_true
         ensure
           tempfile.delete

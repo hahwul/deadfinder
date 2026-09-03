@@ -40,6 +40,7 @@ module Deadfinder
         parser.on("--debug", "Debug mode") { options.debug = true }
         parser.on("--limit=N", "Limit number of URLs to scan") { |v| options.limit = v.to_i }
         parser.on("--coverage", "Enable coverage tracking and reporting") { options.coverage = true }
+        parser.on("-F", "--fail-on-dead", "Exit with code #{Deadfinder::EXIT_DEAD_FOUND} when any dead link or dead target is found (default: always exit 0)") { options.fail_on_dead = true }
         parser.on("--visualize=PATH", "Generate visualization PNG") { |v| options.visualize = v }
         parser.on("-h", "--help", "Show help") do
           puts parser
@@ -107,6 +108,7 @@ module Deadfinder
       case subcommand
       when "pipe"
         Deadfinder.run_pipe(options)
+        exit_on_findings(options)
       when "file"
         if positional_arg
           filename = positional_arg.not_nil!
@@ -126,6 +128,7 @@ module Deadfinder
             end
           end
           Deadfinder.run_file(filename, options)
+          exit_on_findings(options)
         else
           STDERR.puts "Error: file command requires a filename argument"
           STDERR.puts "Usage: deadfinder file <FILE> [options]  (use `-` to read from STDIN)"
@@ -139,6 +142,7 @@ module Deadfinder
             exit 1
           end
           Deadfinder.run_url(target, options)
+          exit_on_findings(options)
         else
           STDERR.puts "Error: url command requires a URL argument"
           STDERR.puts "Usage: deadfinder url <URL> [options]"
@@ -152,6 +156,7 @@ module Deadfinder
             exit 1
           end
           Deadfinder.run_sitemap(target, options)
+          exit_on_findings(options)
         else
           STDERR.puts "Error: sitemap command requires a URL argument"
           STDERR.puts "Usage: deadfinder sitemap <SITEMAP-URL> [options]"
@@ -182,6 +187,15 @@ module Deadfinder
         puts global_parser
         exit 1 if subcommand
       end
+    end
+
+    # `--fail-on-dead` turns a completed scan that found something into a
+    # non-zero exit so a CI job can gate on it. Opt-in only: the frozen v1
+    # contract is that every scan exits 0, and `spec/compat/run.rb` asserts it.
+    # Exit 1 stays reserved for usage/IO errors, so findings get their own code.
+    private def self.exit_on_findings(options : Options) : Nil
+      return unless options.fail_on_dead
+      exit Deadfinder::EXIT_DEAD_FOUND if Deadfinder.dead_findings?
     end
   end
 end

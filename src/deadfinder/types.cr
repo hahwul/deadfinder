@@ -19,6 +19,9 @@ module Deadfinder
     property coverage : Bool = false
     property visualize : String = ""
     property limit : Int32 = 0
+    # Opt-in CI gate. The v1 CLI contract always exits 0, so this stays off by
+    # default and only `--fail-on-dead` turns findings into a non-zero exit.
+    property fail_on_dead : Bool = false
   end
 
   class TargetCoverage
@@ -33,20 +36,38 @@ module Deadfinder
   struct CoverageTarget
     property total_tested : Int32
     property dead_links : Int32
+    # DEPRECATED NAME: this is `dead_links / total_tested * 100`, i.e. the ratio
+    # of links that are dead — not how much of the site was covered. A healthy
+    # target reports 0.0 here. Read `dead_link_percentage` instead; the old name
+    # is kept (in the struct and in every output format) so existing parsers
+    # keep working.
     property coverage_percentage : Float64
     property status_counts : Hash(String, Int32)
 
     def initialize(@total_tested, @dead_links, @coverage_percentage, @status_counts)
+    end
+
+    # Correctly named accessor for the value stored as `coverage_percentage`.
+    def dead_link_percentage : Float64
+      coverage_percentage
     end
   end
 
   struct CoverageSummary
     property total_tested : Int32
     property total_dead : Int32
+    # DEPRECATED NAME: same misnomer as `CoverageTarget#coverage_percentage` —
+    # it is the overall dead-link ratio. Read `overall_dead_link_percentage`.
     property overall_coverage_percentage : Float64
     property overall_status_counts : Hash(String, Int32)
 
     def initialize(@total_tested, @total_dead, @overall_coverage_percentage, @overall_status_counts)
+    end
+
+    # Correctly named accessor for the value stored as
+    # `overall_coverage_percentage`.
+    def overall_dead_link_percentage : Float64
+      overall_coverage_percentage
     end
   end
 
