@@ -19,6 +19,10 @@ module Deadfinder
     property coverage : Bool = false
     property visualize : String = ""
     property limit : Int32 = 0
+    # Opt-in: verify that `#fragment` link targets actually exist in the linked
+    # document. Off by default because it needs the response body, which the
+    # status-only link check never reads.
+    property check_anchors : Bool = false
   end
 
   class TargetCoverage

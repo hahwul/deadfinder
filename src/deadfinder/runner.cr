@@ -12,7 +12,30 @@ module Deadfinder
       "form"   => {"form", "action"},
       "object" => {"object", "data"},
       "embed"  => {"embed", "src"},
+      # Images and media. A broken <img> is one of the most common dead links
+      # on a real site, yet none of these resources were visible at all before.
+      # <source> covers all three of its parents (<picture>, <video>, <audio>).
+      "image"        => {"img", "src"},
+      "source"       => {"source", "src"},
+      "video"        => {"video", "src"},
+      "video-poster" => {"video", "poster"},
+      "audio"        => {"audio", "src"},
+      "track"        => {"track", "src"},
+      "area"         => {"area", "href"},
     }
+
+    # `srcset` holds a *list* of candidates with optional descriptors
+    # (`img-480.png 480w, img-2x.png 2x`), so it is expanded by `parse_srcset`
+    # rather than read verbatim like the single-URL attributes above.
+    SRCSET_SELECTORS = {
+      "image-srcset"  => {"img", "srcset"},
+      "source-srcset" => {"source", "srcset"},
+    }
+
+    # Fragments that address the top of the document rather than an element.
+    # `#` (empty) and `#top` are valid by definition (HTML spec, "scroll to the
+    # fragment"), so `--check-anchors` must never report them as broken.
+    TOP_FRAGMENT = "top"
 
     # Sentinel stored in the status cache when a URL could not be fetched
     # (connection refused, timeout, TLS failure, …). Real HTTP status codes are
@@ -120,6 +143,11 @@ module Deadfinder
       end
 
       jobs_size.times { results.receive }
+
+      # Fragment targets are verified in a second, opt-in pass so the default
+      # path never pays for reading a response body. It reuses `grouped`, so a
+      # document that many fragments point at is still opened only once.
+      verify_anchors(target, grouped, options, output, coverage_data, status_cache, mutex) if options.check_anchors
 
       # Log coverage summary
       if options.coverage
@@ -296,7 +324,228 @@ module Deadfinder
         end
         links[type] = urls
       end
+      SRCSET_SELECTORS.each do |type, selector_info|
+        tag, attr = selector_info
+        urls = [] of String
+        page.css(tag).each do |element|
+          if val = element.attribute_by(attr)
+            urls.concat(parse_srcset(val))
+          end
+        end
+        links[type] = urls
+      end
       links
+    end
+
+    # Expands a `srcset` attribute into its candidate URLs, following the HTML
+    # spec's "parse a srcset attribute" grammar rather than splitting on every
+    # comma: a URL may legally *contain* commas (`/a,b.png 2x`), and the comma
+    # that separates candidates is only recognised after the URL token ends.
+    # A URL token runs to the next whitespace; if it ends with commas those are
+    # the separator (`a.png, b.png`) and the candidate has no descriptor,
+    # otherwise the descriptor runs to the next comma outside parentheses.
+    private def parse_srcset(value : String) : Array(String)
+      urls = [] of String
+      # Scan over chars, not the String: `String#[](Int)` is O(n) for anything
+      # that is not pure ASCII, which would make this quadratic on a srcset
+      # holding a non-ASCII path.
+      chars = value.chars
+      pos = 0
+      size = chars.size
+
+      while pos < size
+        # Separators between candidates: whitespace and commas alike.
+        while pos < size && (chars[pos].ascii_whitespace? || chars[pos] == ',')
+          pos += 1
+        end
+        break if pos >= size
+
+        start = pos
+        while pos < size && !chars[pos].ascii_whitespace?
+          pos += 1
+        end
+        url = chars[start...pos].join
+
+        if url.ends_with?(',')
+          url = url.rstrip(',')
+        else
+          # Skip this candidate's descriptor. Parentheses are tracked because
+          # the grammar allows a parenthesised descriptor whose contents may
+          # contain commas that do not end the candidate.
+          in_parens = false
+          while pos < size
+            char = chars[pos]
+            break if char == ',' && !in_parens
+            in_parens = true if char == '('
+            in_parens = false if char == ')'
+            pos += 1
+          end
+        end
+
+        urls << url unless url.empty?
+      end
+
+      urls
+    end
+
+    # Verifies `#fragment` targets (`--check-anchors`). This needs the response
+    # *body*, which the status-only link check deliberately never keeps, so it
+    # runs as a separate opt-in pass.
+    #
+    # It reads `status_cache` rather than re-deciding anything: only a document
+    # that answered 2xx is worth opening, and every other outcome was already
+    # reported (or deliberately not) by the link pass above.
+    private def verify_anchors(target : String, grouped : Hash(String, Array(String)),
+                               options : Options,
+                               output : Hash(String, Array(String)),
+                               coverage_data : Hash(String, TargetCoverage),
+                               status_cache : Hash(String, Int32),
+                               mutex : Mutex) : Nil
+      # request URL => the linked URLs that carry a verifiable fragment, paired
+      # with the decoded fragment. Keyed by request URL so the "one fetch per
+      # document" grouping established above is not regressed into one fetch
+      # per fragment.
+      pending = {} of String => Array(Tuple(String, String))
+
+      mutex.synchronize do
+        grouped.each do |request, linked_urls|
+          status = status_cache[request]?
+          next unless status && status >= 200 && status < 300
+          linked_urls.each do |url|
+            fragment = checkable_fragment(url)
+            next unless fragment
+            (pending[request] ||= [] of Tuple(String, String)) << {url, fragment}
+          end
+        end
+      end
+
+      return if pending.empty?
+
+      worker_count = options.concurrency < 1 ? 1 : options.concurrency
+      jobs = Channel(Tuple(String, Array(Tuple(String, String)))).new(1000)
+      results = Channel(Nil).new(1000)
+
+      worker_count.times do
+        spawn do
+          anchor_worker(jobs, results, target, options, output, coverage_data, mutex)
+        end
+      end
+
+      jobs_size = pending.size
+
+      # Feed from its own fiber: `pending` can exceed the channel buffer, and a
+      # blocked main fiber would never reach `results.receive`.
+      spawn do
+        pending.each { |request, entries| jobs.send({request, entries}) }
+        jobs.close
+      end
+
+      jobs_size.times { results.receive }
+    end
+
+    private def anchor_worker(jobs : Channel(Tuple(String, Array(Tuple(String, String)))),
+                              results : Channel(Nil), target : String, options : Options,
+                              output : Hash(String, Array(String)),
+                              coverage_data : Hash(String, TargetCoverage),
+                              mutex : Mutex)
+      loop do
+        job = jobs.receive? || break
+        request, entries = job
+
+        begin
+          ids = anchor_ids(request, options)
+          # nil means the document could not be re-read or is not HTML. A
+          # fragment we cannot verify is left alone rather than guessed at.
+          if ids
+            entries.each do |entry|
+              url, fragment = entry
+              next if ids.includes?(fragment)
+              # Deliberately not "[404]": a live page missing an anchor is a
+              # different defect from a page that does not exist, and the log
+              # line has to say which one the user is looking at.
+              Deadfinder::Logger.found "[anchor-missing] #{url}"
+              record_dead_anchor(target, url, options, output, coverage_data, mutex)
+            end
+          end
+        rescue ex
+          Deadfinder::Logger.verbose "[anchor check failed: #{ex}] #{request}" if options.verbose
+        ensure
+          # Mirror `worker`: always report completion so the accounting in
+          # `verify_anchors` stays balanced even when logging blows up.
+          results.send(nil)
+        end
+      end
+    end
+
+    # Every fragment name `url` offers, or nil when the response cannot answer
+    # the question (not fetchable, not a success, or not HTML — a fragment on a
+    # PDF or a plain-text file is not ours to judge).
+    private def anchor_ids(url : String, options : Options) : Set(String)?
+      uri = URI.parse(url)
+      headers = build_headers(options.worker_headers, options.user_agent)
+      response, _ = HttpClient.fetch(uri, options, headers)
+      return nil unless response.status.success?
+
+      content_type = response.headers["Content-Type"]?
+      return nil unless content_type && content_type.downcase.includes?("html")
+
+      page = Lexbor::Parser.new(response.body)
+      ids = Set(String).new
+      page.css("[id]").each do |element|
+        if value = element.attribute_by("id")
+          ids << value unless value.empty?
+        end
+      end
+      # Pre-HTML5 documents still address sections via `<a name="install">`,
+      # which browsers honor as a fragment target to this day.
+      page.css("a[name]").each do |element|
+        if value = element.attribute_by("name")
+          ids << value unless value.empty?
+        end
+      end
+      ids
+    end
+
+    # The fragment of `url` in the form an `id` attribute would hold, or nil
+    # when there is nothing to verify: no fragment at all, or one of the
+    # document-top fragments. Percent-encoding is undone first because the
+    # attribute it has to match is stored decoded (`#%EC%95%88` -> `#안`).
+    private def checkable_fragment(url : String) : String?
+      idx = url.index('#')
+      return nil if idx.nil?
+
+      raw = url[(idx + 1)..]
+      return nil if raw.empty?
+      return nil if raw.compare(TOP_FRAGMENT, case_insensitive: true) == 0
+
+      decoded = begin
+        URI.decode(raw)
+      rescue
+        raw
+      end
+      decoded.presence
+    end
+
+    # A missing anchor is a dead link, so it joins `output` like any other.
+    # `status_counts` is left alone on purpose: it is a histogram of HTTP
+    # statuses and this URL really did answer 2xx — only `dead` changes, so the
+    # coverage percentage reflects the anchor failure.
+    #
+    # No dedupe guard is needed: `verify_anchors` only ever sees URLs whose
+    # status was 2xx, which `record_status` never recorded as dead.
+    private def record_dead_anchor(target : String, url : String, options : Options,
+                                   output : Hash(String, Array(String)),
+                                   coverage_data : Hash(String, TargetCoverage),
+                                   mutex : Mutex) : Nil
+      mutex.synchronize do
+        output[target] ||= [] of String
+        output[target] << url
+
+        if options.coverage
+          coverage_data[target] ||= TargetCoverage.new
+          coverage_data[target].dead += 1
+        end
+      end
     end
   end
 end
