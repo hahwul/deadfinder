@@ -30,8 +30,12 @@ STDOUT.flush
 trap('TERM') { exit 0 }
 trap('INT')  { exit 0 }
 
-loop do
-  client = server.accept
+# Each connection is served on its own thread so the accept loop never blocks.
+# The binary under test makes concurrent requests — a HEAD-first check can need
+# two connections per link, `Connection: close` means none are reused, and
+# several targets are scanned at once — so a fixture that serialized connections
+# would make the harness sensitive to the order and timing of those requests.
+def serve(client)
   begin
     request_line = client.gets
     method = request_line&.split(' ')&.dig(0) || 'GET'
@@ -46,20 +50,32 @@ loop do
 
     route = ROUTES[path]
     if route
+      # This fixture closes the socket after every response (see the `ensure`
+      # below), so it says so rather than letting HTTP/1.1's keep-alive default
+      # imply the opposite. (`HTTP::Client` reconnects transparently either way;
+      # this just makes the fixture describe what it actually does.)
       headers = {
         'Content-Type'   => route[:content_type],
-        'Content-Length' => route[:body].bytesize.to_s
+        'Content-Length' => route[:body].bytesize.to_s,
+        'Connection'     => 'close'
       }.merge(route[:extra] || {})
       client.print "HTTP/1.1 #{route[:status]} #{STATUS_TEXT[route[:status]] || 'OK'}\r\n"
       headers.each { |k, v| client.print "#{k}: #{v}\r\n" }
       client.print "\r\n"
       client.print route[:body] if body_allowed
     else
-      client.print "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"
+      client.print "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
     end
   rescue StandardError
     # swallow: test fixture, keep accepting
   ensure
     client&.close
+  end
+end
+
+loop do
+  client = server.accept
+  Thread.new(client) do |conn|
+    serve(conn)
   end
 end

@@ -559,6 +559,8 @@ module Deadfinder
       rescue ex
         # The connection may be half-written or half-read; reusing it would
         # desynchronize the next response, so it never goes back to the pool.
+        # A peer that closed an idle keep-alive socket needs no handling here:
+        # `HTTP::Client#exec` reconnects transparently in that case.
         if pool_key
           @@pool.discard(client)
         else
