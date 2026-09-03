@@ -11,6 +11,18 @@ module Deadfinder
     @@sink : IO = STDOUT
     @@mutex = Mutex.new
 
+    # Per-target output buffers. Each target prints a coherent block
+    # ("► Fetching …" → discovered → findings → "Task completed"), and
+    # scanning several targets at once would interleave those blocks line by
+    # line into an unreadable mess. So a target fiber can claim a buffer: every
+    # line it — or a worker fiber it spawned — logs is collected there and
+    # written to `@@sink` as one atomic block when the target finishes. Keyed by
+    # fiber because logging happens deep inside call chains that have no idea
+    # which target they belong to. No buffer is attached while only one target is
+    # in flight, so single-target output still streams line by line, byte for
+    # byte as before.
+    @@buffers = {} of Fiber => IO::Memory
+
     def self.apply_options(options : Options)
       set_silent if options.silent
       set_verbose if options.verbose
@@ -121,8 +133,68 @@ module Deadfinder
     # already held here and Crystal's Mutex is not reentrant.
     private def self.print_line(line : String)
       @@mutex.synchronize do
+        # The `empty?` check keeps the common single-target path from hashing a
+        # Fiber for every link checked.
+        if !@@buffers.empty? && (buffer = @@buffers[Fiber.current]?)
+          buffer << line
+        else
+          begin
+            @@sink.print line
+          rescue IO::Error
+          end
+        end
+      end
+    end
+
+    # Collects everything the block logs (from this fiber and any fiber that
+    # inherits the buffer via `with_buffer`) and writes it out as one block on
+    # the way out, so concurrently scanned targets never shred each other's
+    # output.
+    def self.buffered(&)
+      buffer = IO::Memory.new
+      bind_buffer(buffer)
+      begin
+        yield
+      ensure
+        unbind_buffer
+        flush_buffer(buffer)
+      end
+    end
+
+    # The buffer the current fiber writes into, if any. Work fibers spawned on
+    # a target's behalf must be handed this explicitly: they are separate keys
+    # in the registry and would otherwise write straight to the sink, landing in
+    # the middle of some other target's block.
+    def self.current_buffer : IO::Memory?
+      @@mutex.synchronize { @@buffers[Fiber.current]? }
+    end
+
+    # Routes everything the block logs into `buffer`. A nil buffer means the
+    # parent was not buffering (single-target run), so this is a pass-through.
+    def self.with_buffer(buffer : IO::Memory?, &)
+      return yield if buffer.nil?
+      bind_buffer(buffer)
+      begin
+        yield
+      ensure
+        unbind_buffer
+      end
+    end
+
+    private def self.bind_buffer(buffer : IO::Memory) : Nil
+      @@mutex.synchronize { @@buffers[Fiber.current] = buffer }
+    end
+
+    private def self.unbind_buffer : Nil
+      @@mutex.synchronize { @@buffers.delete(Fiber.current) }
+    end
+
+    private def self.flush_buffer(buffer : IO::Memory) : Nil
+      block = buffer.to_s
+      return if block.empty?
+      @@mutex.synchronize do
         begin
-          @@sink.print line
+          @@sink.print block
         rescue IO::Error
         end
       end

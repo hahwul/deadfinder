@@ -92,6 +92,92 @@ describe Deadfinder::Logger do
     end
   end
 
+  describe "target output buffering" do
+    it "collects a fiber's lines in its sink instead of writing them out" do
+      sink = IO::Memory.new
+      Deadfinder::Logger.with_buffer(sink) do
+        Deadfinder::Logger.target "Fetching http://buffered.test"
+        Deadfinder::Logger.sub_info "Discovered 1 URLs, currently checking them. [anchor:1]"
+        Deadfinder::Logger.found "[404] http://buffered.test/gone"
+        Deadfinder::Logger.sub_complete "Task completed"
+      end
+
+      text = sink.to_s
+      text.should contain "Fetching http://buffered.test"
+      text.should contain "Discovered 1 URLs"
+      text.should contain "[404] http://buffered.test/gone"
+      text.should contain "Task completed"
+      text.lines.size.should eq 4
+    end
+
+    it "keeps concurrently logged blocks from interleaving" do
+      sinks = [IO::Memory.new, IO::Memory.new]
+      done = Channel(Nil).new
+
+      sinks.each_with_index do |sink, i|
+        spawn do
+          Deadfinder::Logger.with_buffer(sink) do
+            3.times do |n|
+              Deadfinder::Logger.found "[404] http://t#{i}.test/#{n}"
+              # Hand control to the other "target" mid-block: this is exactly
+              # the point at which unbuffered output used to shred.
+              Fiber.yield
+            end
+          end
+          done.send(nil)
+        end
+      end
+      2.times { done.receive }
+
+      sinks.each_with_index do |sink, i|
+        lines = sink.to_s.lines
+        lines.size.should eq 3
+        lines.all?(&.includes?("http://t#{i}.test/")).should be_true
+      end
+    end
+
+    it "hands the sink to fibers spawned on the target's behalf" do
+      sink = IO::Memory.new
+      done = Channel(Nil).new
+
+      Deadfinder::Logger.with_buffer(sink) do
+        inherited = Deadfinder::Logger.current_buffer
+        spawn do
+          Deadfinder::Logger.with_buffer(inherited) do
+            Deadfinder::Logger.found "[404] http://worker.test/gone"
+          end
+          done.send(nil)
+        end
+        done.receive
+      end
+
+      sink.to_s.should contain "http://worker.test/gone"
+    end
+
+    it "releases the sink again on the way out" do
+      Deadfinder::Logger.current_buffer.should be_nil
+      Deadfinder::Logger.with_buffer(IO::Memory.new) do
+        Deadfinder::Logger.current_buffer.should_not be_nil
+      end
+      Deadfinder::Logger.current_buffer.should be_nil
+    end
+
+    it "passes straight through when no sink is bound" do
+      # A nil sink is what keeps single-target runs streaming line by line
+      # instead of arriving in one burst at the end.
+      Deadfinder::Logger.with_buffer(nil) { Deadfinder::Logger.current_buffer }.should be_nil
+    end
+
+    it "buffers and then flushes without leaving the sink bound" do
+      Deadfinder::Logger.set_silent
+      Deadfinder::Logger.buffered do
+        Deadfinder::Logger.current_buffer.should_not be_nil
+        Deadfinder::Logger.target "Fetching http://flushed.test"
+      end
+      Deadfinder::Logger.current_buffer.should be_nil
+    end
+  end
+
   describe "output suppression in silent mode" do
     it "does not output when silent" do
       Deadfinder::Logger.set_silent

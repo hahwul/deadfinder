@@ -10,6 +10,7 @@ describe Deadfinder::CLI do
     it "has correct default values" do
       options = Deadfinder::Options.new
       options.concurrency.should eq 50
+      options.target_concurrency.should eq 10
       options.timeout.should eq 10
       options.output.should eq ""
       options.output_format.should eq "json"

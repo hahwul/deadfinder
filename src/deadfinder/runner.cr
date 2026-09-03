@@ -3,6 +3,29 @@ require "uri"
 require "lexbor"
 
 module Deadfinder
+  # Counting semaphore over a buffered channel: a slot is taken by sending
+  # (which blocks once `size` are outstanding) and given back by receiving.
+  # No fiber ever holds a slot while waiting on anything else — not on another
+  # fiber's in-flight request, not on a second slot — so the pool cannot
+  # deadlock no matter how many targets pile up behind it.
+  class RequestPermits
+    getter size : Int32
+
+    def initialize(size : Int32)
+      @size = size < 1 ? 1 : size
+      @slots = Channel(Nil).new(@size)
+    end
+
+    def acquire(&)
+      @slots.send(nil)
+      begin
+        yield
+      ensure
+        @slots.receive
+      end
+    end
+  end
+
   class Runner
     LINK_SELECTORS = {
       "anchor" => {"a", "href"},
@@ -18,6 +41,40 @@ module Deadfinder
     # (connection refused, timeout, TLS failure, …). Real HTTP status codes are
     # always >= 0, so -1 unambiguously marks a connection error.
     ERROR_STATUS = -1
+
+    # Global cap on concurrent HTTP requests, shared by every target in flight.
+    # Target-level concurrency multiplies the number of fibers that *want* to
+    # make a request; it must not multiply the number that actually do — ten
+    # targets times fifty workers is 500 sockets aimed at one host, which is a
+    # self-inflicted DoS rather than throughput. So `-c` means "requests in
+    # flight anywhere in the run", and target concurrency rides on top of that
+    # fixed budget instead of multiplying it.
+    @@permits = RequestPermits.new(1)
+
+    # Requests currently being made, keyed by URL. See `resolve_status`.
+    @@inflight = {} of String => Channel(Nil)
+    @@shared_mutex = Mutex.new
+
+    # Sized lazily from the run's `-c`. `Runner` is instantiated in several
+    # places (and per target on some paths), so the budget cannot live on an
+    # instance — every target has to draw from the same pool for the cap to mean
+    # anything.
+    def self.permits(size : Int32) : RequestPermits
+      @@shared_mutex.synchronize do
+        permits = @@permits
+        return permits if permits.size == size
+        @@permits = RequestPermits.new(size)
+      end
+    end
+
+    # Drops any in-flight bookkeeping left over from a previous run. Only
+    # relevant to back-to-back runs in one process (tests, embedded usage).
+    def self.reset_shared_state : Nil
+      @@shared_mutex.synchronize do
+        @@inflight.each_value(&.close)
+        @@inflight.clear
+      end
+    end
 
     private def build_headers(raw : Array(String), user_agent : String) : HTTP::Headers
       HttpClient.build_headers(raw, user_agent)
@@ -36,8 +93,14 @@ module Deadfinder
       # Follow redirects for the page itself: a target that moves (http -> https,
       # / -> /index.html, an apex -> www hop) would otherwise be parsed as an
       # empty redirect body and silently report zero links.
+      #
+      # The page fetch counts against the same global budget as the link checks
+      # below; otherwise `--target-concurrency` would quietly add one extra
+      # in-flight request per target on top of `-c`.
       response, final_uri = begin
-        HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+        Runner.permits(options.concurrency).acquire do
+          HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+        end
       rescue ex
         # A target we cannot reach at all is itself a finding, not just a log
         # line: without this a URL list whose entries all refuse connections
@@ -105,9 +168,9 @@ module Deadfinder
 
       # Group by the URL that is actually requested. A fragment is a client-side
       # anchor and is never transmitted, so `/guide#install` and `/guide#usage`
-      # are one request while both still appear in the report. Grouping (rather
-      # than relying on the status cache) also keeps the guarantee that no two
-      # workers ever fetch the same URL concurrently.
+      # are one request while both still appear in the report. Grouping keeps
+      # this target's workers off each other's toes; collisions with *other*
+      # targets are handled by the in-flight registry in `resolve_status`.
       grouped = {} of String => Array(String)
       resolved_urls.each do |url|
         (grouped[request_url(url)] ||= [] of String) << url
@@ -116,9 +179,23 @@ module Deadfinder
       jobs = Channel(Tuple(String, Array(String))).new(1000)
       results = Channel(Nil).new(1000)
 
+      # Never spawn more workers than there are requests to make. With several
+      # targets in flight the fiber count is multiplied by the number of
+      # targets, and a page with three links has no use for fifty idle fibers.
+      # (Fewer workers than `-c` costs nothing: the global permit pool, not the
+      # per-target pool size, is what bounds concurrency now.)
+      worker_count = grouped.size if grouped.size < worker_count
+
+      # Workers log on this target's behalf, so they inherit its output sink
+      # (nil unless several targets are being scanned at once) and their lines
+      # land inside the target's block instead of racing straight to STDOUT.
+      buffer = Deadfinder::Logger.current_buffer
+
       worker_count.times do |w|
         spawn do
-          worker(w, jobs, results, target, options, output, coverage_data, status_cache, mutex)
+          Deadfinder::Logger.with_buffer(buffer) do
+            worker(w, jobs, results, target, options, output, coverage_data, status_cache, mutex)
+          end
         end
       end
 
@@ -187,23 +264,56 @@ module Deadfinder
     # entire run. Subsequent references (including from other pages) reuse the
     # cached status, so every page that links to the URL is still attributed it
     # without paying for a second network request. `ERROR_STATUS` marks a
-    # connection failure. Within a single target run resolved URLs are unique,
-    # so no two workers ever fetch the same URL concurrently.
+    # connection failure.
+    #
+    # The cache alone is not enough once targets run concurrently. This used to
+    # lean on "within a single target run resolved URLs are unique, so no two
+    # workers ever fetch the same URL at once" — an invariant that dies the
+    # moment two targets are in flight, because two pages linking to the same
+    # URL would both miss the cache and both issue a request before either
+    # wrote the result. So a requester publishes an in-flight entry for the URL
+    # before fetching; anyone arriving in that window waits on it (holding no
+    # permit, so it costs nothing from the request budget) and then re-reads the
+    # cache instead of duplicating the request.
     private def resolve_status(url : String, status_cache : Hash(String, Int32),
                                mutex : Mutex, options : Options) : Int32
-      if cached = mutex.synchronize { status_cache[url]? }
-        return cached
-      end
+      # Loop rather than check-once: after waiting on someone else's request the
+      # cache is normally populated, but if that fiber's entry vanished without
+      # a result (a reset between runs) we fall through and take ownership on
+      # the next pass rather than returning a bogus status.
+      loop do
+        pending = nil
 
-      status = begin
-        check_url(url, options)
-      rescue ex
-        Deadfinder::Logger.verbose "[#{ex}] #{url}" if options.verbose
-        ERROR_STATUS
-      end
+        @@shared_mutex.synchronize do
+          if cached = mutex.synchronize { status_cache[url]? }
+            return cached
+          end
+          pending = @@inflight[url]?
+          @@inflight[url] = Channel(Nil).new if pending.nil?
+        end
 
-      mutex.synchronize { status_cache[url] = status }
-      status
+        if pending
+          # Closed, never sent to: `receive?` returns nil for every waiter at
+          # once when the owner finishes.
+          pending.receive?
+          next
+        end
+
+        status = begin
+          Runner.permits(options.concurrency).acquire { check_url(url, options) }
+        rescue ex
+          Deadfinder::Logger.verbose "[#{ex}] #{url}" if options.verbose
+          ERROR_STATUS
+        end
+
+        # Publish the result before waking the waiters, so they find it in the
+        # cache. The in-flight entry is dropped either way: a failed request
+        # must never leave a later requester blocked on a channel nobody closes.
+        mutex.synchronize { status_cache[url] = status }
+        @@shared_mutex.synchronize { @@inflight.delete(url).try(&.close) }
+
+        return status
+      end
     end
 
     # Checks a single link. Redirects are deliberately *not* followed here: the

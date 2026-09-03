@@ -830,4 +830,108 @@ describe Deadfinder::Runner do
       args[:coverage_data]["http://frag.test/index.html"].total.should eq 2
     end
   end
+
+  describe "#run cross-target request de-duplication" do
+    it "requests a URL shared by two concurrently scanned targets only once" do
+      link = %(<a href="http://shared.test/x">s</a>)
+      WebMock.stub(:get, "http://a.test").to_return(body: "<html><body>#{link}</body></html>")
+      WebMock.stub(:get, "http://b.test").to_return(body: "<html><body>#{link}</body></html>")
+      # Sleeping inside the stub yields the fiber mid-request, which is exactly
+      # the window in which the second target used to issue a duplicate request:
+      # both miss the status cache, because neither has written it yet.
+      shared = WebMock.stub(:get, "http://shared.test/x").to_return do
+        sleep 20.milliseconds
+        HTTP::Client::Response.new(404, body: "")
+      end
+
+      options = default_test_options
+      args = make_runner_args
+      runner = Deadfinder::Runner.new
+
+      done = Channel(Nil).new
+      ["http://a.test", "http://b.test"].each do |target|
+        spawn do
+          runner.run(target, options, **args)
+          done.send(nil)
+        end
+      end
+      2.times { done.receive }
+
+      shared.calls.should eq 1
+      # The second requester still gets the status attributed to its own target
+      # rather than silently dropping the link.
+      args[:output]["http://a.test"].should contain "http://shared.test/x"
+      args[:output]["http://b.test"].should contain "http://shared.test/x"
+      args[:status_cache]["http://shared.test/x"].should eq 404
+    end
+
+    it "lets a waiter fall through to its own request when the fetch failed" do
+      link = %(<a href="http://unreachable.test/x">s</a>)
+      WebMock.stub(:get, "http://c.test").to_return(body: "<html><body>#{link}</body></html>")
+      WebMock.stub(:get, "http://d.test").to_return(body: "<html><body>#{link}</body></html>")
+      # No stub for unreachable.test: every fetch raises, so the owner records
+      # ERROR_STATUS. The in-flight entry must still be cleared, otherwise the
+      # waiter would block on a channel nobody ever closes.
+      options = default_test_options
+      args = make_runner_args
+      runner = Deadfinder::Runner.new
+
+      done = Channel(Nil).new
+      ["http://c.test", "http://d.test"].each do |target|
+        spawn do
+          runner.run(target, options, **args)
+          done.send(nil)
+        end
+      end
+      2.times { done.receive }
+
+      args[:status_cache]["http://unreachable.test/x"].should eq Deadfinder::Runner::ERROR_STATUS
+      args[:output]["http://c.test"].should contain "http://unreachable.test/x"
+      args[:output]["http://d.test"].should contain "http://unreachable.test/x"
+    end
+  end
+end
+
+describe Deadfinder::RequestPermits do
+  it "never lets more than `size` blocks run at once" do
+    permits = Deadfinder::RequestPermits.new(3)
+    inflight = 0
+    peak = 0
+    done = Channel(Nil).new
+
+    10.times do
+      spawn do
+        permits.acquire do
+          inflight += 1
+          peak = inflight if inflight > peak
+          sleep 2.milliseconds
+          inflight -= 1
+        end
+        done.send(nil)
+      end
+    end
+    10.times { done.receive }
+
+    peak.should eq 3
+    inflight.should eq 0
+  end
+
+  it "clamps a non-positive size to one" do
+    Deadfinder::RequestPermits.new(0).size.should eq 1
+    Deadfinder::RequestPermits.new(-5).size.should eq 1
+  end
+
+  it "returns the permit when the block raises" do
+    permits = Deadfinder::RequestPermits.new(1)
+    expect_raises(Exception, "boom") { permits.acquire { raise "boom" } }
+    # The slot has to be free again; otherwise the next acquire hangs forever.
+    permits.acquire { 42 }.should eq 42
+  end
+
+  it "reuses one pool per size so every target draws from the same budget" do
+    pool = Deadfinder::Runner.permits(7)
+    pool.size.should eq 7
+    Deadfinder::Runner.permits(7).should be pool
+    Deadfinder::Runner.permits(9).should_not be pool
+  end
 end
