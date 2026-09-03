@@ -90,8 +90,11 @@ steps:
     # user_agent: "Apple"
     # proxy: "http://localhost:8070"
     # proxy_auth: "id:pw"
+    # insecure: false
     # match:  ""
     # ignore: ""
+    # limit: 0
+    # output_format: json
     # coverage: true
     # visualize: report.png
 
@@ -124,6 +127,7 @@ Options:
       --user_agent=UA              User-Agent string
   -p, --proxy=PROXY                Proxy server (HTTP and HTTPS CONNECT)
       --proxy_auth=USER:PASS       Proxy authentication
+  -k, --insecure                   Skip TLS certificate verification (not recommended)
   -m, --match=PATTERN              Match URL pattern (regex)
   -i, --ignore=PATTERN             Ignore URL pattern (regex)
   -s, --silent                     Silent mode
@@ -132,6 +136,7 @@ Options:
       --limit=N                    Limit number of URLs to scan
       --coverage                   Enable coverage tracking and reporting
       --visualize=PATH             Generate visualization PNG
+  -h, --help                       Show help
 ```
 
 ## Modes
