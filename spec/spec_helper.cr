@@ -4,9 +4,9 @@ require "../src/deadfinder"
 require "../src/deadfinder/cli"
 
 def reset_deadfinder_state
-  Deadfinder.output.clear
-  Deadfinder.coverage_data.clear
-  Deadfinder.status_cache.clear
+  # Clears the accumulators *and* Runner's shared in-flight/permit bookkeeping,
+  # which otherwise carries over between examples.
+  Deadfinder.reset_state
   Deadfinder::Logger.unset_silent
   Deadfinder::Logger.unset_verbose
   Deadfinder::Logger.unset_debug

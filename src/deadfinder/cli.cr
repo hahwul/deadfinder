@@ -24,6 +24,7 @@ module Deadfinder
 
         parser.on("-r", "--include30x", "Include 30x redirections") { options.include30x = true }
         parser.on("-c CONCURRENCY", "--concurrency=CONCURRENCY", "Number of concurrency (default: 50)") { |v| options.concurrency = v.to_i }
+        parser.on("--target-concurrency=N", "Number of targets scanned in parallel; total in-flight requests stay capped at -c (default: 10)") { |v| options.target_concurrency = v.to_i }
         parser.on("-t TIMEOUT", "--timeout=TIMEOUT", "Timeout in seconds (default: 10)") { |v| options.timeout = v.to_i }
         parser.on("-o OUTPUT", "--output=OUTPUT", "File to write result") { |v| options.output = v }
         parser.on("-f FORMAT", "--output_format=FORMAT", "Output format: json, yaml, toml, csv, sarif (default: json)") { |v| options.output_format = v }
@@ -82,6 +83,10 @@ module Deadfinder
       if subcommand && ["pipe", "file", "url", "sitemap"].includes?(subcommand)
         if options.concurrency < 1
           STDERR.puts "Error: concurrency must be >= 1 (got #{options.concurrency})"
+          exit 1
+        end
+        if options.target_concurrency < 1
+          STDERR.puts "Error: target concurrency must be >= 1 (got #{options.target_concurrency})"
           exit 1
         end
         if options.timeout < 1

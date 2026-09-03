@@ -31,6 +31,11 @@ module Deadfinder
   # the whole run; every page that references it is still attributed the cached
   # status. A value of `Runner::ERROR_STATUS` (-1) records a connection failure.
   @@status_cache = {} of String => Int32
+  # The targets that were dispatched, in the order the user supplied them.
+  # Targets finish out of order once several are scanned at once, so the report
+  # would otherwise be keyed in whatever order results happened to land in;
+  # this restores the requested order at serialization time.
+  @@target_order = [] of String
   @@mutex = Mutex.new
 
   def self.output
@@ -56,7 +61,9 @@ module Deadfinder
       @@output.clear
       @@coverage_data.clear
       @@status_cache.clear
+      @@target_order.clear
     end
+    Runner.reset_shared_state
   end
 
   def self.run_pipe(options : Options)
@@ -161,9 +168,7 @@ module Deadfinder
       Deadfinder::Logger.info "Found #{urls.size} URLs from #{sitemap_url}"
     end
 
-    urls.each do |url|
-      run_with_target(url, options, app)
-    end
+    run_targets(urls, options, app)
     gen_output(options)
   end
 
@@ -302,12 +307,82 @@ module Deadfinder
     if targets.empty?
       Deadfinder::Logger.info "No URLs to scan"
     else
-      app = Runner.new
-      targets.each do |target|
-        run_with_target(target, options, app)
-      end
+      run_targets(targets, options, Runner.new)
     end
     gen_output(options)
+  end
+
+  # Scans `targets`, up to `options.target_concurrency` of them at a time.
+  #
+  # This is what makes `file`, `pipe` and `sitemap` scale: `-c` only ever
+  # parallelized the links *within* one page, so pages themselves were fetched
+  # strictly one after another and a 5000-URL sitemap paid 5000 serial round
+  # trips first. Total network pressure is unchanged — `Runner` hands out a
+  # global budget of `-c` in-flight requests however many targets are running.
+  private def self.run_targets(targets : Array(String), options : Options, app : Runner) : Nil
+    @@mutex.synchronize { @@target_order.concat(targets) }
+
+    concurrency = options.target_concurrency
+    concurrency = 1 if concurrency < 1
+    concurrency = targets.size if targets.size < concurrency
+
+    # One target in flight: run it inline and leave the log stream alone, so
+    # output is byte-for-byte what it has always been and still streams line by
+    # line instead of arriving in one burst at the end.
+    if concurrency <= 1
+      targets.each { |target| run_with_target(target, options, app) }
+      return
+    end
+
+    jobs = Channel(String).new(concurrency)
+    done = Channel(Nil).new(concurrency)
+
+    concurrency.times do
+      spawn do
+        loop do
+          target = jobs.receive? || break
+          begin
+            # Buffer this target's lines and flush them as one block, so
+            # concurrent targets don't shred each other's output.
+            Deadfinder::Logger.buffered { run_with_target(target, options, app) }
+          rescue ex
+            # `Runner#run` already reports its own failures; this is the
+            # last-resort net. A fiber that dies here would stop draining the
+            # queue, and the run would then block forever waiting for targets
+            # nobody is left to pick up.
+            Deadfinder::Logger.error "[#{ex}] #{target}"
+          end
+        end
+        done.send(nil)
+      end
+    end
+
+    # A feeder fiber rather than a channel big enough for every target: a
+    # sitemap can carry hundreds of thousands of URLs.
+    spawn do
+      targets.each { |target| jobs.send(target) }
+      jobs.close
+    end
+
+    concurrency.times { done.receive }
+  end
+
+  # Re-keys a per-target hash into the order the targets were requested in.
+  # Anything not dispatched through `run_targets` (a single `url` scan) keeps
+  # its existing position at the end.
+  private def self.in_target_order(data : Hash(String, V)) : Hash(String, V) forall V
+    order = @@mutex.synchronize { @@target_order.dup }
+    return data if order.size < 2 || data.size < 2
+
+    ordered = {} of String => V
+    order.each do |target|
+      next if ordered.has_key?(target)
+      if value = data[target]?
+        ordered[target] = value
+      end
+    end
+    data.each { |key, value| ordered[key] = value unless ordered.has_key?(key) }
+    ordered
   end
 
   def self.run_with_target(target : String, options : Options, app : Runner = Runner.new)
@@ -321,7 +396,7 @@ module Deadfinder
     total_all_dead = 0
     overall_status_counts = {} of String => Int32
 
-    @@coverage_data.each do |target, data|
+    in_target_order(@@coverage_data).each do |target, data|
       total = data.total
       dead = data.dead
       status_counts = data.status_counts
@@ -357,7 +432,7 @@ module Deadfinder
   def self.gen_output(options : Options)
     # Dedupe per-target URLs so a page that references the same link twice
     # (or is scanned more than once) never lists it twice in the report.
-    output_data = @@output.transform_values(&.uniq)
+    output_data = in_target_order(@@output.transform_values(&.uniq))
     format = options.output_format.downcase
 
     coverage_info : CoverageResult? = nil

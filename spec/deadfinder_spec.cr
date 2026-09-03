@@ -243,6 +243,173 @@ describe Deadfinder do
     end
   end
 
+  describe "target-level concurrency" do
+    it "scans several targets at once" do
+      pages_inflight = 0
+      pages_peak = 0
+
+      WebMock.stub(:get, /http:\/\/conc\.test\/page\/\d+/).to_return do |request|
+        pages_inflight += 1
+        pages_peak = pages_inflight if pages_inflight > pages_peak
+        sleep 5.milliseconds
+        pages_inflight -= 1
+        n = request.resource.split('/').last
+        HTTP::Client::Response.new(200,
+          body: %(<html><body><a href="http://conc.test/dead/#{n}">d</a></body></html>))
+      end
+      WebMock.stub(:get, /http:\/\/conc\.test\/dead\/\d+/).to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_tc", ".txt")
+      begin
+        File.write(urlfile.path, (0...4).map { |n| "http://conc.test/page/#{n}" }.join('\n'))
+
+        options = default_test_options
+        options.concurrency = 8
+        options.target_concurrency = 4
+        Deadfinder.run_file(urlfile.path, options)
+
+        pages_peak.should eq 4
+        Deadfinder.output.keys.size.should eq 4
+        Deadfinder.output["http://conc.test/page/2"].should eq ["http://conc.test/dead/2"]
+      ensure
+        urlfile.delete
+      end
+    end
+
+    it "scans strictly one target at a time with --target-concurrency 1" do
+      pages_inflight = 0
+      pages_peak = 0
+
+      WebMock.stub(:get, /http:\/\/serial\.test\/page\/\d+/).to_return do |request|
+        pages_inflight += 1
+        pages_peak = pages_inflight if pages_inflight > pages_peak
+        sleep 2.milliseconds
+        pages_inflight -= 1
+        n = request.resource.split('/').last
+        HTTP::Client::Response.new(200,
+          body: %(<html><body><a href="http://serial.test/dead/#{n}">d</a></body></html>))
+      end
+      WebMock.stub(:get, /http:\/\/serial\.test\/dead\/\d+/).to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_tc1", ".txt")
+      begin
+        File.write(urlfile.path, (0...4).map { |n| "http://serial.test/page/#{n}" }.join('\n'))
+
+        options = default_test_options
+        options.target_concurrency = 1
+        Deadfinder.run_file(urlfile.path, options)
+
+        pages_peak.should eq 1
+        Deadfinder.output.keys.size.should eq 4
+      ensure
+        urlfile.delete
+      end
+    end
+
+    it "caps total in-flight requests at --concurrency however many targets run" do
+      inflight = 0
+      peak = 0
+
+      # One stub for pages and links alike: the budget covers every request the
+      # run makes, not just the link checks.
+      WebMock.stub(:get, /http:\/\/cap\.test\//).to_return do |request|
+        inflight += 1
+        peak = inflight if inflight > peak
+        sleep 2.milliseconds
+        inflight -= 1
+
+        if request.resource.starts_with?("/page/")
+          n = request.resource.split('/').last
+          links = String.build do |io|
+            3.times { |i| io << %(<a href="http://cap.test/link/#{n}/#{i}">l</a>) }
+          end
+          HTTP::Client::Response.new(200, body: "<html><body>#{links}</body></html>")
+        else
+          HTTP::Client::Response.new(200, body: "ok")
+        end
+      end
+
+      urlfile = File.tempfile("deadfinder_cap", ".txt")
+      begin
+        File.write(urlfile.path, (0...6).map { |n| "http://cap.test/page/#{n}" }.join('\n'))
+
+        options = default_test_options
+        # Six targets x four workers each would be 24 sockets without a global
+        # budget; `-c 2` has to hold regardless of the target concurrency.
+        options.concurrency = 2
+        options.target_concurrency = 6
+        Deadfinder.run_file(urlfile.path, options)
+
+        peak.should eq 2
+        inflight.should eq 0
+      ensure
+        urlfile.delete
+      end
+    end
+
+    it "serializes the report in the requested order even when targets finish out of order" do
+      # Later targets answer faster, so completion order is the reverse of the
+      # input order; the report must still follow the file.
+      WebMock.stub(:get, /http:\/\/order\.test\/page\/\d+/).to_return do |request|
+        n = request.resource.split('/').last.to_i
+        sleep ((4 - n) * 5).milliseconds
+        HTTP::Client::Response.new(200,
+          body: %(<html><body><a href="http://order.test/dead/#{n}">d</a></body></html>))
+      end
+      WebMock.stub(:get, /http:\/\/order\.test\/dead\/\d+/).to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_order", ".txt")
+      report = File.tempfile("deadfinder_order_report", ".json")
+      begin
+        targets = (0...4).map { |n| "http://order.test/page/#{n}" }
+        File.write(urlfile.path, targets.join('\n'))
+
+        options = default_test_options
+        options.coverage = true
+        options.target_concurrency = 4
+        options.output = report.path
+        Deadfinder.run_file(urlfile.path, options)
+
+        # The accumulator is filled in completion order, which is racy by
+        # nature; the serialized report is the contract, and it follows the
+        # order the targets were asked for.
+        Deadfinder.output.keys.sort.should eq targets
+        parsed = JSON.parse(File.read(report.path))
+        parsed["dead_links"].as_h.keys.should eq targets
+        parsed["coverage"]["targets"].as_h.keys.should eq targets
+      ensure
+        urlfile.delete
+        report.delete
+      end
+    end
+
+    it "still honors --limit when targets are scanned concurrently" do
+      WebMock.stub(:get, /http:\/\/lim\.test\/page\/\d+/).to_return do |request|
+        n = request.resource.split('/').last
+        HTTP::Client::Response.new(200,
+          body: %(<html><body><a href="http://lim.test/dead/#{n}">d</a></body></html>))
+      end
+      WebMock.stub(:get, /http:\/\/lim\.test\/dead\/\d+/).to_return(status: 404)
+
+      urlfile = File.tempfile("deadfinder_tclimit", ".txt")
+      begin
+        File.write(urlfile.path, (0...6).map { |n| "http://lim.test/page/#{n}" }.join('\n'))
+
+        options = default_test_options
+        options.target_concurrency = 6
+        options.limit = 2
+        Deadfinder.run_file(urlfile.path, options)
+
+        Deadfinder.output.keys.should eq [
+          "http://lim.test/page/0",
+          "http://lim.test/page/1",
+        ]
+      ensure
+        urlfile.delete
+      end
+    end
+  end
+
   describe ".read_targets" do
     it "normalizes, dedupes and preserves first-seen order" do
       io = IO::Memory.new(<<-LIST)

@@ -1,6 +1,12 @@
 module Deadfinder
   class Options
     property concurrency : Int32 = 50
+    # How many targets are scanned at once. This does *not* widen the request
+    # budget: `concurrency` stays the global cap on in-flight HTTP requests, and
+    # target concurrency only decides how many pages compete for it. Without it
+    # `-c` only parallelized the links within a single page, so a 5000-URL
+    # sitemap paid 5000 serial round trips before any of that concurrency helped.
+    property target_concurrency : Int32 = 10
     property timeout : Int32 = 10
     property output : String = ""
     property output_format : String = "json"
