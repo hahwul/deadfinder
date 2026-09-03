@@ -28,6 +28,10 @@ module Deadfinder
     # Opt-in CI gate. The v1 CLI contract always exits 0, so this stays off by
     # default and only `--fail-on-dead` turns findings into a non-zero exit.
     property fail_on_dead : Bool = false
+    # Opt-in: verify that `#fragment` link targets actually exist in the linked
+    # document. Off by default because it needs the response body, which the
+    # status-only link check never reads.
+    property check_anchors : Bool = false
   end
 
   class TargetCoverage

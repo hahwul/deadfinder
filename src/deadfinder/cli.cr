@@ -40,6 +40,7 @@ module Deadfinder
         parser.on("-v", "--verbose", "Verbose mode") { options.verbose = true }
         parser.on("--debug", "Debug mode") { options.debug = true }
         parser.on("--limit=N", "Limit number of URLs to scan") { |v| options.limit = v.to_i }
+        parser.on("--check-anchors", "Verify #fragment targets exist in the linked document") { options.check_anchors = true }
         parser.on("--coverage", "Enable coverage tracking and reporting") { options.coverage = true }
         parser.on("-F", "--fail-on-dead", "Exit with code #{Deadfinder::EXIT_DEAD_FOUND} when any dead link or dead target is found (default: always exit 0)") { options.fail_on_dead = true }
         parser.on("--visualize=PATH", "Generate visualization PNG") { |v| options.visualize = v }
