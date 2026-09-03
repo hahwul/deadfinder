@@ -9,6 +9,9 @@ def reset_deadfinder_state
   Deadfinder.reset_state
   Deadfinder.reset_report_sink
   Deadfinder::Logger.reset_sink
+  # Pooled connections and per-host throttle slots outlive a single run, so an
+  # example must not inherit them from the previous one.
+  Deadfinder::HttpClient.close_idle_connections
   Deadfinder::Logger.unset_silent
   Deadfinder::Logger.unset_verbose
   Deadfinder::Logger.unset_debug
@@ -18,6 +21,10 @@ def default_test_options : Deadfinder::Options
   options = Deadfinder::Options.new
   options.silent = true
   options.concurrency = 2
+  # No retries by default in specs: a stubbed failure never becomes a success,
+  # so retrying one would only add backoff sleeps. The retry behaviour has its
+  # own specs in `request_layer_spec.cr`, which opt in explicitly.
+  options.retries = 0
   options
 end
 

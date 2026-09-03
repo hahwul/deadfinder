@@ -99,6 +99,18 @@ module Deadfinder
       end
     end
 
+    # First backoff step for `--retry`. Doubles per attempt (200ms, 400ms,
+    # 800ms, …) and is jittered, so a burst of workers that all trip the same
+    # rate limiter does not come back in lockstep and trip it again.
+    RETRY_BASE_DELAY = 200.milliseconds
+
+    # Fraction of the computed backoff that jitter may add or remove.
+    RETRY_JITTER = 0.25
+
+    # Result of one link check: the status plus whatever `Retry-After` the
+    # server attached, which the retry loop honors on a 429/503.
+    record CheckOutcome, status : Int32, retry_after : Time::Span?
+
     private def build_headers(raw : Array(String), user_agent : String) : HTTP::Headers
       HttpClient.build_headers(raw, user_agent)
     end
@@ -303,6 +315,11 @@ module Deadfinder
     # before fetching; anyone arriving in that window waits on it (holding no
     # permit, so it costs nothing from the request budget) and then re-reads the
     # cache instead of duplicating the request.
+    #
+    # Only the *final* verdict of `fetch_status_with_retries` is cached. The
+    # cache is process-global and never expires, so writing an intermediate
+    # failure into it used to mark a URL dead for every remaining page in the
+    # run on the strength of a single TCP reset.
     private def resolve_status(url : String, status_cache : Hash(String, Int32),
                                mutex : Mutex, options : Options) : Int32
       # Loop rather than check-once: after waiting on someone else's request the
@@ -327,30 +344,114 @@ module Deadfinder
           next
         end
 
-        status = begin
-          Runner.permits(options.concurrency).acquire { check_url(url, options) }
-        rescue ex
-          Deadfinder::Logger.verbose "[#{ex}] #{url}" if options.verbose
-          ERROR_STATUS
+        # This fiber now owns the request for `url`. The `ensure` is what makes
+        # that safe: however this ends, the in-flight entry is dropped and its
+        # channel closed, or every later requester blocks on a channel nobody
+        # will ever close.
+        begin
+          status = fetch_status_with_retries(url, options)
+          # Publish the result before waking the waiters, so they find it in the
+          # cache rather than racing back around the loop.
+          mutex.synchronize { status_cache[url] = status }
+          return status
+        ensure
+          @@shared_mutex.synchronize { @@inflight.delete(url).try(&.close) }
         end
-
-        # Publish the result before waking the waiters, so they find it in the
-        # cache. The in-flight entry is dropped either way: a failed request
-        # must never leave a later requester blocked on a channel nobody closes.
-        mutex.synchronize { status_cache[url] = status }
-        @@shared_mutex.synchronize { @@inflight.delete(url).try(&.close) }
-
-        return status
       end
     end
 
+    # Requests `url` until it answers or the `--retry` budget runs out, and
+    # returns the final status. Transient failures back off exponentially with
+    # jitter (see `retry_delay`); a definitive answer such as a 404 returns on
+    # the first attempt.
+    #
+    # A permit is held for the request and released before the backoff sleep:
+    # holding one while waiting would let a handful of retrying fibers idle the
+    # entire `-c` budget and stall every other link in the run.
+    private def fetch_status_with_retries(url : String, options : Options) : Int32
+      attempts = options.retries < 0 ? 1 : options.retries + 1
+      status = ERROR_STATUS
+      attempt = 1
+      # Set once an attempt has failed outright: from then on `auto` mode skips
+      # the HEAD probe, so retrying an unreachable host costs one connect
+      # timeout per attempt instead of two.
+      force_get = false
+
+      loop do
+        retry_after : Time::Span? = nil
+
+        begin
+          outcome = Runner.permits(options.concurrency).acquire do
+            check_url(url, options, force_get)
+          end
+          status = outcome.status
+          retry_after = outcome.retry_after
+        rescue ex
+          Deadfinder::Logger.verbose "[#{ex}] #{url}" if options.verbose
+          status = ERROR_STATUS
+        end
+
+        force_get = true if status == ERROR_STATUS
+
+        break if attempt >= attempts || !transient?(status)
+
+        wait = retry_delay(attempt, retry_after, options)
+        # Hold the whole host back, not just this fiber: every other worker
+        # queued on the same origin would otherwise walk straight into the same
+        # 429 before this one has finished waiting it out.
+        HttpClient.throttle.penalize(origin_key_for(url), wait) if retry_after
+        Deadfinder::Logger.debug "Retrying #{url} in #{wait.total_milliseconds.round}ms (attempt #{attempt + 1}/#{attempts}, last status #{status})"
+        sleep wait
+
+        attempt += 1
+      end
+
+      status
+    end
+
+    # Conditions worth another attempt: the request never produced a status, the
+    # server said "too many requests", or it reported a server-side fault. A 404
+    # — or any other 4xx — is a definitive answer about the link and is never
+    # retried, so a genuinely dead link still costs exactly one request.
+    private def transient?(status : Int32) : Bool
+      status == ERROR_STATUS || status == 429 || (status >= 500 && status <= 599)
+    end
+
+    # Exponential backoff with +/-`RETRY_JITTER` jitter, raised to the server's
+    # `Retry-After` when it asked for longer. Bounded by `--timeout` so a
+    # hostile (or absurd) `Retry-After: 86400` cannot park the run for a day.
+    private def retry_delay(attempt : Int32, retry_after : Time::Span?, options : Options) : Time::Span
+      backoff = RETRY_BASE_DELAY * (1 << Math.min(attempt - 1, 16))
+      jitter = 1.0 + (Random.rand * 2.0 - 1.0) * RETRY_JITTER
+      wait = backoff * jitter
+      wait = retry_after if retry_after && retry_after > wait
+
+      cap = options.timeout.seconds
+      wait > cap ? cap : wait
+    end
+
+    # Origin of `url` for throttling purposes; a URL that no longer parses just
+    # doesn't get a host-wide penalty.
+    private def origin_key_for(url : String) : String
+      HttpClient.origin_key(URI.parse(url))
+    rescue
+      url
+    end
+
     # Checks a single link. Redirects are deliberately *not* followed here: the
-    # 30x status is itself the reported result (`--include30x`).
-    private def check_url(url : String, options : Options) : Int32
+    # 30x status is itself the reported result (`--include30x`). The request
+    # method comes from `--method`; see `HttpClient::METHOD_AUTO` for why the
+    # default confirms an unhappy HEAD with a GET before reporting anything.
+    private def check_url(url : String, options : Options, force_get : Bool = false) : CheckOutcome
       uri = URI.parse(url)
       headers = build_headers(options.worker_headers, options.user_agent)
-      response, _ = HttpClient.fetch(uri, options, headers)
-      response.status_code
+      response = HttpClient.check(uri, options, headers, force_get)
+      # `Retry-After` is only meaningful on the statuses that define it; reading
+      # it elsewhere would let an unrelated header stretch the backoff.
+      retry_after = if response.status_code == 429 || response.status_code == 503
+                      HttpClient.parse_retry_after(response.headers["Retry-After"]?)
+                    end
+      CheckOutcome.new(response.status_code, retry_after)
     end
 
     # A fragment is a client-side anchor and never reaches the server, so it is
@@ -390,7 +491,7 @@ module Deadfinder
                               output : Hash(String, Array(String)),
                               coverage_data : Hash(String, TargetCoverage),
                               mutex : Mutex) : Nil
-      dead = status_code >= 400 || (status_code >= 300 && options.include30x)
+      dead = dead_status?(status_code, options)
       if dead
         Deadfinder::Logger.found "[#{status_code}] #{url}"
       else
@@ -413,6 +514,23 @@ module Deadfinder
             (coverage_data[target].status_counts[status_code.to_s]? || 0) + 1
         end
       end
+    end
+
+    # Dead/alive policy, in strict precedence order:
+    #
+    #   1. `--accept-status` — an explicit allow-list always wins, so a code
+    #      listed there is alive even when it also appears in `--dead-status`.
+    #      This is the escape hatch for bot-defense answers that are not really
+    #      broken links: LinkedIn's 999, Cloudflare's 403 to a non-browser
+    #      User-Agent, a 429 from a rate limiter.
+    #   2. `--dead-status` / `--exclude-status` — anything listed is dead, even
+    #      a 2xx (e.g. a soft-404 page that answers 200).
+    #   3. the built-in default, unchanged: >= 400 is dead, and 3xx is dead only
+    #      when `--include30x` is set.
+    private def dead_status?(status_code : Int32, options : Options) : Bool
+      return false if StatusList.includes?(options.accept_status_ranges, status_code)
+      return true if StatusList.includes?(options.dead_status_ranges, status_code)
+      status_code >= 400 || (status_code >= 300 && options.include30x)
     end
 
     private def record_error(target : String, url : String, options : Options,
