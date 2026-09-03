@@ -43,8 +43,11 @@ steps:
       # user_agent: "MyBot/1.0"
       # proxy: "http://localhost:8080"
       # proxy_auth: "user:pass"
+      # insecure: false
       # match: "^https://example\\.com/"
       # ignore: "\\.png$"
+      # limit: 0
+      # output_format: json
       # coverage: true
       # visualize: report.png
       # silent: false
@@ -71,8 +74,11 @@ steps:
 | `user_agent` | | `""` | overrides default UA |
 | `proxy` | | `""` | HTTP/HTTPS proxy URL |
 | `proxy_auth` | | `""` | `user:pass` |
+| `insecure` | | `false` | skip TLS certificate verification |
 | `match` | | `""` | regex |
 | `ignore` | | `""` | regex |
+| `limit` | | `""` | cap the input URL count; empty or `0` means no limit |
+| `output_format` | | `json` | `json` / `yaml` / `toml` / `csv` / `sarif` |
 | `coverage` | | `false` | |
 | `visualize` | | `""` | file path (implies coverage) |
 
@@ -80,7 +86,7 @@ steps:
 
 | Output | Shape |
 |---|---|
-| `output` | Compact JSON string of the scan result (same shape as `-f json` output). |
+| `output` | The scan result, serialized with `output_format`. `json` (the default) is compacted onto one line; every other format is passed through verbatim, newlines included. |
 
 The JSON maps each scanned target to its list of dead links (with `coverage: true`, the map moves under a `dead_links` key and a `coverage` section is added). For example, fail the job when any dead link was found:
 
@@ -91,6 +97,6 @@ The JSON maps each scanned target to its list of dead links (with `coverage: tru
 
 ## Migrating from v1
 
-The v1 action was Docker-based and bundled the Ruby gem. v2 is a composite action that downloads the Crystal binary directly. All v1 inputs are preserved. `worker_headers` was previously undeclared but wired through args — it's now a formal input. `version` is new. No inputs were renamed or removed.
+The v1 action was Docker-based and bundled the Ruby gem. v2 is a composite action that downloads the Crystal binary directly. All v1 inputs are preserved. `worker_headers` was previously undeclared but wired through args — it's now a formal input. `version`, `insecure`, `limit` and `output_format` are new. No inputs were renamed or removed.
 
 Pin to `@1.10.0` to keep the v1 behavior; use `@v2` (or pin a specific 2.x tag like `@2.0.2`) for v2.

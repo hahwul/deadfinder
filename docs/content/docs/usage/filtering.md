@@ -4,7 +4,7 @@ description = "Regex match/ignore, 3xx inclusion, URL limit."
 weight = 3
 +++
 
-## `--match=PATTERN` / `--ignore=PATTERN`
+## `-m` / `--match=PATTERN` and `-i` / `--ignore=PATTERN`
 
 Regex applied to every discovered URL before it's fetched. To prevent ReDoS, patterns are capped at 1024 characters and nested-quantifier shapes (e.g. `(a+)+`) are rejected.
 
@@ -20,7 +20,7 @@ deadfinder url https://www.example.com \
 
 Using both: `--match` is applied first, then `--ignore`.
 
-## `--include30x`
+## `-r` / `--include30x`
 
 Link checks don't follow redirects — the 3xx status itself is the result, and by default it's treated as healthy. Enable this flag to report redirecting links as dead too:
 
@@ -40,7 +40,7 @@ deadfinder sitemap https://www.example.com/sitemap.xml --limit=50
 
 Applies to the input list (file lines, STDIN lines, or sitemap `<loc>` entries). Not to discovered child links on each page.
 
-## `--concurrency=N` / `--timeout=N`
+## `-c` / `--concurrency=N` and `-t` / `--timeout=N`
 
 Not filters per se, but the other knobs you'll reach for:
 

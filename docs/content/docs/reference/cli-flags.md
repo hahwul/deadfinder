@@ -43,6 +43,7 @@ Commands:
 | | `--limit=N` | `0` | Cap input URLs (`0` = unlimited). |
 | | `--coverage` | `false` | Emit per-target coverage stats. |
 | | `--visualize=PATH` | `""` | Write a PNG status-code chart (implies `--coverage`). |
+| `-h` | `--help` | | Print this option list and exit. |
 
 ## Notes
 
@@ -50,3 +51,4 @@ Commands:
 - `match` / `ignore` patterns are capped at 1024 characters, and patterns with nested quantifiers (e.g. `(a+)+`) are rejected up front to block ReDoS.
 - The initial page fetch receives `--headers`; worker link-check requests receive `--worker_headers`. `--user_agent` applies to both.
 - `--visualize` auto-enables `--coverage`.
+- `-k` / `--insecure` turns off certificate verification for **every** HTTPS request — the initial page fetch, every link check, and the CONNECT tunnel to an HTTPS proxy. Use it only against hosts whose certificate you already know is broken (an internal CA, an expired staging cert).
