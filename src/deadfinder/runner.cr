@@ -36,10 +36,20 @@ module Deadfinder
       # Follow redirects for the page itself: a target that moves (http -> https,
       # / -> /index.html, an apex -> www hop) would otherwise be parsed as an
       # empty redirect body and silently report zero links.
-      response, final_uri = HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+      response, final_uri = begin
+        HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+      rescue ex
+        # A target we cannot reach at all is itself a finding, not just a log
+        # line: without this a URL list whose entries all refuse connections
+        # reported an empty result. Re-raised so the rescue below still logs it.
+        Deadfinder.record_dead_target(target, ERROR_STATUS, options)
+        raise ex
+      end
 
       unless response.status.success?
         Deadfinder::Logger.error "Target page returned HTTP #{response.status_code} (links below, if any, come from that response): #{target}"
+        # Same reasoning as above for a target that answers but answers badly.
+        Deadfinder.record_dead_target(target, response.status_code, options)
       end
 
       page = Lexbor::Parser.new(response.body)

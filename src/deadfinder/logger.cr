@@ -5,12 +5,29 @@ module Deadfinder
     @@silent = false
     @@verbose = false
     @@debug = false
+    # Where log lines go. Normally STDOUT, but `-o -` streams the report itself
+    # on STDOUT, so the logs have to move aside or they interleave with (and
+    # corrupt) the JSON/YAML/… a consumer is piping into `jq`.
+    @@sink : IO = STDOUT
     @@mutex = Mutex.new
 
     def self.apply_options(options : Options)
       set_silent if options.silent
       set_verbose if options.verbose
       set_debug if options.debug
+      self.sink = STDERR if options.output == Deadfinder::STDOUT_FILENAME
+    end
+
+    def self.sink : IO
+      @@mutex.synchronize { @@sink }
+    end
+
+    def self.sink=(io : IO)
+      @@mutex.synchronize { @@sink = io }
+    end
+
+    def self.reset_sink
+      self.sink = STDOUT
     end
 
     def self.set_silent
@@ -100,10 +117,12 @@ module Deadfinder
     # Centralized writer. A closed/broken output stream (e.g. STDOUT piped to a
     # process that exited, like `... | head`) raises IO::Error; swallow it so
     # logging can never crash a scan or leave the worker accounting unbalanced.
+    # `@@sink` is read directly rather than through `sink` because the mutex is
+    # already held here and Crystal's Mutex is not reentrant.
     private def self.print_line(line : String)
       @@mutex.synchronize do
         begin
-          STDOUT.print line
+          @@sink.print line
         rescue IO::Error
         end
       end

@@ -7,6 +7,9 @@ def reset_deadfinder_state
   Deadfinder.output.clear
   Deadfinder.coverage_data.clear
   Deadfinder.status_cache.clear
+  Deadfinder.dead_targets.clear
+  Deadfinder.reset_report_sink
+  Deadfinder::Logger.reset_sink
   Deadfinder::Logger.unset_silent
   Deadfinder::Logger.unset_verbose
   Deadfinder::Logger.unset_debug
