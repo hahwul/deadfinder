@@ -25,6 +25,12 @@ module Deadfinder
         parser.on("-r", "--include30x", "Include 30x redirections") { options.include30x = true }
         parser.on("-c CONCURRENCY", "--concurrency=CONCURRENCY", "Number of concurrency (default: 50)") { |v| options.concurrency = v.to_i }
         parser.on("-t TIMEOUT", "--timeout=TIMEOUT", "Timeout in seconds (default: 10)") { |v| options.timeout = v.to_i }
+        parser.on("--method=METHOD", "Link check method: auto, head, get (default: auto). auto sends HEAD first and re-checks with GET on any 4xx/5xx (405/501 included) or a failed HEAD, so no link is reported dead on a HEAD alone") { |v| options.http_method = v.strip.downcase }
+        parser.on("--retry=N", "Retry a transient failure N times: connection error, timeout, 429 or 5xx. A 404 is never retried (default: 2)") { |v| options.retries = v.to_i }
+        parser.on("--delay=MS", "Minimum milliseconds between two requests to the same host; other hosts are unaffected (default: 0)") { |v| options.delay = v.to_i }
+        parser.on("--accept-status=LIST", "Treat these statuses as alive, e.g. '200,204,403,999' or '400-499'. Wins over --dead-status and over the built-in >= 400 rule") { |v| options.accept_status = v }
+        parser.on("--dead-status=LIST", "Treat these statuses as dead, e.g. '500-599'. Applied after --accept-status and before the built-in rule") { |v| options.dead_status = v }
+        parser.on("--exclude-status=LIST", "Alias of --dead-status") { |v| options.dead_status = v }
         parser.on("-o OUTPUT", "--output=OUTPUT", "File to write result") { |v| options.output = v }
         parser.on("-f FORMAT", "--output_format=FORMAT", "Output format: json, yaml, toml, csv, sarif (default: json)") { |v| options.output_format = v }
         parser.on("-H HEADER", "--headers=HEADER", "Custom HTTP headers for initial request") { |v| options.headers << v }
@@ -90,6 +96,18 @@ module Deadfinder
         end
         if options.limit < 0
           STDERR.puts "Error: limit must be >= 0 (got #{options.limit})"
+          exit 1
+        end
+        if options.retries < 0
+          STDERR.puts "Error: retry must be >= 0 (got #{options.retries})"
+          exit 1
+        end
+        if options.delay < 0
+          STDERR.puts "Error: delay must be >= 0 (got #{options.delay})"
+          exit 1
+        end
+        unless HttpClient::METHODS.includes?(options.http_method)
+          STDERR.puts "Error: unsupported method: #{options.http_method} (allowed: #{HttpClient::METHODS.join(", ")})"
           exit 1
         end
         allowed_formats = ["json", "yaml", "yml", "csv", "toml", "sarif"]

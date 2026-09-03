@@ -34,9 +34,15 @@ loop do
   client = server.accept
   begin
     request_line = client.gets
+    method = request_line&.split(' ')&.dig(0) || 'GET'
     raw_path = request_line&.split(' ')&.dig(1) || '/'
     path = raw_path.split('?').first
     while (line = client.gets) && line.strip != ''; end
+
+    # A HEAD response carries the headers a GET would return but no body
+    # (RFC 9110 9.3.2). Sending one anyway would desynchronize any client that
+    # keeps the connection alive, which is exactly what deadfinder now does.
+    body_allowed = method != 'HEAD'
 
     route = ROUTES[path]
     if route
@@ -46,7 +52,8 @@ loop do
       }.merge(route[:extra] || {})
       client.print "HTTP/1.1 #{route[:status]} #{STATUS_TEXT[route[:status]] || 'OK'}\r\n"
       headers.each { |k, v| client.print "#{k}: #{v}\r\n" }
-      client.print "\r\n#{route[:body]}"
+      client.print "\r\n"
+      client.print route[:body] if body_allowed
     else
       client.print "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"
     end
