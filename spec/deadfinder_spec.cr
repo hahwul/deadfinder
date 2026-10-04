@@ -429,7 +429,7 @@ describe Deadfinder do
     end
 
     it "rejects targets that cannot be fetched over http(s)" do
-      Deadfinder::Logger.set_silent
+      Deadfinder::Logger.silent = true
       io = IO::Memory.new("example.com\nfile:///etc/hosts\nftp://x.test/a\n://broken\n")
       Deadfinder.read_targets(io, 0).should be_empty
     end

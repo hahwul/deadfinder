@@ -24,9 +24,9 @@ module Deadfinder
     @@buffers = {} of Fiber => IO::Memory
 
     def self.apply_options(options : Options)
-      set_silent if options.silent
-      set_verbose if options.verbose
-      set_debug if options.debug
+      self.silent = true if options.silent
+      self.verbose = true if options.verbose
+      self.debug = true if options.debug
       self.sink = STDERR if options.output == Deadfinder::STDOUT_FILENAME
     end
 
@@ -42,36 +42,24 @@ module Deadfinder
       self.sink = STDOUT
     end
 
-    def self.set_silent
-      @@mutex.synchronize { @@silent = true }
-    end
-
-    def self.unset_silent
-      @@mutex.synchronize { @@silent = false }
+    def self.silent=(value : Bool)
+      @@mutex.synchronize { @@silent = value }
     end
 
     def self.silent?
       @@mutex.synchronize { @@silent }
     end
 
-    def self.set_verbose
-      @@mutex.synchronize { @@verbose = true }
-    end
-
-    def self.unset_verbose
-      @@mutex.synchronize { @@verbose = false }
+    def self.verbose=(value : Bool)
+      @@mutex.synchronize { @@verbose = value }
     end
 
     def self.verbose?
       @@mutex.synchronize { @@verbose }
     end
 
-    def self.set_debug
-      @@mutex.synchronize { @@debug = true }
-    end
-
-    def self.unset_debug
-      @@mutex.synchronize { @@debug = false }
+    def self.debug=(value : Bool)
+      @@mutex.synchronize { @@debug = value }
     end
 
     def self.debug?

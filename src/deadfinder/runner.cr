@@ -111,10 +111,6 @@ module Deadfinder
     # server attached, which the retry loop honors on a 429/503.
     record CheckOutcome, status : Int32, retry_after : Time::Span?
 
-    private def build_headers(raw : Array(String), user_agent : String) : HTTP::Headers
-      HttpClient.build_headers(raw, user_agent)
-    end
-
     def run(target : String, options : Options,
             output : Hash(String, Array(String)),
             coverage_data : Hash(String, TargetCoverage),
@@ -122,7 +118,7 @@ module Deadfinder
             mutex : Mutex)
       Deadfinder::Logger.apply_options(options)
 
-      headers = build_headers(options.headers, options.user_agent)
+      headers = HttpClient.build_headers(options.headers, options.user_agent)
 
       uri = URI.parse(target)
       # Follow redirects for the page itself: a target that moves (http -> https,
@@ -449,7 +445,7 @@ module Deadfinder
     # default confirms an unhappy HEAD with a GET before reporting anything.
     private def check_url(url : String, options : Options, force_get : Bool = false) : CheckOutcome
       uri = URI.parse(url)
-      headers = build_headers(options.worker_headers, options.user_agent)
+      headers = HttpClient.build_headers(options.worker_headers, options.user_agent)
       response = HttpClient.check(uri, options, headers, force_get)
       # `Retry-After` is only meaningful on the statuses that define it; reading
       # it elsewhere would let an unrelated header stretch the backoff.
@@ -733,7 +729,7 @@ module Deadfinder
     # PDF or a plain-text file is not ours to judge).
     private def anchor_ids(url : String, options : Options) : Set(String)?
       uri = URI.parse(url)
-      headers = build_headers(options.worker_headers, options.user_agent)
+      headers = HttpClient.build_headers(options.worker_headers, options.user_agent)
       # Counts against the global in-flight budget like any other request;
       # without this `--check-anchors` would quietly exceed `-c`.
       response, _ = Runner.permits(options.concurrency).acquire do
