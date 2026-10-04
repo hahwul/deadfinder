@@ -2,9 +2,9 @@ require "../spec_helper"
 
 describe Deadfinder::Logger do
   before_each do
-    Deadfinder::Logger.unset_silent
-    Deadfinder::Logger.unset_verbose
-    Deadfinder::Logger.unset_debug
+    Deadfinder::Logger.silent = false
+    Deadfinder::Logger.verbose = false
+    Deadfinder::Logger.debug = false
   end
 
   describe ".apply_options" do
@@ -53,11 +53,11 @@ describe Deadfinder::Logger do
     end
   end
 
-  describe ".set_silent / .unset_silent" do
+  describe ".silent=" do
     it "sets and unsets silent mode" do
-      Deadfinder::Logger.set_silent
+      Deadfinder::Logger.silent = true
       Deadfinder::Logger.silent?.should be_true
-      Deadfinder::Logger.unset_silent
+      Deadfinder::Logger.silent = false
       Deadfinder::Logger.silent?.should be_false
     end
   end
@@ -68,11 +68,11 @@ describe Deadfinder::Logger do
     end
   end
 
-  describe ".set_verbose / .unset_verbose" do
+  describe ".verbose=" do
     it "sets and unsets verbose mode" do
-      Deadfinder::Logger.set_verbose
+      Deadfinder::Logger.verbose = true
       Deadfinder::Logger.verbose?.should be_true
-      Deadfinder::Logger.unset_verbose
+      Deadfinder::Logger.verbose = false
       Deadfinder::Logger.verbose?.should be_false
     end
   end
@@ -83,11 +83,11 @@ describe Deadfinder::Logger do
     end
   end
 
-  describe ".set_debug / .unset_debug" do
+  describe ".debug=" do
     it "sets and unsets debug mode" do
-      Deadfinder::Logger.set_debug
+      Deadfinder::Logger.debug = true
       Deadfinder::Logger.debug?.should be_true
-      Deadfinder::Logger.unset_debug
+      Deadfinder::Logger.debug = false
       Deadfinder::Logger.debug?.should be_false
     end
   end
@@ -169,7 +169,7 @@ describe Deadfinder::Logger do
     end
 
     it "buffers and then flushes without leaving the sink bound" do
-      Deadfinder::Logger.set_silent
+      Deadfinder::Logger.silent = true
       Deadfinder::Logger.buffered do
         Deadfinder::Logger.current_buffer.should_not be_nil
         Deadfinder::Logger.target "Fetching http://flushed.test"
@@ -180,7 +180,7 @@ describe Deadfinder::Logger do
 
   describe "output suppression in silent mode" do
     it "does not output when silent" do
-      Deadfinder::Logger.set_silent
+      Deadfinder::Logger.silent = true
       # These should not raise and should produce no visible output
       Deadfinder::Logger.info("test")
       Deadfinder::Logger.error("test")

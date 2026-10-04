@@ -12,9 +12,9 @@ def reset_deadfinder_state
   # Pooled connections and per-host throttle slots outlive a single run, so an
   # example must not inherit them from the previous one.
   Deadfinder::HttpClient.close_idle_connections
-  Deadfinder::Logger.unset_silent
-  Deadfinder::Logger.unset_verbose
-  Deadfinder::Logger.unset_debug
+  Deadfinder::Logger.silent = false
+  Deadfinder::Logger.verbose = false
+  Deadfinder::Logger.debug = false
 end
 
 def default_test_options : Deadfinder::Options
