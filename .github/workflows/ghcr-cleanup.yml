@@ -1,0 +1,25 @@
+name: GHCR Cleanup
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only log what would be deleted
+        type: boolean
+        default: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      # Deletes untagged images but keeps the platform manifests that tagged
+      # multi-arch lists still reference. A plain "delete untagged versions"
+      # prune removes those children and breaks every tag (#277).
+      - uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          package: deadfinder
+          dry-run: ${{ inputs.dry_run || false }}
+          validate: true

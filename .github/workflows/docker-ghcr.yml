@@ -137,23 +137,3 @@ jobs:
 
       - name: Inspect image
         run: docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-
-  cleanup:
-    runs-on: ubuntu-latest
-    needs: [build, merge]
-    if: always() && needs.build.result == 'success'
-    permissions:
-      packages: write
-    steps:
-      # The build matrix pushes per-platform digests with push-by-digest=true,
-      # which leaves untagged manifests in GHCR after the merge job assembles
-      # the multi-arch manifest list. Prune them so only tagged versions
-      # (main, latest, semver) remain — run even if merge fails so orphaned
-      # per-platform digests don't accumulate in the package listing.
-      - name: Delete untagged GHCR versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: deadfinder
-          package-type: container
-          delete-only-untagged-versions: 'true'
-          min-versions-to-keep: 0
