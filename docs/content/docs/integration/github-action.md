@@ -13,7 +13,7 @@ Always pin a released ref. `@latest` is **not** a valid Actions ref (GitHub has 
 ```yaml
 - uses: hahwul/deadfinder@v2       # tracks latest 2.x — gets bug-fix patches automatically
 # or
-- uses: hahwul/deadfinder@2.0.2    # exact pin — fully reproducible
+- uses: hahwul/deadfinder@2.1.0    # exact pin — fully reproducible
 ```
 
 The `version` input can override the binary independently of the action ref:
@@ -21,7 +21,7 @@ The `version` input can override the binary independently of the action ref:
 ```yaml
 - uses: hahwul/deadfinder@v2
   with:
-    version: "2.0.2"   # download binary from this release tag
+    version: "2.1.0"   # download binary from this release tag
 ```
 
 ## Full example
@@ -99,4 +99,4 @@ The JSON maps each scanned target to its list of dead links (with `coverage: tru
 
 The v1 action was Docker-based and bundled the Ruby gem. v2 is a composite action that downloads the Crystal binary directly. All v1 inputs are preserved. `worker_headers` was previously undeclared but wired through args — it's now a formal input. `version`, `insecure`, `limit` and `output_format` are new. No inputs were renamed or removed.
 
-Pin to `@1.10.0` to keep the v1 behavior; use `@v2` (or pin a specific 2.x tag like `@2.0.2`) for v2.
+Pin to `@1.10.0` to keep the v1 behavior; use `@v2` (or pin a specific 2.x tag like `@2.1.0`) for v2.

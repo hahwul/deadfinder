@@ -76,7 +76,7 @@ Pin a specific release tag. `@latest` is **not** a valid Actions ref.
 ```yml
 steps:
 - name: Run DeadFinder
-  uses: hahwul/deadfinder@v2       # tracks the latest 2.x — pin a specific tag (e.g. @2.0.2) for stricter reproducibility
+  uses: hahwul/deadfinder@v2       # tracks the latest 2.x — pin a specific tag (e.g. @2.1.0) for stricter reproducibility
   id: broken-link
   with:
     command: sitemap           # url / file / sitemap / pipe
