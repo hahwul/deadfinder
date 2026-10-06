@@ -4,6 +4,8 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [2.1.0]
+
 ### Added
 - `-F` / `--fail-on-dead` exits `2` when a scan finds a dead link or a dead target, so a CI job can finally gate on a broken link. Opt-in: a scan has always exited `0` and `spec/compat/run.rb` locks that, so the default is unchanged. `1` stays reserved for usage and I/O errors. The GitHub Action gained a matching `fail_on_dead` input; it holds the scan's status until the report has been published as a step output, then re-raises it.
 - `-o -` streams the report to STDOUT instead of creating a file literally named `-`, and moves the live log to STDERR in that mode so `deadfinder url X -f json -o - | jq` works without `--silent`.
@@ -22,14 +24,13 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 - Sitemap fetching transparently inflates gzip-compressed documents, so a `sitemap.xml.gz` served as `application/gzip` (no `Content-Encoding`) is parsed instead of failing with an XML error.
 - `-H`/`--headers` now applies to the sitemap request too, so a sitemap behind auth or a custom edge header can be fetched.
 
-### Fixed
-- macOS release tarballs are re-signed ad hoc after `install_name_tool` rewrites their dylib load paths. The bundled OpenSSL dylibs were left with a stale signature, and Apple Silicon SIGKILLs any process that maps one, so the tarball died at launch with a bare `killed` and no diagnostic. Packaging now verifies every signature and runs the extracted tarball before publishing it. The published 2.0.2 tarball happened to bundle no dylibs and so was unaffected (#271).
-
 ### Changed
 - Scanning a page (`url`/`file`/`pipe` targets and sitemap documents) follows up to 5 redirect hops. Relative links resolve against the page's **final** location, while the report stays keyed by the target you asked for. Link status checks are unchanged — they still report the `30x` verbatim, which is what `--include30x` acts on. Credentials (`Authorization`, `Cookie`, `Proxy-Authorization`) are dropped when a redirect crosses origins.
 - Multi-target scans (`pipe`/`file`/`sitemap`) now attribute a shared broken link to **every** page that references it, not just the first page scanned, and per-target coverage counts each page's own links. Internally the global "already-seen" URL set became a URL→status cache, so each link is still fetched at most once. Previously a 404 referenced by pages A and B was reported only under A and skewed B's coverage.
 
 ### Fixed
+- Multi-arch Docker images on GHCR pull again. A per-publish cleanup deleted every untagged package version, including the per-platform manifests that the `main`, `latest` and version tags point at, so `docker pull` failed with `manifests/sha256:… not found`. The cleanup now runs monthly and keeps manifests a tagged image still references (#277).
+- macOS release tarballs are re-signed ad hoc after `install_name_tool` rewrites their dylib load paths. The bundled OpenSSL dylibs were left with a stale signature, and Apple Silicon SIGKILLs any process that maps one, so the tarball died at launch with a bare `killed` and no diagnostic. Packaging now verifies every signature and runs the extracted tarball before publishing it. The published 2.0.2 tarball happened to bundle no dylibs and so was unaffected (#271).
 - macOS release tarballs now bundle Homebrew-linked runtime libraries (OpenSSL, libyaml, pcre2, bdw-gc) next to the binary so direct-download installs work without a local Homebrew dependency tree.
 - `url`/`sitemap` no longer silently report nothing when the target redirects. Previously the `30x` body was parsed as the page (zero links discovered, no message) and a redirected sitemap failed outright with `HTTP 301`.
 - Relative links are resolved against `<base href>` when the document declares one, matching browser behaviour, instead of always resolving against the page URL.
@@ -98,7 +99,8 @@ If you need a bugfix in v1, open an issue/PR against the [`legacy/v1`](https://g
 
 History prior to 2.0.0 was not maintained in this file. See [GitHub Releases](https://github.com/hahwul/deadfinder/releases?q=prerelease%3Afalse) and the [`legacy/v1`](https://github.com/hahwul/deadfinder/tree/legacy/v1) branch for v1 release history.
 
-[Unreleased]: https://github.com/hahwul/deadfinder/compare/2.0.2...HEAD
+[Unreleased]: https://github.com/hahwul/deadfinder/compare/2.1.0...HEAD
+[2.1.0]: https://github.com/hahwul/deadfinder/releases/tag/2.1.0
 [2.0.2]: https://github.com/hahwul/deadfinder/releases/tag/2.0.2
 [2.0.1]: https://github.com/hahwul/deadfinder/releases/tag/2.0.1
 [2.0.0]: https://github.com/hahwul/deadfinder/releases/tag/2.0.0
