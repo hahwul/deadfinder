@@ -127,7 +127,7 @@ EXTRACT_DIR="$VERIFY_DIR/extracted"
 mkdir -p "$EXTRACT_DIR"
 tar -xzf "$STAGED_OUTPUT" -C "$EXTRACT_DIR"
 smoke_status=0
-VERSION_OUTPUT="$("$EXTRACT_DIR/$NAME" --version)" || smoke_status=$?
+VERSION_OUTPUT="$("$EXTRACT_DIR/$NAME" version)" || smoke_status=$?
 if [[ "$smoke_status" -ne 0 ]]; then
   echo "error: packaged binary failed to run (exit $smoke_status)" >&2
   echo "       arm64 SIGKILLs binaries and dylibs with an invalid signature;" >&2
