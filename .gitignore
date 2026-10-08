@@ -4,6 +4,7 @@
 
 # Built binary
 /deadfinder
+/deadfinder.exe
 
 # Release artifacts
 /deadfinder-*.tar.gz

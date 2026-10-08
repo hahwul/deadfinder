@@ -32,13 +32,19 @@ brew install deadfinder
 # https://formulae.brew.sh/formula/deadfinder
 ```
 
+### Chocolatey (Windows)
+Starting with the release after 2.1.0:
+```powershell
+choco install deadfinder
+```
+
 ### Docker
 ```bash
 docker run ghcr.io/hahwul/deadfinder:latest deadfinder url https://example.com
 ```
 
 ### Prebuilt binary
-Download the archive for your platform from the [latest release](https://github.com/hahwul/deadfinder/releases/latest), extract, and place `deadfinder` on your `PATH`.
+Download the archive for your platform from the [latest release](https://github.com/hahwul/deadfinder/releases/latest), extract, and place `deadfinder` (`deadfinder.exe` on Windows) on your `PATH`.
 
 ### Nix
 ```bash

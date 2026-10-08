@@ -107,3 +107,56 @@ jobs:
           path: |
             deadfinder-macos-${{ matrix.arch }}.tar.gz
             deadfinder-macos-${{ matrix.arch }}.tar.gz.sha256
+
+  build-windows:
+    runs-on: windows-latest
+    # A Windows build failure must not fail the workflow: the AUR, deb, rpm,
+    # apk and Chocolatey publishers only run after it succeeds. Chocolatey
+    # then stops on the missing .sha256 instead.
+    continue-on-error: true
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: 1.21.0
+
+      # lexbor's postinstall builds its C library with cmake + NMake.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # lexbor links as a static lib and --static links the static CRT, so the
+      # .exe needs no DLL and no Visual C++ redistributable.
+      - name: Build release binary
+        run: |
+          shards install --production
+          crystal build src/cli_main.cr -o deadfinder.exe --release --static --no-debug
+
+      - name: Package
+        run: |
+          ./deadfinder.exe version
+          7z a deadfinder-windows-x86_64.zip deadfinder.exe
+          sha256sum deadfinder-windows-x86_64.zip > deadfinder-windows-x86_64.zip.sha256
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            deadfinder-windows-x86_64.zip
+            deadfinder-windows-x86_64.zip.sha256
+
+      - name: Upload as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: deadfinder-windows-x86_64
+          path: |
+            deadfinder-windows-x86_64.zip
+            deadfinder-windows-x86_64.zip.sha256
+
+      - if: failure()
+        name: Report the missing Windows binary
+        run: echo "::warning::The Windows .zip was not built or uploaded; this release may ship without it."

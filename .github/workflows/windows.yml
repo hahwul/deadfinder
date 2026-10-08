@@ -1,0 +1,47 @@
+---
+name: Windows
+# Native Windows build and smoke test, built the way crystal-release.yml
+# ships the .exe. Its own workflow so a red Windows run doesn't gate merges.
+on:
+  pull_request:
+    paths: &paths
+      - .github/workflows/windows.yml
+      - shard.yml
+      - shard.lock
+      - "**/*.cr"
+  push:
+    branches: [main]
+    paths: *paths
+  workflow_dispatch:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: 1.21.0
+      # lexbor's postinstall builds its C library with cmake + NMake.
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Build
+        run: |
+          shards install --production
+          crystal build src/cli_main.cr -o deadfinder.exe --release --static --no-debug
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          # Static: only system DLLs, no lexbor.dll or VC++ runtime.
+          dumpbin -nologo -dependents deadfinder.exe
+          ./deadfinder.exe version
+          ./deadfinder.exe url https://example.com

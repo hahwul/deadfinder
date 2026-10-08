@@ -1,6 +1,6 @@
 +++
 title = "Installation"
-description = "Install DeadFinder via Homebrew, Docker, prebuilt binary, Nix, or from source."
+description = "Install DeadFinder via Homebrew, Chocolatey, Docker, prebuilt binary, Nix, or from source."
 weight = 1
 +++
 
@@ -12,6 +12,14 @@ Pick the channel that fits your environment. All paths produce the same CLI.
 brew install deadfinder
 ```
 
+## Chocolatey (Windows)
+
+```powershell
+choco install deadfinder
+```
+
+The Chocolatey package starts with the first release after 2.1.0, when DeadFinder's Windows x86_64 build ships. Upgrade with `choco upgrade deadfinder -y`.
+
 ## Docker
 
 Image: [`ghcr.io/hahwul/deadfinder`](https://github.com/hahwul/deadfinder/pkgs/container/deadfinder). Multi-arch (linux/amd64, linux/arm64).
@@ -22,13 +30,14 @@ docker run ghcr.io/hahwul/deadfinder:latest deadfinder url https://example.com
 
 ## Prebuilt binary
 
-Download the tarball for your platform from [Releases](https://github.com/hahwul/deadfinder/releases/latest) (a `.sha256` sidecar ships alongside each tarball):
+Download the archive for your platform from [Releases](https://github.com/hahwul/deadfinder/releases/latest) (a `.sha256` sidecar ships alongside each archive):
 
 | OS | Arch | Asset |
 |---|---|---|
 | Linux | x86_64 | `deadfinder-linux-x86_64.tar.gz` |
 | Linux | aarch64 | `deadfinder-linux-aarch64.tar.gz` |
 | macOS | arm64 | `deadfinder-macos-arm64.tar.gz` |
+| Windows | x86_64 | `deadfinder-windows-x86_64.zip` (after 2.1.0) |
 
 > Intel macOS (`x86_64`) doesn't have a prebuilt binary — use `brew install deadfinder` (builds from source) or run the Apple Silicon binary under Rosetta.
 

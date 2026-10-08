@@ -1,0 +1,9 @@
+$ErrorActionPreference = 'Stop'
+$toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
+# The release zip holds deadfinder.exe at its root; Chocolatey shims every
+# .exe under tools\.
+Install-ChocolateyZipPackage -PackageName 'deadfinder' `
+  -UnzipLocation $toolsDir `
+  -Url64bit 'https://github.com/hahwul/deadfinder/releases/download/__VERSION__/deadfinder-windows-x86_64.zip' `
+  -Checksum64 '__SHA256__' -ChecksumType64 'sha256'
