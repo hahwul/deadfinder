@@ -41,5 +41,7 @@ jobs:
       - name: Smoke test
         run: |
           set -euo pipefail
+          # Static: only system DLLs, no lexbor.dll or VC++ runtime.
+          dumpbin -nologo -dependents deadfinder.exe
           ./deadfinder.exe version
           ./deadfinder.exe url https://example.com

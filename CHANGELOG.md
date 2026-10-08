@@ -4,6 +4,10 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- Windows x86_64 builds: releases ship `deadfinder-windows-x86_64.zip` (a static `deadfinder.exe`, no Visual C++ redistributable needed), and a `windows.yml` CI job builds and smoke-tests it.
+- Chocolatey package: `choco install deadfinder`, published after each release by `publish-chocolatey.yml`.
+
 ## [2.1.0]
 
 ### Added
