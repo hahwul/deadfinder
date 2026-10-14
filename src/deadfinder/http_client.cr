@@ -454,16 +454,20 @@ module Deadfinder
     # Request-line target for `uri`: an absolute URI when talking plain HTTP to
     # a forward proxy, an origin-form path otherwise.
     def self.request_path(uri : URI, options : Options) : String
-      if proxy_configured?(options) && uri.scheme == "http"
-        absolute_uri(uri)
-      else
-        path = uri.path.presence || "/"
-        if q = uri.query.presence
-          "#{path}?#{q}"
-        else
-          path
-        end
-      end
+      target = if proxy_configured?(options) && uri.scheme == "http"
+                 absolute_uri(uri)
+               else
+                 path = uri.path.presence || "/"
+                 if q = uri.query.presence
+                   "#{path}?#{q}"
+                 else
+                   path
+                 end
+               end
+      # Crystal 1.22+ rejects a request target holding raw non-ASCII or control
+      # bytes (a link to `/한글.html` was never checked), so percent-encode them
+      # the way a browser does. `%XX` escapes and reserved characters stay as-is.
+      String.build { |io| URI.encode(target, io) { |byte| 0x21 <= byte < 0x7F } }
     end
 
     # Runs a single link status check against `uri`, honoring `--method`.
