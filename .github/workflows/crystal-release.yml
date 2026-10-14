@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 env:
-  CRYSTAL_BUILD_IMAGE: crystallang/crystal:1.19.1-alpine
+  CRYSTAL_BUILD_IMAGE: crystallang/crystal:1.22.0-alpine
 
 jobs:
   build-linux:
@@ -122,7 +122,7 @@ jobs:
 
       - uses: crystal-lang/install-crystal@v1
         with:
-          crystal: 1.21.0
+          crystal: 1.22.0
 
       # lexbor's postinstall builds its C library with cmake + NMake.
       - uses: ilammy/msvc-dev-cmd@v1
