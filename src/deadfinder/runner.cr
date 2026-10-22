@@ -26,21 +26,30 @@ module Deadfinder
     end
   end
 
-  # Runs `block` over `items` on at most `limit` fibers and returns once every
-  # item has been handled. The block must rescue its own failures: a fiber that
-  # dies stops draining the queue, and the final wait would never finish.
+  # Runs `block` over `items` (an Array or Hash; never nil items) on at most
+  # `limit` fibers and returns once every item has been handled. The block
+  # should rescue its own failures: a worker that raises stops taking items,
+  # though the `ensure` still lets the run finish instead of hanging.
+  #
+  # Workers log on the caller's behalf, so they inherit its log buffer (nil
+  # unless several targets are being scanned at once) and their lines land
+  # inside the caller's block instead of racing straight to the sink.
   def self.each_concurrently(items : Enumerable(T), limit : Int32, &block : T ->) : Nil forall T
     workers = Math.min(Math.max(limit, 1), items.size)
     return if workers < 1
 
     jobs = Channel(T).new(workers)
     done = Channel(Nil).new(workers)
+    buffer = Deadfinder::Logger.current_buffer
 
     workers.times do
       spawn do
-        while item = jobs.receive?
-          block.call(item)
+        Deadfinder::Logger.with_buffer(buffer) do
+          until (item = jobs.receive?).nil?
+            block.call(item)
+          end
         end
+      ensure
         done.send(nil)
       end
     end
@@ -83,6 +92,8 @@ module Deadfinder
       "image-srcset"  => {"img", "srcset"},
       "source-srcset" => {"source", "srcset"},
     }
+
+    ALL_SELECTORS = LINK_SELECTORS.merge(SRCSET_SELECTORS)
 
     # Fragments that address the top of the document rather than an element.
     # `#` (empty) and `#top` are valid by definition (HTML spec, "scroll to the
@@ -233,19 +244,12 @@ module Deadfinder
         (grouped[request_url(url)] ||= [] of String) << url
       end
 
-      # Workers log on this target's behalf, so they inherit its output sink
-      # (nil unless several targets are being scanned at once) and their lines
-      # land inside the target's block instead of racing straight to STDOUT.
-      #
       # At most one worker per request: with several targets in flight the
       # fiber count is multiplied by the number of targets, and a page with
       # three links has no use for fifty idle fibers. (Fewer workers than `-c`
       # costs nothing: the global permit pool bounds concurrency.)
-      buffer = Deadfinder::Logger.current_buffer
       Deadfinder.each_concurrently(grouped, options.concurrency) do |(request, linked_urls)|
-        Deadfinder::Logger.with_buffer(buffer) do
-          check_request(request, linked_urls, target, options, output, coverage_data, status_cache, mutex)
-        end
+        check_request(request, linked_urls, target, options, output, coverage_data, status_cache, mutex)
       end
 
       # Fragment targets are verified in a second, opt-in pass so the default
@@ -524,7 +528,7 @@ module Deadfinder
 
     private def extract_links(page : Lexbor::Parser) : Hash(String, Array(String))
       links = {} of String => Array(String)
-      LINK_SELECTORS.merge(SRCSET_SELECTORS).each do |type, (tag, attr)|
+      ALL_SELECTORS.each do |type, (tag, attr)|
         urls = [] of String
         page.css(tag).each do |element|
           next unless val = element.attribute_by(attr)
@@ -624,14 +628,8 @@ module Deadfinder
         end
       end
 
-      # Same as the link-check pass: these fibers log on the target's behalf, so
-      # they inherit its output buffer and their findings land inside the
-      # target's block instead of racing other targets straight to the sink.
-      buffer = Deadfinder::Logger.current_buffer
       Deadfinder.each_concurrently(pending, options.concurrency) do |(request, entries)|
-        Deadfinder::Logger.with_buffer(buffer) do
-          verify_document_anchors(request, entries, target, options, output, coverage_data, mutex)
-        end
+        verify_document_anchors(request, entries, target, options, output, coverage_data, mutex)
       end
     end
 
@@ -679,7 +677,7 @@ module Deadfinder
       ids = Set(String).new
       # Pre-HTML5 documents still address sections via `<a name="install">`,
       # which browsers honor as a fragment target to this day.
-      {"[id]" => "id", "a[name]" => "name"}.each do |selector, attr|
+      { {"[id]", "id"}, {"a[name]", "name"} }.each do |(selector, attr)|
         page.css(selector).each do |element|
           value = element.attribute_by(attr)
           ids << value if value && !value.empty?

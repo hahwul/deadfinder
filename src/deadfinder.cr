@@ -388,17 +388,15 @@ module Deadfinder
   private def self.run_targets(targets : Array(String), options : Options, app : Runner) : Nil
     @@mutex.synchronize { @@target_order.concat(targets) }
 
-    concurrency = Math.min(Math.max(options.target_concurrency, 1), targets.size)
-
     # One target in flight: run it inline and leave the log stream alone, so
     # output is byte-for-byte what it has always been and still streams line by
     # line instead of arriving in one burst at the end.
-    if concurrency <= 1
+    if options.target_concurrency <= 1 || targets.size <= 1
       targets.each { |target| run_with_target(target, options, app) }
       return
     end
 
-    each_concurrently(targets, concurrency) do |target|
+    each_concurrently(targets, options.target_concurrency) do |target|
       begin
         # Buffer this target's lines and flush them as one block, so
         # concurrent targets don't shred each other's output.

@@ -440,6 +440,39 @@ describe Deadfinder::Runner do
     end
   end
 
+  describe ".each_concurrently" do
+    it "handles every item, including falsy ones, with more workers than items" do
+      got = [] of Bool
+      Deadfinder.each_concurrently([true, false, true, false], 10) { |b| got << b }
+      got.sort_by(&.hash).should eq [true, false, true, false].sort_by(&.hash)
+    end
+
+    it "returns at once for an empty list" do
+      called = false
+      Deadfinder.each_concurrently([] of String, 4) { called = true }
+      called.should be_false
+    end
+
+    it "walks a Hash as key/value pairs" do
+      seen = [] of String
+      Deadfinder.each_concurrently({"a" => 1, "b" => 2}, 2) { |(k, v)| seen << "#{k}#{v}" }
+      seen.sort.should eq ["a1", "b2"]
+    end
+
+    it "still returns when the block raises" do
+      done = Channel(Nil).new
+      spawn do
+        Deadfinder.each_concurrently([1, 2, 3], 3) { |i| raise "boom" if i == 2 }
+        done.send(nil)
+      end
+      select
+      when done.receive
+      when timeout(2.seconds)
+        fail "each_concurrently hung after a raising block"
+      end
+    end
+  end
+
   describe "#check_request" do
     it "detects 404 as broken link" do
       target = "http://example.com"
