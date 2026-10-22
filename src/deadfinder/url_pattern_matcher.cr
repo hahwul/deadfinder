@@ -32,6 +32,15 @@ module Deadfinder
       end
     end
 
+    # Raises ArgumentError when `pattern` does not compile or fails the static
+    # ReDoS check. The CLI calls this before scanning: once the scan starts a
+    # bad pattern only logs an error per target and the filter is skipped, so
+    # `--match` would silently widen the scan to every link instead of
+    # narrowing it.
+    def self.validate!(pattern : String) : Nil
+      compile(pattern)
+    end
+
     # Exposed for tests / diagnostics.
     def self.clear_cache : Nil
       @@regex_cache_mutex.synchronize { @@regex_cache.clear }

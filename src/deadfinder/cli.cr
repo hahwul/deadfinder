@@ -120,6 +120,15 @@ module Deadfinder
           STDERR.puts "Error: unsupported method: #{options.http_method} (allowed: #{HttpClient::METHODS.join(", ")})"
           exit 1
         end
+        {"match" => options.match, "ignore" => options.ignore}.each do |name, pattern|
+          next if pattern.empty?
+          begin
+            UrlPatternMatcher.validate!(pattern)
+          rescue ex : ArgumentError
+            STDERR.puts "Error: invalid #{name} pattern: #{ex.message}"
+            exit 1
+          end
+        end
         allowed_formats = ["json", "yaml", "yml", "csv", "toml", "sarif"]
         unless allowed_formats.includes?(options.output_format.downcase)
           STDERR.puts "Error: unsupported output format: #{options.output_format} (allowed: #{allowed_formats.join(", ")})"

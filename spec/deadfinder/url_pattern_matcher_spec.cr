@@ -1,6 +1,22 @@
 require "../spec_helper"
 
 describe Deadfinder::UrlPatternMatcher do
+  describe ".validate!" do
+    it "accepts a valid pattern" do
+      Deadfinder::UrlPatternMatcher.validate!("example\\.com/docs")
+    end
+
+    it "rejects an invalid regex" do
+      expect_raises(ArgumentError) { Deadfinder::UrlPatternMatcher.validate!("[") }
+    end
+
+    it "rejects a catastrophic-backtracking pattern" do
+      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
+        Deadfinder::UrlPatternMatcher.validate!("(a+)+")
+      end
+    end
+  end
+
   describe ".match?" do
     it "returns true when the URL matches the pattern" do
       Deadfinder::UrlPatternMatcher.match?("http://example.com", "example").should be_true

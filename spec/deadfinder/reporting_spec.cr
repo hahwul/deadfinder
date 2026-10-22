@@ -86,6 +86,17 @@ describe "reporting" do
       Deadfinder.record_dead_target("http://example.com", 301, options)
       Deadfinder.dead_targets["http://example.com"].should eq "301"
     end
+
+    it "follows --accept-status and --dead-status like a link check" do
+      options = default_test_options
+      options.accept_status = "403"
+      Deadfinder.record_dead_target("http://example.com", 403, options)
+      Deadfinder.dead_targets.should be_empty
+
+      options.dead_status = "200"
+      Deadfinder.record_dead_target("http://example.com", 200, options)
+      Deadfinder.dead_targets["http://example.com"].should eq "200"
+    end
   end
 
   describe "dead targets through a real run" do
@@ -106,6 +117,39 @@ describe "reporting" do
       Deadfinder.run_url(target, default_test_options)
 
       Deadfinder.dead_targets[target].should eq "error"
+    end
+
+    it "applies --accept-status and --dead-status to the target page" do
+      accepted = "http://mock-accepted-target.test"
+      soft404 = "http://mock-soft404-target.test"
+      WebMock.stub(:get, accepted).to_return(status: 403, body: "")
+      WebMock.stub(:get, soft404).to_return(status: 200, body: "")
+
+      options = default_test_options
+      options.accept_status = "403"
+      options.dead_status = "200"
+      Deadfinder.run_url(accepted, options)
+      Deadfinder.run_url(soft404, options)
+
+      Deadfinder.dead_targets.has_key?(accepted).should be_false
+      Deadfinder.dead_targets[soft404].should eq "200"
+    end
+
+    it "records a sitemap that returns 404" do
+      sitemap = "http://mock-gone-sitemap.test/sitemap.xml"
+      WebMock.stub(:get, sitemap).to_return(status: 404, body: "")
+
+      Deadfinder.run_sitemap(sitemap, default_test_options)
+
+      Deadfinder.dead_targets[sitemap].should eq "404"
+    end
+
+    it "records a sitemap that cannot be reached at all" do
+      sitemap = "http://mock-unreachable-sitemap.test/sitemap.xml"
+
+      Deadfinder.run_sitemap(sitemap, default_test_options)
+
+      Deadfinder.dead_targets[sitemap].should eq "error"
     end
 
     it "leaves dead_targets empty for a healthy target" do
