@@ -108,6 +108,24 @@ module Deadfinder
       @dead_status_ranges = StatusList.parse(value)
       @dead_status = value
     end
+
+    # Dead/alive policy for an HTTP status, shared by link checks and scan
+    # targets so the status flags govern both identically. Strict precedence:
+    #
+    #   1. `--accept-status` — an explicit allow-list always wins, so a code
+    #      listed there is alive even when it also appears in `--dead-status`.
+    #      This is the escape hatch for bot-defense answers that are not really
+    #      broken links: LinkedIn's 999, Cloudflare's 403 to a non-browser
+    #      User-Agent, a 429 from a rate limiter.
+    #   2. `--dead-status` / `--exclude-status` — anything listed is dead, even
+    #      a 2xx (e.g. a soft-404 page that answers 200).
+    #   3. the built-in default, unchanged: >= 400 is dead, and 3xx is dead only
+    #      when `--include30x` is set.
+    def dead_status?(status_code : Int32) : Bool
+      return false if StatusList.includes?(accept_status_ranges, status_code)
+      return true if StatusList.includes?(dead_status_ranges, status_code)
+      status_code >= 400 || (status_code >= 300 && include30x)
+    end
   end
 
   class TargetCoverage

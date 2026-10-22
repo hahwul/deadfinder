@@ -107,11 +107,12 @@ module Deadfinder
   # the links *found on* a page, so before this a URL list whose entries all
   # 404 or refuse connections (the advertised
   # `deadfinder file <(subfinder | httpx)` workflow) reported nothing at all.
-  # The dead/alive rule matches `Runner#record_status` so `--include30x`
-  # governs targets and links identically.
+  # The dead/alive rule is `Options#dead_status?`, the same one link checks
+  # use, so `--include30x`, `--accept-status` and `--dead-status` govern
+  # targets and links identically.
   def self.record_dead_target(target : String, status : Int32, options : Options) : Nil
     connection_error = status == Runner::ERROR_STATUS
-    return unless connection_error || status >= 400 || (status >= 300 && options.include30x)
+    return unless connection_error || options.dead_status?(status)
     label = connection_error ? "error" : status.to_s
     @@mutex.synchronize { @@dead_targets[target] = label }
   end
@@ -290,10 +291,21 @@ module Deadfinder
       # Sitemaps very commonly sit behind a redirect (http -> https, apex -> www,
       # /sitemap.xml -> /sitemap_index.xml). Follow it instead of reporting the
       # 30x itself as a fetch failure.
-      response, final_uri = HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+      #
+      # A sitemap that cannot be fetched is recorded like a dead scan target:
+      # otherwise a deleted sitemap scanned zero pages and `--fail-on-dead`
+      # still exited 0.
+      response, final_uri = begin
+        HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+      rescue ex
+        Deadfinder::Logger.error "Failed to fetch sitemap #{sitemap_url}: #{ex.message}"
+        record_dead_target(sitemap_url, Runner::ERROR_STATUS, options)
+        return
+      end
 
       unless response.status.success?
         Deadfinder::Logger.error "Failed to fetch sitemap #{sitemap_url}: HTTP #{response.status_code}"
+        record_dead_target(sitemap_url, response.status_code, options)
         return
       end
 

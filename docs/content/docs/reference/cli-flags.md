@@ -58,7 +58,7 @@ Commands:
 
 - Structured output needs `-o`. Pass `-o -` to stream the report on stdout; the live log then moves to stderr so the two never interleave (`deadfinder url X -f json -o - | jq` works without `-s`).
 - Exit codes: `0` = scan completed, `1` = usage or I/O error, `2` = dead findings and `--fail-on-dead` was given. Without `--fail-on-dead` a scan that finds broken links still exits `0`.
-- A scan target that is itself broken (4xx/5xx, or unreachable) is reported under a `dead_targets` key, emitted only when non-empty. Previously only links *found on* a page were reported, so a URL list whose entries all 404 produced an empty report.
+- A scan target that is itself broken (4xx/5xx, or unreachable) is reported under a `dead_targets` key, emitted only when non-empty. Previously only links *found on* a page were reported, so a URL list whose entries all 404 produced an empty report. A sitemap that cannot be fetched counts as a dead target too, and `--accept-status` / `--dead-status` / `--include30x` decide whether a target page's status is dead exactly as they do for links.
 - Coverage's `coverage_percentage` / `overall_coverage_percentage` are really the **dead-link ratio** (a healthy target reports `0.0`). `dead_link_percentage` / `overall_dead_link_percentage` carry the same value under the correct name; the old keys remain as deprecated aliases.
 - `match` / `ignore` patterns are capped at 1024 characters, and patterns with nested quantifiers (e.g. `(a+)+`) are rejected up front to block ReDoS.
 - The initial page fetch receives `--headers`; worker link-check requests receive `--worker_headers`. `--user_agent` applies to both.

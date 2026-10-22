@@ -1209,5 +1209,22 @@ describe Deadfinder::Runner do
       # The HTTP histogram still reports what the server actually answered.
       cov.status_counts["200"].should eq 2
     end
+
+    it "does not count a link twice when its 2xx is listed in --dead-status" do
+      html = %(<html><body><a href="/guide#nope">n</a></body></html>)
+      WebMock.stub(:get, "http://soft404.test/").to_return(body: html)
+      WebMock.stub(:get, "http://soft404.test/guide")
+        .to_return(status: 200, body: doc, headers: {"Content-Type" => "text/html"})
+
+      options = default_test_options
+      options.check_anchors = true
+      options.coverage = true
+      options.dead_status = "200"
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://soft404.test/", options, **args)
+
+      args[:output]["http://soft404.test/"].should eq ["http://soft404.test/guide#nope"]
+      args[:coverage_data]["http://soft404.test/"].dead.should eq 1
+    end
   end
 end

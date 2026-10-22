@@ -140,9 +140,11 @@ module Deadfinder
         raise ex
       end
 
-      unless response.status.success?
+      # Same reasoning as above for a target that answers but answers badly.
+      # Judged by the link policy, so `--accept-status 403` keeps a 403 target
+      # quiet and `--dead-status 200` flags a soft-404 target.
+      if options.dead_status?(response.status_code)
         Deadfinder::Logger.error "Target page returned HTTP #{response.status_code} (links below, if any, come from that response): #{target}"
-        # Same reasoning as above for a target that answers but answers badly.
         Deadfinder.record_dead_target(target, response.status_code, options)
       end
 
@@ -492,7 +494,7 @@ module Deadfinder
                               output : Hash(String, Array(String)),
                               coverage_data : Hash(String, TargetCoverage),
                               mutex : Mutex) : Nil
-      dead = dead_status?(status_code, options)
+      dead = options.dead_status?(status_code)
       if dead
         Deadfinder::Logger.found "[#{status_code}] #{url}"
       else
@@ -515,23 +517,6 @@ module Deadfinder
             (coverage_data[target].status_counts[status_code.to_s]? || 0) + 1
         end
       end
-    end
-
-    # Dead/alive policy, in strict precedence order:
-    #
-    #   1. `--accept-status` — an explicit allow-list always wins, so a code
-    #      listed there is alive even when it also appears in `--dead-status`.
-    #      This is the escape hatch for bot-defense answers that are not really
-    #      broken links: LinkedIn's 999, Cloudflare's 403 to a non-browser
-    #      User-Agent, a 429 from a rate limiter.
-    #   2. `--dead-status` / `--exclude-status` — anything listed is dead, even
-    #      a 2xx (e.g. a soft-404 page that answers 200).
-    #   3. the built-in default, unchanged: >= 400 is dead, and 3xx is dead only
-    #      when `--include30x` is set.
-    private def dead_status?(status_code : Int32, options : Options) : Bool
-      return false if StatusList.includes?(options.accept_status_ranges, status_code)
-      return true if StatusList.includes?(options.dead_status_ranges, status_code)
-      status_code >= 400 || (status_code >= 300 && options.include30x)
     end
 
     private def record_error(target : String, url : String, options : Options,
@@ -650,6 +635,9 @@ module Deadfinder
         grouped.each do |request, linked_urls|
           status = status_cache[request]?
           next unless status && status >= 200 && status < 300
+          # A 2xx listed in `--dead-status` was already recorded dead by the
+          # link pass; checking its anchors would count the same link twice.
+          next if options.dead_status?(status)
           linked_urls.each do |url|
             fragment = checkable_fragment(url)
             next unless fragment
@@ -783,7 +771,7 @@ module Deadfinder
     # coverage percentage reflects the anchor failure.
     #
     # No dedupe guard is needed: `verify_anchors` only ever sees URLs whose
-    # status was 2xx, which `record_status` never recorded as dead.
+    # status was an alive 2xx, which `record_status` never recorded as dead.
     private def record_dead_anchor(target : String, url : String, options : Options,
                                    output : Hash(String, Array(String)),
                                    coverage_data : Hash(String, TargetCoverage),
