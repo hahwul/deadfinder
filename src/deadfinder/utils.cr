@@ -40,13 +40,6 @@ module Deadfinder
     nil
   end
 
-  # True when `target` can actually be scanned: an absolute URL with an
-  # http/https scheme and a non-empty host. Same rules as
-  # `http_target_error`, for callers that only need the yes/no.
-  def self.valid_target?(target : String) : Bool
-    http_target_error(target).nil?
-  end
-
   def self.generate_url(text : String, base_url : String) : String?
     # Browsers strip ASCII tab/newline/CR from inside a URL before navigating,
     # so `java\tscript:alert(1)` is a javascript: link to them. Mirror that here

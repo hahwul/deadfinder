@@ -308,15 +308,6 @@ describe "request layer" do
         pool.try &.close_all
       end
 
-      it "does not keep a discarded client" do
-        pool = Deadfinder::HttpClient::ConnectionPool.new
-        pool.discard(HTTP::Client.new("example.com"))
-        pool.idle_count("k").should eq 0
-        pool.checkout("k").should be_nil
-      ensure
-        pool.try &.close_all
-      end
-
       it "drops everything on close_all" do
         pool = Deadfinder::HttpClient::ConnectionPool.new
         pool.checkin("k", HTTP::Client.new("example.com"))

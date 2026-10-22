@@ -158,13 +158,6 @@ module Deadfinder
         evicted.each { |stale| close_quietly(stale) }
       end
 
-      # A client whose request raised is never returned to the pool: the
-      # connection may be half-written or half-read, and reusing it would
-      # desynchronize the next response.
-      def discard(client : HTTP::Client) : Nil
-        close_quietly(client)
-      end
-
       def close_all : Nil
         clients = [] of HTTP::Client
         @mutex.synchronize do
@@ -442,11 +435,6 @@ module Deadfinder
       create_direct(host, port, use_ssl, options)
     end
 
-    # For HTTP proxy, requests need to use absolute URI as path
-    def self.absolute_uri(uri : URI) : String
-      uri.to_s
-    end
-
     def self.proxy_configured?(options : Options) : Bool
       !options.proxy.empty?
     end
@@ -455,7 +443,7 @@ module Deadfinder
     # a forward proxy, an origin-form path otherwise.
     def self.request_path(uri : URI, options : Options) : String
       target = if proxy_configured?(options) && uri.scheme == "http"
-                 absolute_uri(uri)
+                 uri.to_s
                else
                  path = uri.path.presence || "/"
                  if q = uri.query.presence
@@ -566,10 +554,15 @@ module Deadfinder
       key = origin_key(uri)
       @@throttle.acquire(key, options.delay.milliseconds)
 
-      poolable = poolable?(options)
-      pool_key = poolable ? pool_key(uri, options) : nil
+      # Only plain direct connections are pooled. With a proxy configured the
+      # HTTPS path builds a client on top of a hand-rolled CONNECT tunnel whose
+      # lifecycle this pool does not model, and the HTTP path aims every client
+      # at the proxy rather than at the origin the pool is keyed by — so both
+      # are left to the old create-and-close behaviour. Correctness over
+      # coverage.
+      pool_key = proxy_configured?(options) ? nil : pool_key(uri, options)
 
-      client = (pool_key ? @@pool.checkout(pool_key) : nil) || create(uri, options)
+      client = pool_key.try { |k| @@pool.checkout(k) } || create(uri, options)
 
       begin
         response = client.exec(method, request_path(uri, options), headers: headers)
@@ -578,33 +571,18 @@ module Deadfinder
         # desynchronize the next response, so it never goes back to the pool.
         # A peer that closed an idle keep-alive socket needs no handling here:
         # `HTTP::Client#exec` reconnects transparently in that case.
-        if pool_key
-          @@pool.discard(client)
-        else
-          close_quietly(client)
-        end
+        close_quietly(client)
         raise ex
       end
 
       if pool_key && response.keep_alive?
         @@pool.checkin(pool_key, client)
-      elsif pool_key
-        # `Connection: close` — the server is done with this socket.
-        @@pool.discard(client)
       else
+        # Unpooled, or `Connection: close` — the server is done with this socket.
         close_quietly(client)
       end
 
       response
-    end
-
-    # Only plain direct connections are pooled. With a proxy configured the
-    # HTTPS path builds a client on top of a hand-rolled CONNECT tunnel whose
-    # lifecycle this pool does not model, and the HTTP path aims every client at
-    # the proxy rather than at the origin the pool is keyed by — so both are left
-    # to the old create-and-close behaviour. Correctness over coverage.
-    private def self.poolable?(options : Options) : Bool
-      !proxy_configured?(options)
     end
 
     # Pool identity: the origin, plus every option that changes how the

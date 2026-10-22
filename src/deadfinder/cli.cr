@@ -92,29 +92,18 @@ module Deadfinder
       # the scanning subcommands consume these, so `version`/`completion` aren't
       # rejected for an (irrelevant) bad option value.
       if subcommand && ["pipe", "file", "url", "sitemap"].includes?(subcommand)
-        if options.concurrency < 1
-          STDERR.puts "Error: concurrency must be >= 1 (got #{options.concurrency})"
-          exit 1
-        end
-        if options.target_concurrency < 1
-          STDERR.puts "Error: target concurrency must be >= 1 (got #{options.target_concurrency})"
-          exit 1
-        end
-        if options.timeout < 1
-          STDERR.puts "Error: timeout must be >= 1 (got #{options.timeout})"
-          exit 1
-        end
-        if options.limit < 0
-          STDERR.puts "Error: limit must be >= 0 (got #{options.limit})"
-          exit 1
-        end
-        if options.retries < 0
-          STDERR.puts "Error: retry must be >= 0 (got #{options.retries})"
-          exit 1
-        end
-        if options.delay < 0
-          STDERR.puts "Error: delay must be >= 0 (got #{options.delay})"
-          exit 1
+        {
+          {"concurrency", options.concurrency, 1},
+          {"target concurrency", options.target_concurrency, 1},
+          {"timeout", options.timeout, 1},
+          {"limit", options.limit, 0},
+          {"retry", options.retries, 0},
+          {"delay", options.delay, 0},
+        }.each do |(name, value, min)|
+          if value < min
+            STDERR.puts "Error: #{name} must be >= #{min} (got #{value})"
+            exit 1
+          end
         end
         unless HttpClient::METHODS.includes?(options.http_method)
           STDERR.puts "Error: unsupported method: #{options.http_method} (allowed: #{HttpClient::METHODS.join(", ")})"
@@ -170,52 +159,35 @@ module Deadfinder
           STDERR.puts "Usage: deadfinder file <FILE> [options]  (use `-` to read from STDIN)"
           exit 1
         end
-      when "url"
-        if positional_arg
-          target = positional_arg.not_nil!
-          if reason = Deadfinder.http_target_error(target)
-            STDERR.puts "Error: #{reason}"
-            exit 1
-          end
+      when "url", "sitemap"
+        unless target = positional_arg
+          STDERR.puts "Error: #{subcommand} command requires a URL argument"
+          STDERR.puts "Usage: deadfinder #{subcommand} <#{subcommand == "url" ? "URL" : "SITEMAP-URL"}> [options]"
+          exit 1
+        end
+        if reason = Deadfinder.http_target_error(target)
+          STDERR.puts "Error: #{reason}"
+          exit 1
+        end
+        if subcommand == "url"
           Deadfinder.run_url(target, options)
-          exit_on_findings(options)
         else
-          STDERR.puts "Error: url command requires a URL argument"
-          STDERR.puts "Usage: deadfinder url <URL> [options]"
-          exit 1
-        end
-      when "sitemap"
-        if positional_arg
-          target = positional_arg.not_nil!
-          if reason = Deadfinder.http_target_error(target)
-            STDERR.puts "Error: #{reason}"
-            exit 1
-          end
           Deadfinder.run_sitemap(target, options)
-          exit_on_findings(options)
-        else
-          STDERR.puts "Error: sitemap command requires a URL argument"
-          STDERR.puts "Usage: deadfinder sitemap <SITEMAP-URL> [options]"
-          exit 1
         end
+        exit_on_findings(options)
       when "completion"
-        if positional_arg
-          shell = positional_arg.not_nil!
-          unless ["bash", "zsh", "fish"].includes?(shell)
-            Deadfinder::Logger.error "Unsupported shell: #{shell}"
-            exit 1
-          end
-          case shell
-          when "bash"
-            puts Deadfinder::Completion.bash
-          when "zsh"
-            puts Deadfinder::Completion.zsh
-          when "fish"
-            puts Deadfinder::Completion.fish
-          end
-        else
+        unless shell = positional_arg
           STDERR.puts "Error: completion command requires a shell argument (bash/zsh/fish)"
           exit 1
+        end
+        unless ["bash", "zsh", "fish"].includes?(shell)
+          Deadfinder::Logger.error "Unsupported shell: #{shell}"
+          exit 1
+        end
+        case shell
+        when "bash" then puts Deadfinder::Completion.bash
+        when "zsh"  then puts Deadfinder::Completion.zsh
+        when "fish" then puts Deadfinder::Completion.fish
         end
       when "version"
         Deadfinder::Logger.info "deadfinder #{Deadfinder::VERSION}"

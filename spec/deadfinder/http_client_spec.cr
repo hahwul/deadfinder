@@ -92,13 +92,6 @@ describe Deadfinder::HttpClient do
     end
   end
 
-  describe ".absolute_uri" do
-    it "returns the full URI string" do
-      uri = URI.parse("http://example.com/path?q=1")
-      Deadfinder::HttpClient.absolute_uri(uri).should eq("http://example.com/path?q=1")
-    end
-  end
-
   describe ".request_path" do
     it "defaults an empty path to /" do
       Deadfinder::HttpClient.request_path(URI.parse("http://example.com"), default_test_options).should eq("/")
