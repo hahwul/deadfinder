@@ -26,6 +26,35 @@ module Deadfinder
     end
   end
 
+  # Runs `block` over `items` on at most `limit` fibers and returns once every
+  # item has been handled. The block must rescue its own failures: a fiber that
+  # dies stops draining the queue, and the final wait would never finish.
+  def self.each_concurrently(items : Enumerable(T), limit : Int32, &block : T ->) : Nil forall T
+    workers = Math.min(Math.max(limit, 1), items.size)
+    return if workers < 1
+
+    jobs = Channel(T).new(workers)
+    done = Channel(Nil).new(workers)
+
+    workers.times do
+      spawn do
+        while item = jobs.receive?
+          block.call(item)
+        end
+        done.send(nil)
+      end
+    end
+
+    # A feeder fiber rather than a channel big enough for every item: a
+    # sitemap can carry hundreds of thousands of URLs.
+    spawn do
+      items.each { |item| jobs.send(item) }
+      jobs.close
+    end
+
+    workers.times { done.receive }
+  end
+
   class Runner
     LINK_SELECTORS = {
       "anchor" => {"a", "href"},
@@ -194,11 +223,6 @@ module Deadfinder
       # target.
       resolved_urls = all_links.compact_map { |node| Deadfinder.generate_url(node, base_url) }.uniq
 
-      # Channel-based concurrent workers. Guard against a non-positive
-      # concurrency (e.g. `-c 0`): with zero workers nothing would drain `jobs`
-      # and the main fiber would block forever on `results.receive`.
-      worker_count = options.concurrency < 1 ? 1 : options.concurrency
-
       # Group by the URL that is actually requested. A fragment is a client-side
       # anchor and is never transmitted, so `/guide#install` and `/guide#usage`
       # are one request while both still appear in the report. Grouping keeps
@@ -209,37 +233,20 @@ module Deadfinder
         (grouped[request_url(url)] ||= [] of String) << url
       end
 
-      jobs = Channel(Tuple(String, Array(String))).new(1000)
-      results = Channel(Nil).new(1000)
-
-      # Never spawn more workers than there are requests to make. With several
-      # targets in flight the fiber count is multiplied by the number of
-      # targets, and a page with three links has no use for fifty idle fibers.
-      # (Fewer workers than `-c` costs nothing: the global permit pool, not the
-      # per-target pool size, is what bounds concurrency now.)
-      worker_count = grouped.size if grouped.size < worker_count
-
       # Workers log on this target's behalf, so they inherit its output sink
       # (nil unless several targets are being scanned at once) and their lines
       # land inside the target's block instead of racing straight to STDOUT.
+      #
+      # At most one worker per request: with several targets in flight the
+      # fiber count is multiplied by the number of targets, and a page with
+      # three links has no use for fifty idle fibers. (Fewer workers than `-c`
+      # costs nothing: the global permit pool bounds concurrency.)
       buffer = Deadfinder::Logger.current_buffer
-
-      worker_count.times do |w|
-        spawn do
-          Deadfinder::Logger.with_buffer(buffer) do
-            worker(w, jobs, results, target, options, output, coverage_data, status_cache, mutex)
-          end
+      Deadfinder.each_concurrently(grouped, options.concurrency) do |(request, linked_urls)|
+        Deadfinder::Logger.with_buffer(buffer) do
+          check_request(request, linked_urls, target, options, output, coverage_data, status_cache, mutex)
         end
       end
-
-      jobs_size = grouped.size
-
-      spawn do
-        grouped.each { |request, originals| jobs.send({request, originals}) }
-        jobs.close
-      end
-
-      jobs_size.times { results.receive }
 
       # Fragment targets are verified in a second, opt-in pass so the default
       # path never pays for reading a response body. It reuses `grouped`, so a
@@ -263,39 +270,28 @@ module Deadfinder
       Deadfinder::Logger.error "[#{ex}] #{target}"
     end
 
-    def worker(id : Int32, jobs : Channel(Tuple(String, Array(String))), results : Channel(Nil),
-               target : String, options : Options,
-               output : Hash(String, Array(String)),
-               coverage_data : Hash(String, TargetCoverage),
-               status_cache : Hash(String, Int32),
-               mutex : Mutex)
-      loop do
-        job = jobs.receive? || break
-        request, linked_urls = job
-
-        begin
-          status_code = resolve_status(request, status_cache, mutex, options)
-          # One request, but every link that pointed at it is recorded, so
-          # fragment variants are neither lost nor re-fetched.
-          linked_urls.each do |url|
-            record_total(target, options, coverage_data, mutex)
-            if status_code == ERROR_STATUS
-              record_error(target, url, options, output, coverage_data, mutex)
-            else
-              record_status(target, url, status_code, options, output, coverage_data, mutex)
-            end
-          end
-        rescue ex
-          # A recording/logging failure (e.g. a broken STDOUT pipe under
-          # `... | head`) must never kill the worker fiber or skip the result
-          # send below — otherwise the main fiber blocks forever waiting for a
-          # result that never arrives.
-          Deadfinder::Logger.verbose "[record failed: #{ex}] #{request}" if options.verbose
-        ensure
-          # Always report job completion so jobs_size accounting stays balanced.
-          results.send(nil)
+    def check_request(request : String, linked_urls : Array(String),
+                      target : String, options : Options,
+                      output : Hash(String, Array(String)),
+                      coverage_data : Hash(String, TargetCoverage),
+                      status_cache : Hash(String, Int32),
+                      mutex : Mutex) : Nil
+      status_code = resolve_status(request, status_cache, mutex, options)
+      # One request, but every link that pointed at it is recorded, so
+      # fragment variants are neither lost nor re-fetched.
+      linked_urls.each do |url|
+        record_total(target, options, coverage_data, mutex)
+        if status_code == ERROR_STATUS
+          record_dead(target, url, "error", options, output, coverage_data, mutex)
+        else
+          record_status(target, url, status_code, options, output, coverage_data, mutex)
         end
       end
+    rescue ex
+      # A recording/logging failure (e.g. a broken STDOUT pipe under
+      # `... | head`) must never kill the worker fiber — it would stop
+      # draining the queue and the target would never finish.
+      Deadfinder::Logger.verbose "[record failed: #{ex}] #{request}" if options.verbose
     end
 
     # Returns the HTTP status for `url`, fetching it at most once across the
@@ -494,66 +490,48 @@ module Deadfinder
                               output : Hash(String, Array(String)),
                               coverage_data : Hash(String, TargetCoverage),
                               mutex : Mutex) : Nil
-      dead = options.dead_status?(status_code)
-      if dead
+      if options.dead_status?(status_code)
         Deadfinder::Logger.found "[#{status_code}] #{url}"
-      else
-        Deadfinder::Logger.verbose_ok "[#{status_code}] #{url}" if options.verbose
+        return record_dead(target, url, status_code.to_s, options, output, coverage_data, mutex)
       end
 
+      Deadfinder::Logger.verbose_ok "[#{status_code}] #{url}" if options.verbose
       # Skip the mutex entirely on the common "alive + no coverage" path
       # so we don't serialize every live link on the cache-set mutex.
-      return unless dead || options.coverage
-
+      return unless options.coverage
       mutex.synchronize do
-        if dead
-          output[target] ||= [] of String
-          output[target] << url
-        end
-        if options.coverage
-          coverage_data[target] ||= TargetCoverage.new
-          coverage_data[target].dead += 1 if dead
-          coverage_data[target].status_counts[status_code.to_s] =
-            (coverage_data[target].status_counts[status_code.to_s]? || 0) + 1
-        end
+        counts = (coverage_data[target] ||= TargetCoverage.new).status_counts
+        counts[status_code.to_s] = (counts[status_code.to_s]? || 0) + 1
       end
     end
 
-    private def record_error(target : String, url : String, options : Options,
-                             output : Hash(String, Array(String)),
-                             coverage_data : Hash(String, TargetCoverage),
-                             mutex : Mutex) : Nil
+    # Adds a dead `url` to the report and, with coverage on, counts it as dead
+    # under `status_key` in the status histogram. A nil key leaves the
+    # histogram alone (see `verify_anchors`).
+    private def record_dead(target : String, url : String, status_key : String?,
+                            options : Options,
+                            output : Hash(String, Array(String)),
+                            coverage_data : Hash(String, TargetCoverage),
+                            mutex : Mutex) : Nil
       mutex.synchronize do
-        output[target] ||= [] of String
-        output[target] << url
-
-        if options.coverage
-          coverage_data[target] ||= TargetCoverage.new
-          coverage_data[target].dead += 1
-          coverage_data[target].status_counts["error"] =
-            (coverage_data[target].status_counts["error"]? || 0) + 1
-        end
+        (output[target] ||= [] of String) << url
+        next unless options.coverage
+        entry = (coverage_data[target] ||= TargetCoverage.new)
+        entry.dead += 1
+        entry.status_counts[status_key] = (entry.status_counts[status_key]? || 0) + 1 if status_key
       end
     end
 
     private def extract_links(page : Lexbor::Parser) : Hash(String, Array(String))
       links = {} of String => Array(String)
-      LINK_SELECTORS.each do |type, selector_info|
-        tag, attr = selector_info
+      LINK_SELECTORS.merge(SRCSET_SELECTORS).each do |type, (tag, attr)|
         urls = [] of String
         page.css(tag).each do |element|
-          if val = element.attribute_by(attr)
-            urls << val unless val.empty?
-          end
-        end
-        links[type] = urls
-      end
-      SRCSET_SELECTORS.each do |type, selector_info|
-        tag, attr = selector_info
-        urls = [] of String
-        page.css(tag).each do |element|
-          if val = element.attribute_by(attr)
+          next unless val = element.attribute_by(attr)
+          if attr == "srcset"
             urls.concat(parse_srcset(val))
+          elsif !val.empty?
+            urls << val
           end
         end
         links[type] = urls
@@ -646,70 +624,39 @@ module Deadfinder
         end
       end
 
-      return if pending.empty?
-
-      worker_count = options.concurrency < 1 ? 1 : options.concurrency
-      worker_count = pending.size if pending.size < worker_count
-      jobs = Channel(Tuple(String, Array(Tuple(String, String)))).new(1000)
-      results = Channel(Nil).new(1000)
-
       # Same as the link-check pass: these fibers log on the target's behalf, so
       # they inherit its output buffer and their findings land inside the
       # target's block instead of racing other targets straight to the sink.
       buffer = Deadfinder::Logger.current_buffer
-
-      worker_count.times do
-        spawn do
-          Deadfinder::Logger.with_buffer(buffer) do
-            anchor_worker(jobs, results, target, options, output, coverage_data, mutex)
-          end
+      Deadfinder.each_concurrently(pending, options.concurrency) do |(request, entries)|
+        Deadfinder::Logger.with_buffer(buffer) do
+          verify_document_anchors(request, entries, target, options, output, coverage_data, mutex)
         end
       end
-
-      jobs_size = pending.size
-
-      # Feed from its own fiber: `pending` can exceed the channel buffer, and a
-      # blocked main fiber would never reach `results.receive`.
-      spawn do
-        pending.each { |request, entries| jobs.send({request, entries}) }
-        jobs.close
-      end
-
-      jobs_size.times { results.receive }
     end
 
-    private def anchor_worker(jobs : Channel(Tuple(String, Array(Tuple(String, String)))),
-                              results : Channel(Nil), target : String, options : Options,
-                              output : Hash(String, Array(String)),
-                              coverage_data : Hash(String, TargetCoverage),
-                              mutex : Mutex)
-      loop do
-        job = jobs.receive? || break
-        request, entries = job
-
-        begin
-          ids = anchor_ids(request, options)
-          # nil means the document could not be re-read or is not HTML. A
-          # fragment we cannot verify is left alone rather than guessed at.
-          if ids
-            entries.each do |entry|
-              url, fragment = entry
-              next if ids.includes?(fragment)
-              # Deliberately not "[404]": a live page missing an anchor is a
-              # different defect from a page that does not exist, and the log
-              # line has to say which one the user is looking at.
-              Deadfinder::Logger.found "[anchor-missing] #{url}"
-              record_dead_anchor(target, url, options, output, coverage_data, mutex)
-            end
-          end
-        rescue ex
-          Deadfinder::Logger.verbose "[anchor check failed: #{ex}] #{request}" if options.verbose
-        ensure
-          # Mirror `worker`: always report completion so the accounting in
-          # `verify_anchors` stays balanced even when logging blows up.
-          results.send(nil)
-        end
+    private def verify_document_anchors(request : String, entries : Array(Tuple(String, String)),
+                                        target : String, options : Options,
+                                        output : Hash(String, Array(String)),
+                                        coverage_data : Hash(String, TargetCoverage),
+                                        mutex : Mutex) : Nil
+      # nil means the document could not be re-read or is not HTML. A
+      # fragment we cannot verify is left alone rather than guessed at.
+      return unless ids = anchor_ids(request, options)
+      entries.each do |(url, fragment)|
+        next if ids.includes?(fragment)
+        # Deliberately not "[404]": a live page missing an anchor is a
+        # different defect from a page that does not exist, and the log
+        # line has to say which one the user is looking at.
+        Deadfinder::Logger.found "[anchor-missing] #{url}"
+        # `status_counts` is left alone on purpose: it is a histogram of HTTP
+        # statuses and this URL really did answer 2xx — only `dead` changes.
+        # No dedupe guard is needed: only alive 2xx URLs get here, which
+        # `record_status` never recorded as dead.
+        record_dead(target, url, nil, options, output, coverage_data, mutex)
       end
+    rescue ex
+      Deadfinder::Logger.verbose "[anchor check failed: #{ex}] #{request}" if options.verbose
     end
 
     # Every fragment name `url` offers, or nil when the response cannot answer
@@ -730,16 +677,12 @@ module Deadfinder
 
       page = Lexbor::Parser.new(response.body)
       ids = Set(String).new
-      page.css("[id]").each do |element|
-        if value = element.attribute_by("id")
-          ids << value unless value.empty?
-        end
-      end
       # Pre-HTML5 documents still address sections via `<a name="install">`,
       # which browsers honor as a fragment target to this day.
-      page.css("a[name]").each do |element|
-        if value = element.attribute_by("name")
-          ids << value unless value.empty?
+      {"[id]" => "id", "a[name]" => "name"}.each do |selector, attr|
+        page.css(selector).each do |element|
+          value = element.attribute_by(attr)
+          ids << value if value && !value.empty?
         end
       end
       ids
@@ -763,28 +706,6 @@ module Deadfinder
         raw
       end
       decoded.presence
-    end
-
-    # A missing anchor is a dead link, so it joins `output` like any other.
-    # `status_counts` is left alone on purpose: it is a histogram of HTTP
-    # statuses and this URL really did answer 2xx — only `dead` changes, so the
-    # coverage percentage reflects the anchor failure.
-    #
-    # No dedupe guard is needed: `verify_anchors` only ever sees URLs whose
-    # status was an alive 2xx, which `record_status` never recorded as dead.
-    private def record_dead_anchor(target : String, url : String, options : Options,
-                                   output : Hash(String, Array(String)),
-                                   coverage_data : Hash(String, TargetCoverage),
-                                   mutex : Mutex) : Nil
-      mutex.synchronize do
-        output[target] ||= [] of String
-        output[target] << url
-
-        if options.coverage
-          coverage_data[target] ||= TargetCoverage.new
-          coverage_data[target].dead += 1
-        end
-      end
     end
   end
 end

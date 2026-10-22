@@ -79,44 +79,19 @@ module Deadfinder
     end
 
     private def self.draw_corners(canvas, x1, y1, x2, y2, r, color)
-      # Top-left
-      (0..90).each do |angle|
-        rad = angle * Math::PI / 180
-        cx = x1 + r
-        cy = y1 + r
-        px = (cx + r * Math.cos(rad)).to_i
-        py = (cy + r * Math.sin(rad)).to_i
-        canvas[px, py] = color if px >= x1 && py >= y1
-      end
-
-      # Top-right
-      (90..180).each do |angle|
-        rad = angle * Math::PI / 180
-        cx = x2 - r
-        cy = y1 + r
-        px = (cx + r * Math.cos(rad)).to_i
-        py = (cy + r * Math.sin(rad)).to_i
-        canvas[px, py] = color if px <= x2 && py >= y1
-      end
-
-      # Bottom-left
-      (270..360).each do |angle|
-        rad = angle * Math::PI / 180
-        cx = x1 + r
-        cy = y2 - r
-        px = (cx + r * Math.cos(rad)).to_i
-        py = (cy + r * Math.sin(rad)).to_i
-        canvas[px, py] = color if px >= x1 && py <= y2
-      end
-
-      # Bottom-right
-      (180..270).each do |angle|
-        rad = angle * Math::PI / 180
-        cx = x2 - r
-        cy = y2 - r
-        px = (cx + r * Math.cos(rad)).to_i
-        py = (cy + r * Math.sin(rad)).to_i
-        canvas[px, py] = color if px <= x2 && py <= y2
+      # One quarter circle per corner: its centre and the angles it sweeps.
+      {
+        {x1 + r, y1 + r, 0..90},    # top-left
+        {x2 - r, y1 + r, 90..180},  # top-right
+        {x1 + r, y2 - r, 270..360}, # bottom-left
+        {x2 - r, y2 - r, 180..270}, # bottom-right
+      }.each do |(cx, cy, angles)|
+        angles.each do |angle|
+          rad = angle * Math::PI / 180
+          px = (cx + r * Math.cos(rad)).to_i
+          py = (cy + r * Math.sin(rad)).to_i
+          canvas[px, py] = color if x1 <= px <= x2 && y1 <= py <= y2
+        end
       end
     end
   end

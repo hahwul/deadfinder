@@ -86,10 +86,6 @@ module Deadfinder
     self.report_sink = STDOUT
   end
 
-  def self.mutex
-    @@mutex
-  end
-
   # Clears module-level accumulator state so back-to-back runs in the
   # same process (e.g. tests, embedded usage) start from a clean slate.
   def self.reset_state : Nil
@@ -177,7 +173,7 @@ module Deadfinder
       line = line.strip
       next if line.empty? || line.starts_with?('#')
 
-      unless valid_target?(line)
+      if http_target_error(line)
         invalid += 1
         # Cap the per-line reports: a list of bare domains would otherwise
         # bury everything else under one error per line.
@@ -392,9 +388,7 @@ module Deadfinder
   private def self.run_targets(targets : Array(String), options : Options, app : Runner) : Nil
     @@mutex.synchronize { @@target_order.concat(targets) }
 
-    concurrency = options.target_concurrency
-    concurrency = 1 if concurrency < 1
-    concurrency = targets.size if targets.size < concurrency
+    concurrency = Math.min(Math.max(options.target_concurrency, 1), targets.size)
 
     # One target in flight: run it inline and leave the log stream alone, so
     # output is byte-for-byte what it has always been and still streams line by
@@ -404,37 +398,19 @@ module Deadfinder
       return
     end
 
-    jobs = Channel(String).new(concurrency)
-    done = Channel(Nil).new(concurrency)
-
-    concurrency.times do
-      spawn do
-        loop do
-          target = jobs.receive? || break
-          begin
-            # Buffer this target's lines and flush them as one block, so
-            # concurrent targets don't shred each other's output.
-            Deadfinder::Logger.buffered { run_with_target(target, options, app) }
-          rescue ex
-            # `Runner#run` already reports its own failures; this is the
-            # last-resort net. A fiber that dies here would stop draining the
-            # queue, and the run would then block forever waiting for targets
-            # nobody is left to pick up.
-            Deadfinder::Logger.error "[#{ex}] #{target}"
-          end
-        end
-        done.send(nil)
+    each_concurrently(targets, concurrency) do |target|
+      begin
+        # Buffer this target's lines and flush them as one block, so
+        # concurrent targets don't shred each other's output.
+        Deadfinder::Logger.buffered { run_with_target(target, options, app) }
+      rescue ex
+        # `Runner#run` already reports its own failures; this is the
+        # last-resort net. A fiber that dies here would stop draining the
+        # queue, and the run would then block forever waiting for targets
+        # nobody is left to pick up.
+        Deadfinder::Logger.error "[#{ex}] #{target}"
       end
     end
-
-    # A feeder fiber rather than a channel big enough for every target: a
-    # sitemap can carry hundreds of thousands of URLs.
-    spawn do
-      targets.each { |target| jobs.send(target) }
-      jobs.close
-    end
-
-    concurrency.times { done.receive }
   end
 
   # Re-keys a per-target hash into the order the targets were requested in.
@@ -579,37 +555,24 @@ module Deadfinder
                                  dead_targets : Hash(String, String),
                                  coverage_info : CoverageResult?) : String
     JSON.build(indent: "  ") do |json|
-      if coverage_info
-        json.object do
-          json.field "dead_links" do
-            json.object do
-              output_data.each do |target, urls|
-                json.field target do
-                  json.array do
-                    urls.each { |url| json.string url }
-                  end
-                end
-              end
-            end
-          end
-          dead_targets_to_json(json, dead_targets)
-          json.field "coverage" do
-            coverage_to_json(json, coverage_info)
-          end
+      json.object do
+        if coverage_info
+          json.field("dead_links") { json.object { links_to_json(json, output_data) } }
+        else
+          links_to_json(json, output_data)
         end
-      else
-        json.object do
-          output_data.each do |target, urls|
-            json.field target do
-              json.array do
-                urls.each { |url| json.string url }
-              end
-            end
-          end
-          # Sits alongside the per-target keys, which are always absolute
-          # http(s) URLs and so can never collide with this literal name.
-          dead_targets_to_json(json, dead_targets)
-        end
+        # Sits alongside the per-target keys, which are always absolute
+        # http(s) URLs and so can never collide with this literal name.
+        dead_targets_to_json(json, dead_targets)
+        json.field("coverage") { coverage_to_json(json, coverage_info) } if coverage_info
+      end
+    end
+  end
+
+  private def self.links_to_json(json : JSON::Builder, output_data : Hash(String, Array(String)))
+    output_data.each do |target, urls|
+      json.field target do
+        json.array { urls.each { |url| json.string url } }
       end
     end
   end
@@ -678,15 +641,12 @@ module Deadfinder
       yaml.mapping do
         if coverage_info
           yaml.scalar "dead_links"
-          yaml.mapping do
-            output_data.each do |target, urls|
-              yaml.scalar target
-              yaml.sequence do
-                urls.each { |url| yaml.scalar url }
-              end
-            end
-          end
-          dead_targets_to_yaml(yaml, dead_targets)
+          yaml.mapping { links_to_yaml(yaml, output_data) }
+        else
+          links_to_yaml(yaml, output_data)
+        end
+        dead_targets_to_yaml(yaml, dead_targets)
+        if coverage_info
           yaml.scalar "coverage"
           yaml.mapping do
             yaml.scalar "targets"
@@ -733,16 +693,15 @@ module Deadfinder
               end
             end
           end
-        else
-          output_data.each do |target, urls|
-            yaml.scalar target
-            yaml.sequence do
-              urls.each { |url| yaml.scalar url }
-            end
-          end
-          dead_targets_to_yaml(yaml, dead_targets)
         end
       end
+    end
+  end
+
+  private def self.links_to_yaml(yaml : YAML::Builder, output_data : Hash(String, Array(String)))
+    output_data.each do |target, urls|
+      yaml.scalar target
+      yaml.sequence { urls.each { |url| yaml.scalar url } }
     end
   end
 

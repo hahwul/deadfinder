@@ -440,7 +440,7 @@ describe Deadfinder::Runner do
     end
   end
 
-  describe "#worker" do
+  describe "#check_request" do
     it "detects 404 as broken link" do
       target = "http://example.com"
       url = "http://example.com/broken"
@@ -451,12 +451,7 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       args[:output][target].should contain url
     end
@@ -471,12 +466,7 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       args[:output][target].should contain url
     end
@@ -491,12 +481,7 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       (args[:output][target]? || [] of String).should_not contain url
     end
@@ -512,12 +497,7 @@ describe Deadfinder::Runner do
       options.include30x = false
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       (args[:output][target]? || [] of String).should_not contain url
     end
@@ -533,12 +513,7 @@ describe Deadfinder::Runner do
       options.include30x = true
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       args[:output][target].should contain url
     end
@@ -554,12 +529,7 @@ describe Deadfinder::Runner do
       # Pre-populate the status cache as if a previous page already checked it.
       args[:status_cache][url] = 404
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       # The cached dead status is attributed to this target without a 2nd request.
       args[:output][target].should contain url
@@ -576,14 +546,9 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for("http://example.com/a"))
-      jobs.send(job_for("http://example.com/b"))
-      jobs.send(job_for("http://example.com/c"))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      ["http://example.com/a", "http://example.com/b", "http://example.com/c"].each do |url|
+        runner.check_request(*job_for(url), target, options, **args)
+      end
 
       dead = args[:output][target]
       dead.should contain "http://example.com/a"
@@ -603,14 +568,9 @@ describe Deadfinder::Runner do
       options.coverage = true
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for("http://example.com/ok"))
-      jobs.send(job_for("http://example.com/not-found"))
-      jobs.send(job_for("http://example.com/server-err"))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      ["http://example.com/ok", "http://example.com/not-found", "http://example.com/server-err"].each do |url|
+        runner.check_request(*job_for(url), target, options, **args)
+      end
 
       cov = args[:coverage_data][target]
       cov.total.should eq 3
@@ -633,12 +593,7 @@ describe Deadfinder::Runner do
       options.worker_headers = ["Authorization: Bearer token123"]
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       # Should not be in dead links (200 response with correct headers)
       (args[:output][target]? || [] of String).should_not contain url
@@ -656,12 +611,7 @@ describe Deadfinder::Runner do
       options.worker_headers = ["User-Agent: my-custom-agent"]
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       # 200 only matches when the custom UA is sent; if the default UA overrode
       # it, WebMock would not match, the request would raise, and url would be
@@ -679,12 +629,7 @@ describe Deadfinder::Runner do
       options = default_test_options
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       # Should be flagged as broken and present in the output
       args[:output][target].should contain url
@@ -701,12 +646,7 @@ describe Deadfinder::Runner do
       options.coverage = true
       args = make_runner_args
 
-      jobs = Channel(Tuple(String, Array(String))).new(10)
-      results = Channel(Nil).new(10)
-      jobs.send(job_for(url))
-      jobs.close
-
-      runner.worker(1, jobs, results, target, options, **args)
+      runner.check_request(*job_for(url), target, options, **args)
 
       cov = args[:coverage_data][target]
       cov.total.should eq 1
