@@ -10,7 +10,7 @@ VERSION_CR = "src/deadfinder/version.cr"
 SPEC_TOP   = "spec/deadfinder_spec.cr"
 SPEC_CLI   = "spec/deadfinder/cli_spec.cr"
 SNAPCRAFT  = "snap/snapcraft.yaml"
-PKGBUILD   = "aur/PKGBUILD"
+PKGBUILD   = "packaging/aur/PKGBUILD"
 
 def shard_version(path : String) : String?
   YAML.parse(File.read(path))["version"].as_s

@@ -28,8 +28,8 @@
 
           src = ./.;
 
-          # Generate with: crystal2nix > shards.nix
-          shardsFile = ./shards.nix;
+          # Generate with: crystal2nix > packaging/nix/shards.nix
+          shardsFile = ./packaging/nix/shards.nix;
 
           nativeBuildInputs = with pkgs; [ crystal shards cmake pkg-config ];
           buildInputs = [ ];
