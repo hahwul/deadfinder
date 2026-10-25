@@ -71,7 +71,15 @@ spec/
 ├── spec_helper.cr
 ├── deadfinder/                # unit specs per module
 └── compat/                    # black-box harness (v1 golden files)
+
+packaging/
+├── aur/PKGBUILD               # release-aur.yml
+├── chocolatey/                # publish-chocolatey.yml templates
+├── docker/                    # Dockerfile + Dockerfile.dockerignore (build with -f)
+└── nix/shards.nix             # crystal2nix output read by flake.nix
 ```
+
+`snap/snapcraft.yaml` and `flake.nix` stay at the root: snapcraft only looks for its project file at fixed paths, and `nix run github:hahwul/deadfinder` needs the flake there.
 
 ## Conventions
 

@@ -1,0 +1,18 @@
+# Ignore list for packaging/docker/Dockerfile. BuildKit reads <dockerfile>.dockerignore
+# before <context>/.dockerignore; patterns are relative to the build context (repo root).
+
+.git
+.github
+docs
+examples
+github-action
+spec
+tmp
+coverage
+lib
+deadfinder
+AGENTS.md
+README.md
+SECURITY.md
+action.yml
+bin

@@ -22,8 +22,7 @@ github-action:
 docker:
   - changed-files:
       - any-glob-to-any-file:
-          - Dockerfile
-          - .dockerignore
+          - packaging/docker/**
           - .github/workflows/docker-ghcr.yml
           - .github/workflows/docker-build.yml
 code:
