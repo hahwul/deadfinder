@@ -72,7 +72,11 @@ module Deadfinder
   # was never written, or that the list it meant to scan was never read.
   def self.io_error(message : String) : Nil
     @@io_failed = true
-    STDERR.puts "Error: #{message}"
+    begin
+      STDERR.puts "Error: #{message}"
+    rescue IO::Error
+      # STDERR itself is gone; the exit status still carries the failure.
+    end
   end
 
   def self.output
