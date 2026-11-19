@@ -287,6 +287,11 @@ module Deadfinder
     end
   end
 
+  # How a malformed sitemap's ampersands are rewritten before it is parsed
+  # again (see `parse_sitemap`); anything else the pattern matches is kept.
+  private XML_CHAR_REFS = {"&" => "&#38;", "&amp;" => "&#38;", "&lt;" => "&#60;",
+                           "&gt;" => "&#62;", "&quot;" => "&#34;", "&apos;" => "&#39;"}
+
   private def self.parse_sitemap(sitemap_url : String, options : Options,
                                  collector : SitemapCollector,
                                  depth : Int32 = 0) : Nil
@@ -331,15 +336,36 @@ module Deadfinder
       # against the document's final location, not the address originally
       # requested.
       base = final_uri.to_s
-      doc = XML.parse(HttpClient.decompress_if_gzip(response.body))
+      body = HttpClient.decompress_if_gzip(response.body)
+      doc = XML.parse(body)
+
+      # libxml2 parses in recover mode, and its recovery from a raw `&` in a
+      # query string -- the commonest mistake in hand-written sitemaps -- is to
+      # drop it along with the parameter name, so `?q=ok&page=2` was scanned as
+      # `?q=ok=2` and reported dead. Worse, once it has met any error it drops
+      # every later `&amp;` (and the other predefined entities) as well, while
+      # character references survive. So escape the bare ones, spell the
+      # predefined ones as character references, and parse again. Only a
+      # document that did not parse cleanly is touched, so a well-formed
+      # sitemap is never rewritten, and only a UTF-8 one, because the regex
+      # engine raises on anything else. CDATA sections are matched whole and
+      # put back untouched: `&` is literal there. That half of the pattern is
+      # possessive so a huge or unterminated section cannot hit the PCRE2 match
+      # limit or rescan the document once per `<![CDATA[`.
+      if xml_error(doc) && body.valid_encoding?
+        repaired = body.gsub(/<!\[CDATA\[(?:[^\]]++|\](?!\]>))*+(?:\]\]>|\z)|&(?:amp|lt|gt|quot|apos);|&(?!(?:#\d+|#x[[:xdigit:]]+|\w+);)/) do |m|
+          XML_CHAR_REFS[m]? || m
+        end
+        doc = XML.parse(repaired)
+      end
 
       # Namespace-agnostic extraction via local-name(): handles the standard
       # 0.9 namespace, the legacy Google 0.84 namespace, and namespace-free
       # documents uniformly. Page URLs are scoped under <url> and child
       # sitemaps under <sitemap> so a sitemap-index's <sitemap><loc> entries are
       # NOT mis-collected as page targets (which previously double-fetched them).
-      found_before = collector.urls.size
-      doc.xpath_nodes("//*[local-name()='url']/*[local-name()='loc']").each do |node|
+      url_locs = doc.xpath_nodes("//*[local-name()='url']/*[local-name()='loc']")
+      url_locs.each do |node|
         collect_sitemap_url(collector, node.text, base, sitemap_url)
       end
 
@@ -353,10 +379,30 @@ module Deadfinder
       # Tolerate malformed sitemaps that put <loc> at the top level (no <url>
       # wrapper). Only used when *this document* matched neither a urlset nor a
       # sitemap index, so it cannot reintroduce the index double-processing bug.
-      if collector.urls.size == found_before && sitemap_locs.empty?
-        doc.xpath_nodes("//*[local-name()='loc']").each do |node|
+      # That is judged on the node sets, not on whether the collector grew: a
+      # urlset whose pages were all collected from an earlier sitemap adds
+      # nothing either, and `//loc` then picked up its <image:loc> entries.
+      if url_locs.empty? && sitemap_locs.empty?
+        top_locs = doc.xpath_nodes("//*[local-name()='loc']")
+        top_locs.each do |node|
           collect_sitemap_url(collector, node.text, base, sitemap_url)
         end
+
+        # A 200 that is no sitemap at all (an HTML page, a soft 404) is the
+        # same hole as one that cannot be fetched: zero pages scanned, exit 0.
+        # An empty <urlset/> is a legitimate sitemap and stays clean.
+        if top_locs.empty? && !doc.root.try(&.name.in?("urlset", "sitemapindex"))
+          Deadfinder::Logger.error "Not a sitemap (no <urlset>, <sitemapindex> or <loc>): #{sitemap_url}"
+          record_dead_target(sitemap_url, Runner::ERROR_STATUS, options)
+          return
+        end
+      end
+
+      # Whatever libxml2 recovered is still scanned -- dropping a whole sitemap
+      # for one bad entry would be worse -- but say so: a truncated document
+      # ends in a cut-off <loc> that is then reported as a dead target.
+      if error = xml_error(doc)
+        Deadfinder::Logger.error "Sitemap #{sitemap_url} is not well-formed XML (#{error.message}), results may be incomplete"
       end
 
       sitemap_locs.each do |loc|
@@ -372,8 +418,18 @@ module Deadfinder
         parse_sitemap(sub_sitemap, options, collector, depth + 1)
       end
     rescue ex
+      # An empty or binary 200 body makes `XML.parse` raise instead of
+      # returning a rootless document; it is no more a sitemap than an HTML page.
       Deadfinder::Logger.error "Failed to parse sitemap #{sitemap_url}: #{ex.message}"
+      record_dead_target(sitemap_url, Runner::ERROR_STATUS, options)
     end
+  end
+
+  # The first real parse error in `doc`. libxml2 (2.9 at least) reports a
+  # non-absolute `xmlns` URI through the same channel even under NOWARNING,
+  # yet such a document is well-formed, so those are skipped.
+  private def self.xml_error(doc : XML::Node) : XML::Error?
+    doc.errors.try &.find { |e| !e.message.to_s.starts_with?("xmlns") }
   end
 
   private def self.collect_sitemap_url(collector : SitemapCollector, raw : String,
