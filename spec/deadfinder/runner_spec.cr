@@ -169,6 +169,51 @@ describe Deadfinder::Runner do
       runner.run(target, options, **args)
     end
 
+    it "keeps filtering the page when one URL drives the pattern into PCRE2's match limit" do
+      # `(\w|\d)+$` passes the up-front validation, then gives up on a long
+      # digit run. That used to abort the filter mid-page: `--ignore` requested
+      # every link it was told to skip, and `--match` widened to the whole page.
+      target = "http://limit.test/page"
+      pattern = "/private/(\\w|\\d)+$"
+      html = <<-HTML
+        <html><body>
+          <a href="/private/logout">logout</a>
+          <a href="/private/#{"1234567890" * 4}.x">poison</a>
+          <a href="/private/#{"1234567890" * 4}.y">poison</a>
+          <a href="/private/delete">delete</a>
+          <a href="/public/ok">ok</a>
+          <img src="/private/tracking">
+        </body></html>
+      HTML
+      requested = [] of String
+      WebMock.stub(:get, target).to_return(body: html)
+      WebMock.stub(:any, /limit\.test\/(private|public)\//).to_return do |request|
+        requested << request.path
+        HTTP::Client::Response.new(200)
+      end
+
+      log = IO::Memory.new
+      options = default_test_options
+      options.silent = false
+      options.ignore = pattern
+      was_silent = Deadfinder::Logger.silent?
+      Deadfinder::Logger.silent = false
+      begin
+        Deadfinder::Logger.with_buffer(log) { Deadfinder::Runner.new.run(target, options, **make_runner_args) }
+      ensure
+        Deadfinder::Logger.silent = was_silent
+      end
+      requested.should eq ["/public/ok"]
+      # Reported once for the page, not once per poisoned link.
+      log.to_s.scan("Ignore pattern").size.should eq 1
+
+      requested.clear
+      options = default_test_options
+      options.match = pattern
+      Deadfinder::Runner.new.run(target, options, **make_runner_args)
+      requested.sort.should eq ["/private/delete", "/private/logout", "/private/tracking"]
+    end
+
     it "handles target fetch failure gracefully" do
       target = "http://unreachable.invalid"
       WebMock.stub(:get, target).to_return(status: 500, body: "")

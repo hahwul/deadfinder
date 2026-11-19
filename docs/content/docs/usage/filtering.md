@@ -6,7 +6,7 @@ weight = 3
 
 ## `-m` / `--match=PATTERN` and `-i` / `--ignore=PATTERN`
 
-Regex applied to every discovered URL before it's fetched. To prevent ReDoS, patterns are capped at 1024 characters and nested-quantifier shapes (e.g. `(a+)+`) are rejected.
+Regex applied to every discovered URL before it's fetched. To prevent ReDoS, patterns are capped at 1024 characters and nested-quantifier shapes (e.g. `(a+)+`) are rejected. A pattern that passes that check but still exhausts the regex engine's match limit on a particular URL leaves that one URL out of the scan — not matched for `--match`, ignored for `--ignore` — and is reported once per page; every other URL is filtered as usual.
 
 ```bash
 # Only check internal links

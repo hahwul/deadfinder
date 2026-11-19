@@ -60,7 +60,7 @@ src/
     ├── runner.cr              # fiber workers, link extraction, HTTP calls
     ├── http_client.cr         # HTTP::Client wrapper (proxy, CONNECT tunneling)
     ├── utils.cr               # URL resolution helpers
-    ├── url_pattern_matcher.cr # match/ignore regex with 1s timeout
+    ├── url_pattern_matcher.cr # match/ignore regex (nested-quantifier check + PCRE2 match limit; no timeout)
     ├── logger.cr              # silent/verbose/debug gating
     ├── completion.cr          # bash/zsh/fish completion generators
     ├── visualizer.cr          # PNG coverage chart (stumpy_png)
