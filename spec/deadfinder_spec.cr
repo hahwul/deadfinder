@@ -878,6 +878,33 @@ describe Deadfinder do
       end
     end
 
+    context "when a URL is not valid UTF-8" do
+      # A Latin-1 `é`, as it arrives from a URL list or a redirect `Location`.
+      {"json", "yaml", "toml", "csv", "sarif"}.each do |format|
+        it "still writes a #{format} report, and writes it as valid UTF-8" do
+          tempfile = File.tempfile("deadfinder_invalid_utf8", ".#{format}")
+          begin
+            options = default_test_options
+            options.output = tempfile.path
+            options.output_format = format
+            options.coverage = true
+
+            Deadfinder.output["http://example.com/caf\xE9"] = ["http://example.com/caf\xE9/dead"]
+            Deadfinder.coverage_data["http://example.com/caf\xE9"] = Deadfinder::TargetCoverage.new(total: 1, dead: 1)
+            Deadfinder.dead_targets["http://example.com/gone\xE9"] = "404"
+            Deadfinder.gen_output(options)
+
+            content = File.read(tempfile.path)
+            content.valid_encoding?.should be_true
+            content.should contain "http://example.com/caf\uFFFD/dead"
+            content.should contain "http://example.com/gone\uFFFD"
+          ensure
+            tempfile.delete
+          end
+        end
+      end
+    end
+
     context "when output is empty" do
       it "does nothing if output file is not specified" do
         options = default_test_options
