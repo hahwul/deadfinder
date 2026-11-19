@@ -12,6 +12,12 @@ module Deadfinder
     # the answer being reported (see `--include30x`).
     MAX_REDIRECTS = 5
 
+    # Raised when a document fetch never reaches a document: the redirect chain
+    # loops or outruns its hop budget. The last 30x is not the page, so handing
+    # it back made a target stuck in redirects look like a healthy empty one.
+    class RedirectError < Exception
+    end
+
     # Headers that must not be replayed to a different origin after a redirect.
     # Mirrors curl's default behaviour: following a redirect off-host with a
     # user-supplied `Authorization`/`Cookie` would leak the credential.
@@ -502,7 +508,9 @@ module Deadfinder
     # Fetches `uri` with `method` and returns the response together with the URI
     # it was finally served from. `max_redirects` hops of 30x `Location` are
     # followed; with the default of 0 the redirect response itself is returned
-    # untouched.
+    # untouched. A caller that does follow redirects wants the document behind
+    # them, so a chain that loops or is still redirecting once the hops are
+    # spent raises `RedirectError` instead of returning a 30x as if it were one.
     #
     # Callers need the final URI because relative links (and relative sitemap
     # `<loc>` entries) must resolve against the post-redirect location, not
@@ -518,7 +526,7 @@ module Deadfinder
       loop do
         response = request_once(current, options, current_headers, method)
 
-        return {response, current} if hops >= max_redirects || !response.status.redirection?
+        return {response, current} if max_redirects <= 0 || !response.status.redirection?
 
         location = response.headers["Location"]?.try(&.strip).presence
         # A 3xx without a usable Location (300 Multiple Choices, 304 Not
@@ -535,7 +543,8 @@ module Deadfinder
 
         # Stop on a redirect loop rather than burning every remaining hop.
         seen << current.to_s
-        return {response, current} if seen.includes?(next_uri.to_s)
+        raise RedirectError.new("redirect loop at #{next_uri}") if seen.includes?(next_uri.to_s)
+        raise RedirectError.new("too many redirects (more than #{max_redirects})") if hops >= max_redirects
 
         current_headers = strip_cross_origin_headers(current_headers, current, next_uri)
         current = next_uri
