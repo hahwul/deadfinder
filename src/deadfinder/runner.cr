@@ -714,11 +714,16 @@ module Deadfinder
     # when there is nothing to verify: no fragment at all, or one of the
     # document-top fragments. Percent-encoding is undone first because the
     # attribute it has to match is stored decoded (`#%EC%95%88` -> `#안`).
+    #
+    # A fragment directive (`:~:text=...`, the "scroll to text" syntax) is an
+    # instruction to the browser, not part of the element id, so everything
+    # from `:~:` on is dropped: `#intro:~:text=x` verifies `intro`, and a bare
+    # `#:~:text=x` leaves nothing to verify.
     private def checkable_fragment(url : String) : String?
       idx = url.index('#')
       return nil if idx.nil?
 
-      raw = url[(idx + 1)..]
+      raw = url[(idx + 1)..].partition(":~:")[0]
       return nil if raw.empty?
       return nil if raw.compare(TOP_FRAGMENT, case_insensitive: true) == 0
 

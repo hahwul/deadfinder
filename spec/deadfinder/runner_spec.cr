@@ -1205,6 +1205,25 @@ describe Deadfinder::Runner do
       (args[:output]["http://top.test/"]? || [] of String).should be_empty
     end
 
+    it "verifies only the id in front of a text-fragment directive" do
+      html = %(<html><body>
+        <a href="/guide#:~:text=hello">directive only</a>
+        <a href="/guide#install:~:text=hello">id + directive</a>
+        <a href="/guide#top:~:text=hello">top + directive</a>
+        <a href="/guide#nope:~:text=hello">missing id + directive</a>
+      </body></html>)
+      WebMock.stub(:get, "http://textfrag.test/").to_return(body: html)
+      WebMock.stub(:get, "http://textfrag.test/guide")
+        .to_return(status: 200, body: doc, headers: {"Content-Type" => "text/html"})
+
+      options = default_test_options
+      options.check_anchors = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://textfrag.test/", options, **args)
+
+      args[:output]["http://textfrag.test/"].should eq ["http://textfrag.test/guide#nope:~:text=hello"]
+    end
+
     it "opens the linked document once no matter how many fragments point at it" do
       requests = 0
       html = %(<html><body>
