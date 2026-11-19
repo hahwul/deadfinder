@@ -709,6 +709,213 @@ describe Deadfinder do
       Deadfinder.output["http://legacy.test/page1"]?.should_not be_nil
       Deadfinder.output["http://legacy.test/page1"].should contain "http://legacy.test/dead"
     end
+
+    it "keeps a raw & in <loc> instead of the URL libxml2 recovers" do
+      # Not well-formed: the first <loc> has an unescaped ampersand, which
+      # libxml2 recovers as `/search?q=ok=2`, and every `&amp;` after it as
+      # nothing. The other entries pin down what the repair must keep: an
+      # escaped ampersand, hex and decimal character references, and a CDATA
+      # section, where `&` is literal. (No XML declaration: the heredoc indents
+      # it, which is an error of its own.)
+      sitemap_xml = <<-XML
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>http://sm-amp.test/search?q=ok&page=2</loc></url>
+          <url><loc>http://sm-amp.test/search?q=ok&amp;page=3</loc></url>
+          <url><loc>http://sm-amp.test/search?q=ok&#x26;page=4</loc></url>
+          <url><loc><![CDATA[http://sm-amp.test/search?q=ok&page=5]]></loc></url>
+          <url><loc>http://sm-amp.test/search?q=ok&#38;page=6</loc></url>
+        </urlset>
+      XML
+
+      pages = (2..6).map { |n| "http://sm-amp.test/search?q=ok&page=#{n}" }
+      WebMock.stub(:get, "http://sm-amp.test/sitemap.xml").to_return(body: sitemap_xml)
+      pages.each do |page|
+        WebMock.stub(:get, page).to_return(body: %(<html><body><a href="http://sm-amp.test/dead">d</a></body></html>))
+      end
+      WebMock.stub(:get, "http://sm-amp.test/dead").to_return(status: 404)
+
+      log = IO::Memory.new
+      Deadfinder::Logger.sink = log
+      options = default_test_options
+      options.silent = false
+      Deadfinder.run_sitemap("http://sm-amp.test/sitemap.xml", options)
+
+      Deadfinder.output.keys.sort.should eq pages
+      Deadfinder.dead_targets.should be_empty
+      # Repaired cleanly, so there is nothing left to warn about.
+      log.to_s.should_not contain "not well-formed"
+    end
+
+    it "keeps &amp; in <loc> when the sitemap has an error the repair cannot fix" do
+      # After any well-formedness error (here a mismatched end tag) libxml2
+      # drops every later `&amp;`: `?q=ok&amp;page=2` became `?q=okpage=2`.
+      sitemap = "http://sm-ws.test/sitemap.xml"
+      page = "http://sm-ws.test/search?q=ok&page=2"
+      WebMock.stub(:get, sitemap)
+        .to_return(body: %(<?xml version="1.0"?><urlset><x></y><url><loc>http://sm-ws.test/search?q=ok&amp;page=2</loc></url></urlset>))
+      WebMock.stub(:get, page).to_return(body: %(<html><body><a href="http://sm-ws.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-ws.test/dead").to_return(status: 404)
+
+      log = IO::Memory.new
+      Deadfinder::Logger.sink = log
+      options = default_test_options
+      options.silent = false
+      Deadfinder.run_sitemap(sitemap, options)
+
+      Deadfinder.output.keys.should eq [page]
+      Deadfinder.dead_targets.should be_empty
+      log.to_s.should contain "Sitemap #{sitemap} is not well-formed XML"
+    end
+
+    it "says so when a sitemap is not well-formed, and still scans what was recovered" do
+      # Cut off mid-<loc>, as by an interrupted upload or a generator that died.
+      sitemap = "http://sm-trunc.test/sitemap.xml"
+      WebMock.stub(:get, sitemap)
+        .to_return(body: %(<urlset><url><loc>http://sm-trunc.test/page1</loc></url><url><loc>http://sm-trunc.test/pag))
+      WebMock.stub(:get, "http://sm-trunc.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-trunc.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-trunc.test/pag").to_return(status: 404)
+      WebMock.stub(:get, "http://sm-trunc.test/dead").to_return(status: 404)
+
+      log = IO::Memory.new
+      Deadfinder::Logger.sink = log
+      options = default_test_options
+      options.silent = false
+      Deadfinder.run_sitemap(sitemap, options)
+
+      log.to_s.scan("Sitemap #{sitemap} is not well-formed XML").size.should eq 1
+      Deadfinder.output["http://sm-trunc.test/page1"].should contain "http://sm-trunc.test/dead"
+      Deadfinder.dead_targets.has_key?(sitemap).should be_false
+    end
+
+    it "records a 200 that is not a sitemap as a dead target" do
+      # A soft 404 page, a page that happens to parse cleanly as XML, and an
+      # empty body: each used to yield zero URLs and a clean exit.
+      bodies = {
+        "html"  => %(<!doctype html><html><head><title>Not found</title></head><body><br><a href="/x">x</a></body></html>),
+        "xhtml" => %(<html><body><p>Not found</p></body></html>),
+        "empty" => "",
+      }
+      bodies.each do |name, body|
+        sitemap = "http://sm-not-#{name}.test/sitemap.xml"
+        WebMock.stub(:get, sitemap).to_return(body: body)
+
+        Deadfinder.run_sitemap(sitemap, default_test_options)
+
+        Deadfinder.dead_targets[sitemap]?.should eq "error"
+      end
+      Deadfinder.output.should be_empty
+    end
+
+    it "scans a plain-text sitemap, one URL per line" do
+      sitemap = "http://sm-text.test/sitemap.txt"
+      WebMock.stub(:get, sitemap)
+        .to_return(body: "\uFEFFhttp://sm-text.test/page1\r\n\nhttps://sm-text.test/page2\n")
+      WebMock.stub(:get, "http://sm-text.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-text.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "https://sm-text.test/page2").to_return(body: "<html></html>")
+      WebMock.stub(:get, "http://sm-text.test/dead").to_return(status: 404)
+
+      Deadfinder.run_sitemap(sitemap, default_test_options)
+
+      Deadfinder.dead_targets.should be_empty
+      Deadfinder.output["http://sm-text.test/page1"].should eq ["http://sm-text.test/dead"]
+    end
+
+    it "does not call a sitemap malformed for whitespace before the XML declaration" do
+      sitemap = "http://sm-lead.test/sitemap.xml"
+      WebMock.stub(:get, sitemap)
+        .to_return(body: %(\n  <?xml version="1.0"?><urlset><url><loc>http://sm-lead.test/a?x=1&amp;y=2</loc></url></urlset>))
+      WebMock.stub(:get, "http://sm-lead.test/a?x=1&y=2").to_return(body: "<html></html>")
+
+      log = IO::Memory.new
+      Deadfinder::Logger.sink = log
+      options = default_test_options
+      options.silent = false
+      Deadfinder.run_sitemap(sitemap, options)
+
+      log.to_s.should_not contain "not well-formed"
+      log.to_s.should contain "Found 1 URLs"
+      Deadfinder.dead_targets.should be_empty
+    end
+
+    it "treats an empty <urlset/> as a clean result, not a dead sitemap" do
+      WebMock.stub(:get, "http://sm-empty.test/sitemap.xml")
+        .to_return(body: %(<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>))
+
+      Deadfinder.run_sitemap("http://sm-empty.test/sitemap.xml", default_test_options)
+
+      Deadfinder.dead_targets.should be_empty
+      Deadfinder.output.should be_empty
+    end
+
+    it "does not call a sitemap with a relative xmlns URI malformed" do
+      # Well-formed, but libxml2 reports the namespace warning as an error.
+      WebMock.stub(:get, "http://sm-relns.test/sitemap.xml")
+        .to_return(body: %(<urlset xmlns="sitemaps.org/0.9"><url><loc>http://sm-relns.test/page1</loc></url></urlset>))
+      WebMock.stub(:get, "http://sm-relns.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-relns.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-relns.test/dead").to_return(status: 404)
+
+      log = IO::Memory.new
+      Deadfinder::Logger.sink = log
+      options = default_test_options
+      options.silent = false
+      Deadfinder.run_sitemap("http://sm-relns.test/sitemap.xml", options)
+
+      log.to_s.should_not contain "not well-formed"
+      Deadfinder.output["http://sm-relns.test/page1"].should contain "http://sm-relns.test/dead"
+    end
+
+    it "does not scan <image:loc> entries when a urlset only repeats known pages" do
+      # b.xml adds no new page, which used to look like "matched neither a
+      # urlset nor an index" and sent it through the top-level <loc> fallback.
+      index_xml = <<-XML
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>http://sm-dupe.test/a.xml</loc></sitemap>
+          <sitemap><loc>http://sm-dupe.test/b.xml</loc></sitemap>
+        </sitemapindex>
+      XML
+      a_xml = %(<urlset><url><loc>http://sm-dupe.test/page1</loc></url></urlset>)
+      b_xml = <<-XML
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+          <url>
+            <loc>http://sm-dupe.test/page1</loc>
+            <image:image><image:loc>http://sm-dupe.test/photo.png</image:loc></image:image>
+          </url>
+        </urlset>
+      XML
+
+      WebMock.stub(:get, "http://sm-dupe.test/index.xml").to_return(body: index_xml)
+      WebMock.stub(:get, "http://sm-dupe.test/a.xml").to_return(body: a_xml)
+      WebMock.stub(:get, "http://sm-dupe.test/b.xml").to_return(body: b_xml)
+      WebMock.stub(:get, "http://sm-dupe.test/page1").to_return(body: "<html></html>")
+      image_fetches = 0
+      WebMock.stub(:get, "http://sm-dupe.test/photo.png").to_return do
+        image_fetches += 1
+        HTTP::Client::Response.new(200, "")
+      end
+
+      Deadfinder.run_sitemap("http://sm-dupe.test/index.xml", default_test_options)
+
+      image_fetches.should eq 0
+      Deadfinder.dead_targets.should be_empty
+    end
+
+    it "still accepts <loc> entries that have no <url> wrapper" do
+      # Neither a urlset nor an index by its root, but it lists pages, so it is
+      # scanned rather than written off as "not a sitemap".
+      WebMock.stub(:get, "http://sm-bare.test/sitemap.xml")
+        .to_return(body: %(<pages><loc>http://sm-bare.test/page1</loc></pages>))
+      WebMock.stub(:get, "http://sm-bare.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-bare.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "http://sm-bare.test/dead").to_return(status: 404)
+
+      Deadfinder.run_sitemap("http://sm-bare.test/sitemap.xml", default_test_options)
+
+      Deadfinder.output["http://sm-bare.test/page1"].should contain "http://sm-bare.test/dead"
+      Deadfinder.dead_targets.should be_empty
+    end
   end
 
   describe "#gen_output" do
