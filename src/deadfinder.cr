@@ -314,7 +314,7 @@ module Deadfinder
       # otherwise a deleted sitemap scanned zero pages and `--fail-on-dead`
       # still exited 0.
       response, final_uri = begin
-        HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+        Runner.new.fetch_document(uri, options, headers)
       rescue ex
         Deadfinder::Logger.error "Failed to fetch sitemap #{sitemap_url}: #{ex.message}"
         record_dead_target(sitemap_url, Runner::ERROR_STATUS, options)

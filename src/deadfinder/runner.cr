@@ -147,10 +147,6 @@ module Deadfinder
     # Fraction of the computed backoff that jitter may add or remove.
     RETRY_JITTER = 0.25
 
-    # Result of one link check: the status plus whatever `Retry-After` the
-    # server attached, which the retry loop honors on a 429/503.
-    record CheckOutcome, status : Int32, retry_after : Time::Span?
-
     def run(target : String, options : Options,
             output : Hash(String, Array(String)),
             coverage_data : Hash(String, TargetCoverage),
@@ -167,11 +163,10 @@ module Deadfinder
       #
       # The page fetch counts against the same global budget as the link checks
       # below; otherwise `--target-concurrency` would quietly add one extra
-      # in-flight request per target on top of `-c`.
+      # in-flight request per target on top of `-c`. It is also retried like
+      # one: a single 503 on the page must not write off every link on it.
       response, final_uri = begin
-        Runner.permits(options.concurrency).acquire do
-          HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
-        end
+        fetch_document(uri, options, headers)
       rescue ex
         # A target we cannot reach at all is itself a finding, not just a log
         # line: without this a URL list whose entries all refuse connections
@@ -362,32 +357,64 @@ module Deadfinder
       end
     end
 
-    # Requests `url` until it answers or the `--retry` budget runs out, and
-    # returns the final status. Transient failures back off exponentially with
+    # Fetches a document (a scan target page or a sitemap): GET, redirects
+    # followed, and the same `--retry` treatment a link check gets. Raises when
+    # the last attempt still could not produce a response.
+    def fetch_document(uri : URI, options : Options,
+                       headers : HTTP::Headers) : {HTTP::Client::Response, URI}
+      with_retries(uri.to_s, options) do
+        HttpClient.fetch(uri, options, headers, HttpClient::MAX_REDIRECTS)
+      end
+    end
+
+    # The final status of a link check, `ERROR_STATUS` when no attempt produced
+    # a response.
+    private def fetch_status_with_retries(url : String, options : Options) : Int32
+      # Set once an attempt has failed outright: from then on `auto` mode skips
+      # the HEAD probe, so retrying an unreachable host costs one connect
+      # timeout per attempt instead of two.
+      force_get = false
+
+      response, _ = with_retries(url, options) do
+        check_url(url, options, force_get)
+      rescue ex
+        force_get = true
+        raise ex
+      end
+      response.status_code
+    rescue
+      ERROR_STATUS
+    end
+
+    # Runs the request in the block until it answers or the `--retry` budget
+    # runs out, and returns the final response (re-raising the final failure
+    # when there is none). Transient failures back off exponentially with
     # jitter (see `retry_delay`); a definitive answer such as a 404 returns on
     # the first attempt.
     #
     # A permit is held for the request and released before the backoff sleep:
     # holding one while waiting would let a handful of retrying fibers idle the
     # entire `-c` budget and stall every other link in the run.
-    private def fetch_status_with_retries(url : String, options : Options) : Int32
+    private def with_retries(url : String, options : Options,
+                             & : -> {HTTP::Client::Response, URI}) : {HTTP::Client::Response, URI}
       attempts = options.retries < 0 ? 1 : options.retries + 1
-      status = ERROR_STATUS
       attempt = 1
-      # Set once an attempt has failed outright: from then on `auto` mode skips
-      # the HEAD probe, so retrying an unreachable host costs one connect
-      # timeout per attempt instead of two.
-      force_get = false
 
       loop do
+        status = ERROR_STATUS
         retry_after : Time::Span? = nil
 
         begin
-          outcome = Runner.permits(options.concurrency).acquire do
-            check_url(url, options, force_get)
+          result = Runner.permits(options.concurrency).acquire { yield }
+          response = result[0]
+          status = response.status_code
+          return result if attempt >= attempts || !transient?(status)
+          # `Retry-After` is only meaningful on the statuses that define it;
+          # reading it elsewhere would let an unrelated header stretch the
+          # backoff.
+          if status == 429 || status == 503
+            retry_after = HttpClient.parse_retry_after(response.headers["Retry-After"]?)
           end
-          status = outcome.status
-          retry_after = outcome.retry_after
         rescue ex
           # Say which attempt this was: without it a retried link logged the
           # same line two or three times and read as several distinct failures.
@@ -395,12 +422,8 @@ module Deadfinder
             suffix = attempts > 1 ? " (attempt #{attempt}/#{attempts})" : ""
             Deadfinder::Logger.verbose "[#{ex}]#{suffix} #{url}"
           end
-          status = ERROR_STATUS
+          raise ex if attempt >= attempts
         end
-
-        force_get = true if status == ERROR_STATUS
-
-        break if attempt >= attempts || !transient?(status)
 
         wait = retry_delay(attempt, retry_after, options)
         # Hold the whole host back, not just this fiber: every other worker
@@ -412,8 +435,6 @@ module Deadfinder
 
         attempt += 1
       end
-
-      status
     end
 
     # Conditions worth another attempt: the request never produced a status, the
@@ -449,16 +470,11 @@ module Deadfinder
     # 30x status is itself the reported result (`--include30x`). The request
     # method comes from `--method`; see `HttpClient::METHOD_AUTO` for why the
     # default confirms an unhappy HEAD with a GET before reporting anything.
-    private def check_url(url : String, options : Options, force_get : Bool = false) : CheckOutcome
+    private def check_url(url : String, options : Options,
+                          force_get : Bool = false) : {HTTP::Client::Response, URI}
       uri = URI.parse(url)
       headers = HttpClient.build_headers(options.worker_headers, options.user_agent)
-      response = HttpClient.check(uri, options, headers, force_get)
-      # `Retry-After` is only meaningful on the statuses that define it; reading
-      # it elsewhere would let an unrelated header stretch the backoff.
-      retry_after = if response.status_code == 429 || response.status_code == 503
-                      HttpClient.parse_retry_after(response.headers["Retry-After"]?)
-                    end
-      CheckOutcome.new(response.status_code, retry_after)
+      {HttpClient.check(uri, options, headers, force_get), uri}
     end
 
     # A fragment is a client-side anchor and never reaches the server, so it is

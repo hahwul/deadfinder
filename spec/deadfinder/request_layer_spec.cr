@@ -496,6 +496,120 @@ describe "request layer" do
       calls.should eq 1
     end
 
+    it "retries the target page itself, so one transient 503 does not write the target off" do
+      target = "http://flaky-target.test/"
+      html = %(<html><body><a href="http://flaky-target.test/gone">G</a></body></html>)
+      calls = 0
+      WebMock.stub(:get, target).to_return do |_request|
+        calls += 1
+        calls == 1 ? HTTP::Client::Response.new(503, body: "busy") : HTTP::Client::Response.new(200, body: html)
+      end
+      WebMock.stub(:get, "http://flaky-target.test/gone").to_return(status: 404)
+
+      options = default_test_options
+      options.http_method = "get"
+      options.retries = 1
+      args = make_runner_args
+
+      Deadfinder::Runner.new.run(target, options, **args)
+
+      calls.should eq 2
+      Deadfinder.dead_targets.should be_empty
+      # The links come from the page that finally answered, not the 503 body.
+      args[:output][target].should eq ["http://flaky-target.test/gone"]
+    end
+
+    it "retries a target page whose connection failed" do
+      target = "http://reset-target.test/"
+      calls = 0
+      WebMock.stub(:get, target).to_return do |_request|
+        calls += 1
+        raise IO::Error.new("connection reset") if calls == 1
+        HTTP::Client::Response.new(200, body: "<html><body></body></html>")
+      end
+
+      options = default_test_options
+      options.retries = 1
+
+      Deadfinder::Runner.new.run(target, options, **make_runner_args)
+
+      calls.should eq 2
+      Deadfinder.dead_targets.should be_empty
+    end
+
+    it "records a target that is still failing after the last attempt, exactly as before" do
+      busy = "http://busy-target.test/"
+      down = "http://down-target.test/"
+      busy_calls = 0
+      down_calls = 0
+      WebMock.stub(:get, busy).to_return do |_request|
+        busy_calls += 1
+        HTTP::Client::Response.new(503, body: "busy")
+      end
+      WebMock.stub(:get, down).to_return do |_request|
+        down_calls += 1
+        raise IO::Error.new("connection reset")
+      end
+
+      options = default_test_options
+      options.retries = 1
+
+      Deadfinder::Runner.new.run(busy, options, **make_runner_args)
+      Deadfinder::Runner.new.run(down, options, **make_runner_args)
+
+      busy_calls.should eq 2
+      down_calls.should eq 2
+      Deadfinder.dead_targets.should eq({busy => "503", down => "error"})
+    end
+
+    it "fetches the target page exactly once when --retry is 0, and never retries a 404" do
+      busy = "http://busy-once.test/"
+      gone = "http://gone-target.test/"
+      busy_calls = 0
+      gone_calls = 0
+      WebMock.stub(:get, busy).to_return do |_request|
+        busy_calls += 1
+        HTTP::Client::Response.new(503, body: "busy")
+      end
+      WebMock.stub(:get, gone).to_return do |_request|
+        gone_calls += 1
+        HTTP::Client::Response.new(404, body: "")
+      end
+
+      options = default_test_options
+      options.retries = 0
+      Deadfinder::Runner.new.run(busy, options, **make_runner_args)
+      options.retries = 2
+      Deadfinder::Runner.new.run(gone, options, **make_runner_args)
+
+      busy_calls.should eq 1
+      gone_calls.should eq 1
+      Deadfinder.dead_targets.should eq({busy => "503", gone => "404"})
+    end
+
+    it "retries the sitemap document too" do
+      sitemap = "http://flaky-sitemap.test/sitemap.xml"
+      xml = %(<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>http://flaky-sitemap.test/page</loc></url></urlset>)
+      calls = 0
+      WebMock.stub(:get, sitemap).to_return do |_request|
+        calls += 1
+        calls == 1 ? HTTP::Client::Response.new(503, body: "busy") : HTTP::Client::Response.new(200, body: xml)
+      end
+      WebMock.stub(:get, "http://flaky-sitemap.test/page")
+        .to_return(body: %(<html><body><a href="http://flaky-sitemap.test/gone">G</a></body></html>))
+      WebMock.stub(:get, "http://flaky-sitemap.test/gone").to_return(status: 404)
+
+      options = default_test_options
+      options.http_method = "get"
+      options.retries = 1
+
+      Deadfinder.run_sitemap(sitemap, options)
+
+      calls.should eq 2
+      Deadfinder.dead_targets.should be_empty
+      Deadfinder.output["http://flaky-sitemap.test/page"].should eq ["http://flaky-sitemap.test/gone"]
+    end
+
     it "bounds an outsized Retry-After by --timeout so a hostile header cannot hang the run" do
       target = "http://example.com"
       html = %(<html><body><a href="http://example.com/hostile">H</a></body></html>)
