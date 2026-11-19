@@ -118,6 +118,11 @@ module Deadfinder
     @@inflight = {} of String => Channel(Nil)
     @@shared_mutex = Mutex.new
 
+    # Fragment names per document, read at most once per run however many
+    # targets link to it (`--check-anchors`). nil is a result too: a document
+    # that could not answer once is not asked again. See `anchor_ids`.
+    @@anchor_ids = {} of String => Set(String)?
+
     # Sized lazily from the run's `-c`. `Runner` is instantiated in several
     # places (and per target on some paths), so the budget cannot live on an
     # instance — every target has to draw from the same pool for the cap to mean
@@ -136,6 +141,7 @@ module Deadfinder
       @@shared_mutex.synchronize do
         @@inflight.each_value(&.close)
         @@inflight.clear
+        @@anchor_ids.clear
       end
     end
 
@@ -684,7 +690,45 @@ module Deadfinder
     # Every fragment name `url` offers, or nil when the response cannot answer
     # the question (not fetchable, not a success, or not HTML — a fragment on a
     # PDF or a plain-text file is not ours to judge).
+    #
+    # Run-wide like the status cache, and for the same reason: thirty pages
+    # linking to `/doc#x` used to read `/doc` thirty times. The in-flight
+    # registry is shared with `resolve_status` (under a key no URL can equal),
+    # so a second target arriving mid-fetch waits — holding no permit — and
+    # then reads the cache instead of duplicating the request.
     private def anchor_ids(url : String, options : Options) : Set(String)?
+      key = "anchors #{url}"
+
+      loop do
+        pending = nil
+
+        @@shared_mutex.synchronize do
+          return @@anchor_ids[url] if @@anchor_ids.has_key?(url)
+          pending = @@inflight[key]?
+          @@inflight[key] = Channel(Nil).new if pending.nil?
+        end
+
+        if pending
+          pending.receive?
+          next
+        end
+
+        begin
+          ids = begin
+            fetch_anchor_ids(url, options)
+          rescue ex
+            Deadfinder::Logger.verbose "[anchor check failed: #{ex}] #{url}" if options.verbose
+            nil
+          end
+          @@shared_mutex.synchronize { @@anchor_ids[url] = ids }
+          return ids
+        ensure
+          @@shared_mutex.synchronize { @@inflight.delete(key).try(&.close) }
+        end
+      end
+    end
+
+    private def fetch_anchor_ids(url : String, options : Options) : Set(String)?
       uri = URI.parse(url)
       headers = HttpClient.build_headers(options.worker_headers, options.user_agent)
       # Counts against the global in-flight budget like any other request;

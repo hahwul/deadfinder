@@ -1143,6 +1143,9 @@ describe Deadfinder::Runner do
   describe "#run anchor checking" do
     doc = %(<html><body><h1 id="install">i</h1><a name="legacy"></a><div id="\u{d55c}\u{ae00}"></div></body></html>)
 
+    # The per-document id cache is run-wide; an example must not inherit it.
+    before_each { Deadfinder::Runner.reset_shared_state }
+
     it "does not check fragments unless --check-anchors is given" do
       WebMock.stub(:get, "http://anchor.test/")
         .to_return(body: %(<html><body><a href="/guide#nope">n</a></body></html>))
@@ -1249,6 +1252,56 @@ describe Deadfinder::Runner do
         "http://once.test/guide#nope1",
         "http://once.test/guide#nope2",
       ]
+    end
+
+    it "reads a document that several targets link to only once per run" do
+      link = %(<a href="http://shared-doc.test/guide#nope">n</a>)
+      targets = ["http://t1.test/", "http://t2.test/", "http://t3.test/"]
+      targets.each { |t| WebMock.stub(:get, t).to_return(body: "<html><body>#{link}</body></html>") }
+      # Sleeping yields mid-request: the window in which a second target used
+      # to start its own read of the same document.
+      shared = WebMock.stub(:get, "http://shared-doc.test/guide").to_return do
+        sleep 20.milliseconds
+        HTTP::Client::Response.new(200, body: doc, headers: HTTP::Headers{"Content-Type" => "text/html"})
+      end
+
+      options = default_test_options
+      options.check_anchors = true
+      args = make_runner_args
+      runner = Deadfinder::Runner.new
+
+      done = Channel(Nil).new
+      targets.first(2).each do |target|
+        spawn do
+          runner.run(target, options, **args)
+          done.send(nil)
+        end
+      end
+      2.times { done.receive }
+      # And a target that arrives after the fact reuses the result as well.
+      runner.run(targets.last, options, **args)
+
+      # One status check for the link pass plus one body read for the anchor
+      # pass, for the whole run — not one body read per target.
+      shared.calls.should eq 2
+      targets.each { |t| args[:output][t].should eq ["http://shared-doc.test/guide#nope"] }
+    end
+
+    it "remembers a document that cannot answer instead of re-reading it per target" do
+      link = %(<a href="http://shared-pdf.test/manual.pdf#page=3">p</a>)
+      targets = ["http://p1.test/", "http://p2.test/"]
+      targets.each { |t| WebMock.stub(:get, t).to_return(body: "<html><body>#{link}</body></html>") }
+      pdf = WebMock.stub(:get, "http://shared-pdf.test/manual.pdf")
+        .to_return(status: 200, body: "%PDF-1.4", headers: {"Content-Type" => "application/pdf"})
+
+      options = default_test_options
+      options.check_anchors = true
+      args = make_runner_args
+      runner = Deadfinder::Runner.new
+      targets.each { |t| runner.run(t, options, **args) }
+
+      pdf.calls.should eq 2
+      args[:output].values.flatten.should be_empty
     end
 
     it "leaves a fragment on a non-HTML document alone" do
