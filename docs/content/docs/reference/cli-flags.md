@@ -48,7 +48,7 @@ Commands:
 | `-v` | `--verbose` | `false` | Log every checked URL, not just dead ones. |
 | | `--debug` | `false` | Internal state / cache diagnostics. |
 | | `--limit=N` | `0` | Cap input URLs (`0` = unlimited). |
-| | `--check-anchors` | `false` | Verify that `#fragment` link targets exist in the linked document. Needs the response body, so it is opt-in. |
+| | `--check-anchors` | `false` | Verify that `#fragment` link targets exist in the linked document. Needs the response body, so it is opt-in. Same-page links (`<a href="#install">`) are verified against the page they are on; a missing target is reported as `[anchor-missing]` under the resolved URL. `#`, `#top` and text-fragment directives (`#:~:text=...`) are never reported. Each linked document is read once per run. |
 | | `--coverage` | `false` | Emit per-target coverage stats. |
 | `-F` | `--fail-on-dead` | `false` | Exit `2` when any dead link or dead target was found. Off by default: a scan has always exited `0`. |
 | | `--visualize=PATH` | `""` | Write a PNG status-code chart (implies `--coverage`). |

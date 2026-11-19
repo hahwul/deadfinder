@@ -1254,6 +1254,81 @@ describe Deadfinder::Runner do
       ]
     end
 
+    same_page = %(<html><body>
+      <h1 id="install">i</h1><a name="legacy"></a>
+      <a href="#install">present</a>
+      <a href="#legacy">present, legacy name</a>
+      <a href="#nope">missing</a>
+      <a href="#nope">missing, linked twice</a>
+      <a href="#">empty</a>
+      <a href="#top">top</a>
+      <a href="#TOP">TOP</a>
+      <a href="#:~:text=hello">directive only</a>
+      <a href="/other">o</a>
+    </body></html>)
+
+    it "verifies same-page fragments against the page itself, without another request" do
+      page = WebMock.stub(:get, "http://self.test/page").to_return(body: same_page)
+      WebMock.stub(:get, "http://self.test/other").to_return(status: 404)
+
+      options = default_test_options
+      options.check_anchors = true
+      options.coverage = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://self.test/page", options, **args)
+
+      page.calls.should eq 1
+      args[:output]["http://self.test/page"].sort.should eq [
+        "http://self.test/other",
+        "http://self.test/page#nope",
+      ]
+
+      # /other plus the three distinct verifiable fragments; `#`, `#top` and a
+      # bare directive stay out of the count as they always have.
+      cov = args[:coverage_data]["http://self.test/page"]
+      cov.total.should eq 4
+      cov.status_counts.should eq({"404" => 1, "200" => 3})
+      cov.status_counts.values.sum.should eq cov.total
+      cov.dead.should eq args[:output]["http://self.test/page"].size
+    end
+
+    it "resolves a fragment-only link against <base href> when it names another document" do
+      html = %(<html><head><base href="http://based.test/guide"></head><body>
+        <h1 id="here">only on this page</h1>
+        <a href="#install">in the base document</a>
+        <a href="#here">not in the base document</a>
+      </body></html>)
+      page = WebMock.stub(:get, "http://based.test/page").to_return(body: html)
+      WebMock.stub(:get, "http://based.test/guide")
+        .to_return(status: 200, body: doc, headers: {"Content-Type" => "text/html"})
+
+      options = default_test_options
+      options.check_anchors = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://based.test/page", options, **args)
+
+      page.calls.should eq 1
+      args[:output]["http://based.test/page"].should eq ["http://based.test/guide#here"]
+    end
+
+    it "still drops fragment-only links without --check-anchors" do
+      page = WebMock.stub(:get, "http://noflag.test/page").to_return(body: same_page)
+      other = WebMock.stub(:get, "http://noflag.test/other").to_return(status: 404)
+
+      options = default_test_options
+      options.coverage = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://noflag.test/page", options, **args)
+
+      page.calls.should eq 1
+      other.calls.should eq 1
+      args[:output]["http://noflag.test/page"].should eq ["http://noflag.test/other"]
+      cov = args[:coverage_data]["http://noflag.test/page"]
+      cov.total.should eq 1
+      cov.dead.should eq 1
+      cov.status_counts.should eq({"404" => 1})
+    end
+
     it "reads a document that several targets link to only once per run" do
       link = %(<a href="http://shared-doc.test/guide#nope">n</a>)
       targets = ["http://t1.test/", "http://t2.test/", "http://t3.test/"]
