@@ -747,12 +747,12 @@ describe Deadfinder do
     end
 
     it "keeps &amp; in <loc> when the sitemap has an error the repair cannot fix" do
-      # Whitespace before the XML declaration is an error too, after which
-      # libxml2 drops every `&amp;`: `?q=ok&amp;page=2` became `?q=okpage=2`.
+      # After any well-formedness error (here a mismatched end tag) libxml2
+      # drops every later `&amp;`: `?q=ok&amp;page=2` became `?q=okpage=2`.
       sitemap = "http://sm-ws.test/sitemap.xml"
       page = "http://sm-ws.test/search?q=ok&page=2"
       WebMock.stub(:get, sitemap)
-        .to_return(body: %(\n<?xml version="1.0"?><urlset><url><loc>http://sm-ws.test/search?q=ok&amp;page=2</loc></url></urlset>))
+        .to_return(body: %(<?xml version="1.0"?><urlset><x></y><url><loc>http://sm-ws.test/search?q=ok&amp;page=2</loc></url></urlset>))
       WebMock.stub(:get, page).to_return(body: %(<html><body><a href="http://sm-ws.test/dead">d</a></body></html>))
       WebMock.stub(:get, "http://sm-ws.test/dead").to_return(status: 404)
 
@@ -805,6 +805,38 @@ describe Deadfinder do
         Deadfinder.dead_targets[sitemap]?.should eq "error"
       end
       Deadfinder.output.should be_empty
+    end
+
+    it "scans a plain-text sitemap, one URL per line" do
+      sitemap = "http://sm-text.test/sitemap.txt"
+      WebMock.stub(:get, sitemap)
+        .to_return(body: "\uFEFFhttp://sm-text.test/page1\r\n\nhttps://sm-text.test/page2\n")
+      WebMock.stub(:get, "http://sm-text.test/page1")
+        .to_return(body: %(<html><body><a href="http://sm-text.test/dead">d</a></body></html>))
+      WebMock.stub(:get, "https://sm-text.test/page2").to_return(body: "<html></html>")
+      WebMock.stub(:get, "http://sm-text.test/dead").to_return(status: 404)
+
+      Deadfinder.run_sitemap(sitemap, default_test_options)
+
+      Deadfinder.dead_targets.should be_empty
+      Deadfinder.output["http://sm-text.test/page1"].should eq ["http://sm-text.test/dead"]
+    end
+
+    it "does not call a sitemap malformed for whitespace before the XML declaration" do
+      sitemap = "http://sm-lead.test/sitemap.xml"
+      WebMock.stub(:get, sitemap)
+        .to_return(body: %(\n  <?xml version="1.0"?><urlset><url><loc>http://sm-lead.test/a?x=1&amp;y=2</loc></url></urlset>))
+      WebMock.stub(:get, "http://sm-lead.test/a?x=1&y=2").to_return(body: "<html></html>")
+
+      log = IO::Memory.new
+      Deadfinder::Logger.sink = log
+      options = default_test_options
+      options.silent = false
+      Deadfinder.run_sitemap(sitemap, options)
+
+      log.to_s.should_not contain "not well-formed"
+      log.to_s.should contain "Found 1 URLs"
+      Deadfinder.dead_targets.should be_empty
     end
 
     it "treats an empty <urlset/> as a clean result, not a dead sitemap" do

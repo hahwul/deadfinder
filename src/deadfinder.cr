@@ -336,7 +336,17 @@ module Deadfinder
       # against the document's final location, not the address originally
       # requested.
       base = final_uri.to_s
-      body = HttpClient.decompress_if_gzip(response.body)
+      # Whitespace (and a BOM) before `<?xml` is common in generated sitemaps
+      # and makes libxml2 call the whole document malformed; drop it.
+      body = HttpClient.decompress_if_gzip(response.body).lchop(UTF8_BOM).lstrip
+
+      # sitemaps.org also defines a plain-text sitemap: one absolute URL per
+      # line. It is no XML document, so it would otherwise be reported dead.
+      if !body.empty? && body.each_line.all? { |line| line.blank? || http_target_error(line).nil? }
+        body.each_line { |line| collect_sitemap_url(collector, line, base, sitemap_url) unless line.blank? }
+        return
+      end
+
       doc = XML.parse(body)
 
       # libxml2 parses in recover mode, and its recovery from a raw `&` in a
