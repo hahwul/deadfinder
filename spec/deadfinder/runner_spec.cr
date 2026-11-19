@@ -1208,6 +1208,25 @@ describe Deadfinder::Runner do
       (args[:output]["http://top.test/"]? || [] of String).should be_empty
     end
 
+    it "leaves hash-route fragments alone" do
+      html = %(<html><body>
+        <a href="#/quickstart">docsify route</a>
+        <a href="#!/home">hashbang route</a>
+        <a href="/guide#/usage">route on another page</a>
+        <a href="/guide#%2Fencoded">encoded route</a>
+      </body></html>)
+      WebMock.stub(:get, "http://route.test/").to_return(body: html)
+      WebMock.stub(:get, "http://route.test/guide")
+        .to_return(status: 200, body: doc, headers: {"Content-Type" => "text/html"})
+
+      options = default_test_options
+      options.check_anchors = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://route.test/", options, **args)
+
+      (args[:output]["http://route.test/"]? || [] of String).should be_empty
+    end
+
     it "verifies only the id in front of a text-fragment directive" do
       html = %(<html><body>
         <a href="/guide#:~:text=hello">directive only</a>
@@ -1290,6 +1309,23 @@ describe Deadfinder::Runner do
       cov.status_counts.should eq({"404" => 1, "200" => 3})
       cov.status_counts.values.sum.should eq cov.total
       cov.dead.should eq args[:output]["http://self.test/page"].size
+    end
+
+    it "treats #x and /#x on a slashless target as one link" do
+      html = %(<html><body><div id="x"></div>
+        <a href="#x">x</a><a href="/#x">x again</a>
+        <a href="#y">y</a><a href="/#y">y again</a>
+      </body></html>)
+      # WebMock serves `http://slashless.test` and `.../` from this one stub.
+      WebMock.stub(:get, "http://slashless.test/")
+        .to_return(status: 200, body: html, headers: {"Content-Type" => "text/html"})
+
+      options = default_test_options
+      options.check_anchors = true
+      args = make_runner_args
+      Deadfinder::Runner.new.run("http://slashless.test", options, **args)
+
+      args[:output]["http://slashless.test"].should eq ["http://slashless.test/#y"]
     end
 
     it "resolves a fragment-only link against <base href> when it names another document" do
@@ -1377,6 +1413,33 @@ describe Deadfinder::Runner do
 
       pdf.calls.should eq 2
       args[:output].values.flatten.should be_empty
+    end
+
+    it "re-reads a document whose body read failed transiently instead of caching the failure" do
+      link = %(<a href="http://flaky-doc.test/guide#nope">n</a>)
+      targets = ["http://f1.test/", "http://f2.test/"]
+      targets.each { |t| WebMock.stub(:get, t).to_return(body: "<html><body>#{link}</body></html>") }
+      # Call 1 is the (run-wide cached) status check, call 2 the first body
+      # read: only that one is unlucky.
+      calls = 0
+      flaky = WebMock.stub(:get, "http://flaky-doc.test/guide").to_return do
+        calls += 1
+        if calls == 2
+          HTTP::Client::Response.new(503, body: "busy")
+        else
+          HTTP::Client::Response.new(200, body: doc, headers: HTTP::Headers{"Content-Type" => "text/html"})
+        end
+      end
+
+      options = default_test_options
+      options.check_anchors = true
+      args = make_runner_args
+      runner = Deadfinder::Runner.new
+      targets.each { |t| runner.run(t, options, **args) }
+
+      flaky.calls.should eq 3
+      (args[:output]["http://f1.test/"]? || [] of String).should be_empty
+      args[:output]["http://f2.test/"].should eq ["http://flaky-doc.test/guide#nope"]
     end
 
     it "leaves a fragment on a non-HTML document alone" do
