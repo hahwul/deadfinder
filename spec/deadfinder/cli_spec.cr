@@ -34,7 +34,7 @@ describe Deadfinder::CLI do
     it "generates bash completion script" do
       script = Deadfinder::Completion.bash
       script.should contain "_deadfinder_completions"
-      script.should contain "complete -F _deadfinder_completions deadfinder"
+      script.should contain "complete -o default -F _deadfinder_completions deadfinder"
       script.should contain "COMPREPLY"
     end
 

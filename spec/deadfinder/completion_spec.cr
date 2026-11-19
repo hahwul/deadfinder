@@ -116,7 +116,7 @@ describe Deadfinder::Completion do
       script.should contain %(shells="#{Deadfinder::Completion::SHELLS.join(" ")}")
       script.should contain %(formats="#{Deadfinder::Completion::OUTPUT_FORMATS.join(" ")}")
       script.should contain "-f|--output_format)"
-      script.should contain "complete -F _deadfinder_completions deadfinder"
+      script.should contain "complete -o default -F _deadfinder_completions deadfinder"
     end
   end
 
