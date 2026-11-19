@@ -125,6 +125,21 @@ module Deadfinder
         end
       end
 
+      # Crystal 1.22 makes STDOUT/STDERR exit(141) on EPIPE instead of raising,
+      # which killed a scan at its next log line once the reader went away
+      # (`deadfinder ... -o report.json | head -1`): no report, no
+      # `--fail-on-dead` exit code. Opt back into the IO::Error that the logger
+      # and the report writer already swallow. Only for the scanning commands:
+      # help, usage, version and completion output have no rescue around their
+      # `puts`, and a quiet exit 141 is the right ending for them. The setter
+      # does not exist before 1.22, where a broken pipe raised to begin with.
+      if subcommand && ["pipe", "file", "url", "sitemap"].includes?(subcommand)
+        {% if IO::FileDescriptor.has_method?("exit_on_broken_pipe=") %}
+          STDOUT.exit_on_broken_pipe = false
+          STDERR.exit_on_broken_pipe = false
+        {% end %}
+      end
+
       # Auto-enable coverage if visualize is set
       if !options.visualize.empty?
         options.coverage = true
