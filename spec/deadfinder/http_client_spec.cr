@@ -178,21 +178,22 @@ describe Deadfinder::HttpClient do
       final.to_s.should eq("http://fetch.test/b")
     end
 
-    it "stops at the hop limit instead of following forever" do
+    it "raises at the hop limit instead of returning the last redirect as the document" do
       hops = 0
       WebMock.stub(:get, /^http:\/\/hops\.test\//).to_return do |request|
         hops += 1
         HTTP::Client::Response.new(302, body: "", headers: HTTP::Headers{"Location" => "/#{hops}"})
       end
 
-      response, _ = Deadfinder::HttpClient.fetch(
-        URI.parse("http://hops.test/"), default_test_options, HTTP::Headers.new, 3)
+      expect_raises(Deadfinder::HttpClient::RedirectError, "too many redirects") do
+        Deadfinder::HttpClient.fetch(
+          URI.parse("http://hops.test/"), default_test_options, HTTP::Headers.new, 3)
+      end
 
-      response.status_code.should eq(302)
       hops.should eq(4) # initial request + 3 followed hops
     end
 
-    it "stops on a redirect loop" do
+    it "raises on a redirect loop without burning the remaining hops" do
       requests = 0
       WebMock.stub(:get, "http://loop.test/a").to_return do
         requests += 1
@@ -203,8 +204,10 @@ describe Deadfinder::HttpClient do
         HTTP::Client::Response.new(302, body: "", headers: HTTP::Headers{"Location" => "http://loop.test/a"})
       end
 
-      Deadfinder::HttpClient.fetch(
-        URI.parse("http://loop.test/a"), default_test_options, HTTP::Headers.new, 5)
+      expect_raises(Deadfinder::HttpClient::RedirectError, "redirect loop") do
+        Deadfinder::HttpClient.fetch(
+          URI.parse("http://loop.test/a"), default_test_options, HTTP::Headers.new, 5)
+      end
 
       requests.should eq(2)
     end
@@ -218,6 +221,26 @@ describe Deadfinder::HttpClient do
 
       response.status_code.should eq(302)
       final.to_s.should eq("http://scheme.test/a")
+    end
+
+    it "returns a redirect without a Location as the final answer" do
+      WebMock.stub(:get, "http://noloc.test/a").to_return(status: 300, body: "choices")
+
+      response, _ = Deadfinder::HttpClient.fetch(
+        URI.parse("http://noloc.test/a"), default_test_options, HTTP::Headers.new, 5)
+
+      response.status_code.should eq(300)
+    end
+
+    it "follows exactly as many hops as the budget allows" do
+      WebMock.stub(:get, "http://exact.test/0").to_return(status: 302, headers: {"Location" => "/1"})
+      WebMock.stub(:get, "http://exact.test/1").to_return(status: 302, headers: {"Location" => "/2"})
+      WebMock.stub(:get, "http://exact.test/2").to_return(body: "done")
+
+      response, _ = Deadfinder::HttpClient.fetch(
+        URI.parse("http://exact.test/0"), default_test_options, HTTP::Headers.new, 2)
+
+      response.body.should eq("done")
     end
 
     it "keeps credentials on a same-origin redirect" do

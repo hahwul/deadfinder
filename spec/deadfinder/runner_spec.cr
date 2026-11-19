@@ -765,6 +765,60 @@ describe Deadfinder::Runner do
       args[:output]["http://rel.test/old"].should eq ["http://rel.test/new/sibling"]
     end
 
+    it "records a target stuck in a redirect loop as dead instead of as an empty page" do
+      reset_deadfinder_state
+      requests = 0
+      WebMock.stub(:get, "http://stuck.test/loop").to_return do
+        requests += 1
+        HTTP::Client::Response.new(302, body: "", headers: HTTP::Headers{"Location" => "/loop"})
+      end
+
+      # Retries on: a loop is a property of the site and must not be retried.
+      options = default_test_options
+      options.retries = 2
+      Deadfinder::Runner.new.run("http://stuck.test/loop", options, **make_runner_args)
+
+      Deadfinder.dead_targets.should eq({"http://stuck.test/loop" => "error"})
+      requests.should eq 1
+    end
+
+    it "records a target that outruns the redirect hop limit as dead" do
+      reset_deadfinder_state
+      requests = 0
+      WebMock.stub(:get, /^http:\/\/hops\.test\//).to_return do
+        requests += 1
+        HTTP::Client::Response.new(302, body: "", headers: HTTP::Headers{"Location" => "/hop/#{requests}"})
+      end
+
+      Deadfinder::Runner.new.run("http://hops.test/hop/0", default_test_options, **make_runner_args)
+
+      Deadfinder.dead_targets.should eq({"http://hops.test/hop/0" => "error"})
+      requests.should eq Deadfinder::HttpClient::MAX_REDIRECTS + 1
+    end
+
+    it "records a sitemap stuck in a redirect loop as dead" do
+      reset_deadfinder_state
+      WebMock.stub(:get, "http://stuck.test/sitemap.xml")
+        .to_return(status: 301, headers: {"Location" => "/sitemap.xml"})
+
+      Deadfinder.run_sitemap("http://stuck.test/sitemap.xml", default_test_options)
+
+      Deadfinder.dead_targets.should eq({"http://stuck.test/sitemap.xml" => "error"})
+    end
+
+    it "keeps a 3xx that is a legitimate final answer out of the dead targets" do
+      reset_deadfinder_state
+      WebMock.stub(:get, "http://final.test/choices").to_return(status: 300, body: "")
+      WebMock.stub(:get, "http://final.test/ftp")
+        .to_return(status: 302, headers: {"Location" => "ftp://final.test/file"})
+
+      options = default_test_options
+      Deadfinder::Runner.new.run("http://final.test/choices", options, **make_runner_args)
+      Deadfinder::Runner.new.run("http://final.test/ftp", options, **make_runner_args)
+
+      Deadfinder.dead_targets.should be_empty
+    end
+
     it "still reports link redirects verbatim without following them" do
       followed = false
       WebMock.stub(:get, "http://link.test/")

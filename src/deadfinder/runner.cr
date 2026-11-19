@@ -415,6 +415,10 @@ module Deadfinder
           if status == 429 || status == 503
             retry_after = HttpClient.parse_retry_after(response.headers["Retry-After"]?)
           end
+        rescue ex : HttpClient::RedirectError
+          # A property of the site, not a blip: another attempt would only walk
+          # the same chain again.
+          raise ex
         rescue ex
           # Say which attempt this was: without it a retried link logged the
           # same line two or three times and read as several distinct failures.
