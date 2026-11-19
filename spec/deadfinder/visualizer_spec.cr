@@ -252,8 +252,15 @@ describe Deadfinder::Visualizer do
       # Parent directory does not exist -> StumpyPNG.write raises IO::Error,
       # which must be handled gracefully rather than crashing the run.
       bad_path = File.join(Dir.tempdir, "deadfinder_no_such_dir_#{Time.utc.to_unix_ns}", "viz.png")
-      Deadfinder::Visualizer.generate(data, bad_path)
-      File.exists?(bad_path).should be_false
+      Deadfinder.reset_state
+      begin
+        Deadfinder::Visualizer.generate(data, bad_path)
+        File.exists?(bad_path).should be_false
+        # Same rule as an unwritable report: the CLI exits 1 on this.
+        Deadfinder.io_failed?.should be_true
+      ensure
+        Deadfinder.reset_state
+      end
     end
   end
 end

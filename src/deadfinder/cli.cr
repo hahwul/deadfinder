@@ -202,8 +202,15 @@ module Deadfinder
     # contract is that every scan exits 0, and `spec/compat/run.rb` asserts it.
     # Exit 1 stays reserved for usage/IO errors, so findings get their own code.
     private def self.exit_on_findings(options : Options) : Nil
-      return unless options.fail_on_dead
-      exit Deadfinder::EXIT_DEAD_FOUND if Deadfinder.dead_findings?
+      code = exit_code(options)
+      exit code unless code == 0
+    end
+
+    # An I/O failure wins over the findings code: a report that was never
+    # written, or a list that was never read, makes the findings meaningless.
+    def self.exit_code(options : Options) : Int32
+      return 1 if Deadfinder.io_failed?
+      options.fail_on_dead && Deadfinder.dead_findings? ? Deadfinder::EXIT_DEAD_FOUND : 0
     end
   end
 end

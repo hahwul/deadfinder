@@ -50,6 +50,25 @@ describe "reporting" do
       Deadfinder::CLI.run(["url", target, "-s", "--fail-on-dead"])
       Deadfinder.dead_findings?.should be_false
     end
+
+    it "maps findings to the exit code only when the flag is given" do
+      Deadfinder.output["http://example.com"] = ["http://example.com/dead"]
+      options = default_test_options
+
+      Deadfinder::CLI.exit_code(options).should eq 0
+      options.fail_on_dead = true
+      Deadfinder::CLI.exit_code(options).should eq Deadfinder::EXIT_DEAD_FOUND
+    end
+
+    it "yields to an I/O failure, which exits 1 with or without the flag" do
+      Deadfinder.output["http://example.com"] = ["http://example.com/dead"]
+      Deadfinder.io_error "simulated by the spec"
+      options = default_test_options
+
+      Deadfinder::CLI.exit_code(options).should eq 1
+      options.fail_on_dead = true
+      Deadfinder::CLI.exit_code(options).should eq 1
+    end
   end
 
   describe ".record_dead_target" do

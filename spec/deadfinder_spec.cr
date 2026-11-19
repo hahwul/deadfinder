@@ -25,6 +25,15 @@ describe Deadfinder do
       Deadfinder.coverage_data.should be_empty
       Deadfinder.status_cache.should be_empty
     end
+
+    it "clears a recorded I/O failure" do
+      Deadfinder.io_error "simulated by the spec"
+      Deadfinder.io_failed?.should be_true
+
+      Deadfinder.reset_state
+
+      Deadfinder.io_failed?.should be_false
+    end
   end
 
   describe "#run_url" do
@@ -133,6 +142,15 @@ describe Deadfinder do
       Deadfinder.run_file(missing, options)
 
       Deadfinder.output.should be_empty
+    end
+
+    it "records an unreadable input file as an I/O failure" do
+      # Scanning nothing must not look like a clean scan: the CLI exits 1 on this.
+      missing = File.join(Dir.tempdir, "deadfinder_missing_#{Time.utc.to_unix_ns}.txt")
+
+      Deadfinder.run_file(missing, default_test_options)
+
+      Deadfinder.io_failed?.should be_true
     end
 
     it "does not double-count coverage when a target is listed more than once" do
@@ -926,6 +944,15 @@ describe Deadfinder do
         # Should not raise; the bad path is reported and the run finishes.
         Deadfinder.gen_output(options)
         File.exists?(options.output).should be_false
+      end
+
+      it "records the failed write as an I/O failure" do
+        options = default_test_options
+        options.output = File.join(Dir.tempdir, "deadfinder_no_such_dir_#{Time.utc.to_unix_ns}", "out.json")
+
+        Deadfinder.gen_output(options)
+
+        Deadfinder.io_failed?.should be_true
       end
     end
   end

@@ -56,7 +56,24 @@ module Deadfinder
   # would otherwise be keyed in whatever order results happened to land in;
   # this restores the requested order at serialization time.
   @@target_order = [] of String
+  # Set once the run could not read its input or write its report or chart.
+  # Library code must not `exit` (embedded callers and the specs expect
+  # `run_*` to return), so it records the failure here and the CLI turns it
+  # into exit status 1.
+  @@io_failed = false
   @@mutex = Mutex.new
+
+  def self.io_failed? : Bool
+    @@io_failed
+  end
+
+  # Reports an I/O failure. Deliberately not `Logger.error`: `--silent` mutes
+  # that, and then nothing told a CI job that the report it is about to read
+  # was never written, or that the list it meant to scan was never read.
+  def self.io_error(message : String) : Nil
+    @@io_failed = true
+    STDERR.puts "Error: #{message}"
+  end
 
   def self.output
     @@output
@@ -95,6 +112,7 @@ module Deadfinder
       @@status_cache.clear
       @@dead_targets.clear
       @@target_order.clear
+      @@io_failed = false
     end
     Runner.reset_shared_state
   end
@@ -137,7 +155,7 @@ module Deadfinder
           File.open(filename) { |file| read_targets(file, options.limit) }
         end
       rescue ex : IO::Error
-        Deadfinder::Logger.error "Failed to read input file #{filename}: #{ex.message}"
+        io_error "Failed to read input file #{filename}: #{ex.message}"
         [] of String
       end
     end
@@ -533,7 +551,7 @@ module Deadfinder
         begin
           File.write(options.output, content)
         rescue ex : IO::Error
-          Deadfinder::Logger.error "Failed to write output file #{options.output}: #{ex.message}"
+          io_error "Failed to write output file #{options.output}: #{ex.message}"
         end
       end
     end
