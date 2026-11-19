@@ -193,9 +193,11 @@ module Deadfinder
 
       if !options.match.empty?
         begin
+          gave_up = [] of String
           links.each do |type, urls|
-            links[type] = urls.select { |url| UrlPatternMatcher.match?(url, options.match) }
+            links[type] = urls.select { |url| UrlPatternMatcher.match?(url, options.match) { |reason| gave_up << reason } }
           end
+          Deadfinder::Logger.error "Match pattern left #{gave_up.size} URL(s) out of the scan: #{gave_up.first}" unless gave_up.empty?
         rescue ex : ArgumentError
           Deadfinder::Logger.error "Invalid match pattern: #{ex.message}"
         end
@@ -203,9 +205,11 @@ module Deadfinder
 
       if !options.ignore.empty?
         begin
+          gave_up = [] of String
           links.each do |type, urls|
-            links[type] = urls.reject { |url| UrlPatternMatcher.ignore?(url, options.ignore) }
+            links[type] = urls.reject { |url| UrlPatternMatcher.ignore?(url, options.ignore) { |reason| gave_up << reason } }
           end
+          Deadfinder::Logger.error "Ignore pattern left #{gave_up.size} URL(s) out of the scan: #{gave_up.first}" unless gave_up.empty?
         rescue ex : ArgumentError
           Deadfinder::Logger.error "Invalid ignore pattern: #{ex.message}"
         end

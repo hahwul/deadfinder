@@ -10,25 +10,39 @@ module Deadfinder
     @@regex_cache = {} of String => Regex
     @@regex_cache_mutex = Mutex.new
 
+    # `--match` and `--ignore` ask the same question and differ only when it has
+    # no answer: a pattern that got past `validate!` and drives PCRE2 into its
+    # match limit on this one URL. Each then gives the answer that keeps the URL
+    # out of the scan — not matched, or ignored — instead of raising, which
+    # aborted the caller's loop and left every later link on the page
+    # unfiltered. The block is handed the reason, so the caller can report it
+    # once per target rather than once per URL.
+    def self.match?(url : String, pattern : String, &) : Bool
+      matches?(url, pattern) { |reason| yield reason; false }
+    end
+
+    def self.ignore?(url : String, pattern : String, &) : Bool
+      matches?(url, pattern) { |reason| yield reason; true }
+    end
+
     def self.match?(url : String, pattern : String) : Bool
-      matches?(url, pattern)
+      match?(url, pattern) { }
     end
 
     def self.ignore?(url : String, pattern : String) : Bool
-      matches?(url, pattern)
+      ignore?(url, pattern) { }
     end
 
-    private def self.matches?(url : String, pattern : String) : Bool
+    # Yields the reason when PCRE2 gives up on `url`; the block's value is then
+    # the answer.
+    private def self.matches?(url : String, pattern : String, & : String -> Bool) : Bool
       regex = compile(pattern)
       begin
         regex.matches?(url)
       rescue ex : Regex::Error
-        # PCRE2 enforces an internal match limit and raises Regex::Error (which
-        # is NOT an ArgumentError) when a guard-bypassing pattern backtracks
-        # catastrophically at match time. Re-raise as UnsafePatternError so the
-        # runner's `rescue ArgumentError` handles it gracefully instead of
-        # aborting the entire target scan.
-        raise UnsafePatternError.new("Pattern caused excessive backtracking while matching: #{pattern.inspect} (#{ex.message})")
+        # PCRE2 enforces an internal match limit and raises Regex::Error when a
+        # guard-bypassing pattern backtracks catastrophically at match time.
+        yield "Pattern caused excessive backtracking while matching: #{pattern.inspect} (#{ex.message})"
       end
     end
 

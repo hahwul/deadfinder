@@ -44,6 +44,17 @@ describe Deadfinder::UrlPatternMatcher do
     it "matches query parameters" do
       Deadfinder::UrlPatternMatcher.match?("http://example.com?foo=bar", "foo=bar").should be_true
     end
+
+    it "does not match a URL that drives the pattern into PCRE2's match limit" do
+      # `(\w|\d)+$` passes `validate!` and then gives up on a long digit run.
+      # Raising aborted the caller's loop over the page, so the one URL is
+      # answered instead — not matched keeps it out of the scan — and the
+      # pattern goes on answering for the next URL.
+      pattern = "/private/(\\w|\\d)+$"
+      Deadfinder::UrlPatternMatcher.validate!(pattern)
+      Deadfinder::UrlPatternMatcher.match?("/private/#{"1234567890" * 4}.x", pattern).should be_false
+      Deadfinder::UrlPatternMatcher.match?("/private/logout", pattern).should be_true
+    end
   end
 
   describe ".ignore?" do
@@ -65,6 +76,14 @@ describe Deadfinder::UrlPatternMatcher do
       Deadfinder::UrlPatternMatcher.ignore?("http://example.com/ads", "ads|tracking").should be_true
       Deadfinder::UrlPatternMatcher.ignore?("http://example.com/tracking", "ads|tracking").should be_true
       Deadfinder::UrlPatternMatcher.ignore?("http://example.com/page", "ads|tracking").should be_false
+    end
+
+    it "ignores a URL that drives the pattern into PCRE2's match limit" do
+      # The mirror of `match?`: here "ignored" is the answer that keeps the URL
+      # out of the scan.
+      pattern = "/private/(\\w|\\d)+$"
+      Deadfinder::UrlPatternMatcher.ignore?("/private/#{"1234567890" * 4}.x", pattern).should be_true
+      Deadfinder::UrlPatternMatcher.ignore?("/public/ok", pattern).should be_false
     end
   end
 
@@ -108,13 +127,17 @@ describe Deadfinder::UrlPatternMatcher do
       Deadfinder::UrlPatternMatcher.match?("abab", "(ab){2,5}").should be_true
     end
 
-    it "converts a match-time backtracking blowup into an ArgumentError" do
+    it "hands a match-time backtracking blowup to the block instead of raising" do
       # (a|a)* bypasses the static guard but PCRE2 raises a match-limit error at
-      # match time; it must surface as UnsafePatternError (an ArgumentError) so
-      # the runner catches it instead of aborting the whole target scan.
-      expect_raises(Deadfinder::UrlPatternMatcher::UnsafePatternError) do
-        Deadfinder::UrlPatternMatcher.match?("a" * 80 + "!", "(a|a)*$")
-      end
+      # match time. Raising it aborted the runner's filter loop mid-page, so the
+      # caller is told why — to report it once per target — and still gets an
+      # answer for this URL.
+      reasons = [] of String
+      Deadfinder::UrlPatternMatcher.match?("a" * 80 + "!", "(a|a)*$") { |reason| reasons << reason }.should be_false
+      Deadfinder::UrlPatternMatcher.ignore?("a" * 80 + "!", "(a|a)*$") { |reason| reasons << reason }.should be_true
+      Deadfinder::UrlPatternMatcher.match?("aaa", "(a|a)*$") { |reason| reasons << reason }.should be_true
+      reasons.size.should eq 2
+      reasons.first.should contain "(a|a)*$"
     end
 
     it "UnsafePatternError is-a ArgumentError so runner rescue still catches" do
