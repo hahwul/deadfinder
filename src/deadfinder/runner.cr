@@ -118,6 +118,13 @@ module Deadfinder
     @@inflight = {} of String => Channel(Nil)
     @@shared_mutex = Mutex.new
 
+    # Fragment names per document, read at most once per run however many
+    # targets link to it (`--check-anchors`). nil is a result too: a document
+    # that is not HTML or answered 4xx is not asked again. A transient failure
+    # (exception, 429, 5xx) is not stored, so the next target re-reads it.
+    # See `anchor_ids`.
+    @@anchor_ids = {} of String => Set(String)?
+
     # Sized lazily from the run's `-c`. `Runner` is instantiated in several
     # places (and per target on some paths), so the budget cannot live on an
     # instance — every target has to draw from the same pool for the cap to mean
@@ -136,6 +143,7 @@ module Deadfinder
       @@shared_mutex.synchronize do
         @@inflight.each_value(&.close)
         @@inflight.clear
+        @@anchor_ids.clear
       end
     end
 
@@ -233,6 +241,37 @@ module Deadfinder
       # target.
       resolved_urls = all_links.compact_map { |node| Deadfinder.generate_url(node, base_url) }.uniq
 
+      # `generate_url` drops fragment-only links (`#install`): there is nothing
+      # to request, which is right for a status check but left
+      # `--check-anchors` blind to the most common fragment link there is. Such
+      # a reference resolves to the document base plus the fragment. Normally
+      # that is this very page, whose ids are already in hand (`own_anchors`,
+      # verified below without another request); with a `<base href>` pointing
+      # at a different document it is a link to that document and is checked
+      # like any other.
+      own_anchors = [] of Tuple(String, String)
+      if options.check_anchors
+        seen = resolved_urls.to_set
+        doc_url = document_url(base_url)
+        same_page = doc_url == document_url(final_uri.to_s)
+        # Same rule as `verify_anchors`: only a page that answered 2xx and was
+        # not judged dead is worth holding its fragments against.
+        verifiable = response.status.success? && !options.dead_status?(response.status_code)
+        all_links.each do |node|
+          node = node.delete("\t\n\r").strip
+          next unless node.starts_with?('#')
+          url = doc_url + node
+          # Also skips a fragment the page links to in full (`/page#x` next to
+          # `#x`): that one already goes through the link pass.
+          next unless seen.add?(url)
+          if !same_page
+            resolved_urls << url
+          elsif verifiable && (fragment = checkable_fragment(url))
+            own_anchors << {url, fragment}
+          end
+        end
+      end
+
       # Group by the URL that is actually requested. A fragment is a client-side
       # anchor and is never transmitted, so `/guide#install` and `/guide#usage`
       # are one request while both still appear in the report. Grouping keeps
@@ -255,6 +294,17 @@ module Deadfinder
       # path never pays for reading a response body. It reuses `grouped`, so a
       # document that many fragments point at is still opened only once.
       verify_anchors(target, grouped, options, output, coverage_data, status_cache, mutex) if options.check_anchors
+
+      # Same-page fragments count like any other checked link, under the status
+      # the page itself answered with, so coverage stays `total ==
+      # sum(status_counts)` with them in it.
+      own_anchors.each do |(url, _)|
+        record_total(target, options, coverage_data, mutex)
+        record_status(target, url, response.status_code, options, output, coverage_data, mutex)
+      end
+      unless own_anchors.empty?
+        report_missing_anchors(element_ids(page), own_anchors, target, options, output, coverage_data, mutex)
+      end
 
       # Log coverage summary
       if options.coverage
@@ -489,6 +539,17 @@ module Deadfinder
       url[0, idx]
     end
 
+    # `request_url`, spelled the way `generate_url` resolves a link to the same
+    # document: an empty path is `/`, so `#x` on `http://host` and `/#x` land on
+    # one URL rather than being checked and reported twice.
+    private def document_url(url : String) : String
+      url = request_url(url)
+      uri = URI.parse(url)
+      return url unless uri.host && uri.path.empty?
+      uri.path = "/"
+      uri.to_s
+    end
+
     # Honors `<base href>` (the first one wins, per the HTML spec) so relative
     # links on pages that declare a document base resolve the way a browser
     # would instead of against the page URL.
@@ -665,6 +726,17 @@ module Deadfinder
       # nil means the document could not be re-read or is not HTML. A
       # fragment we cannot verify is left alone rather than guessed at.
       return unless ids = anchor_ids(request, options)
+      report_missing_anchors(ids, entries, target, options, output, coverage_data, mutex)
+    rescue ex
+      # `anchor_ids` handles its own fetch errors; only reporting gets here.
+      Deadfinder::Logger.verbose "[anchor report failed: #{ex}] #{request}" if options.verbose
+    end
+
+    private def report_missing_anchors(ids : Set(String), entries : Array(Tuple(String, String)),
+                                       target : String, options : Options,
+                                       output : Hash(String, Array(String)),
+                                       coverage_data : Hash(String, TargetCoverage),
+                                       mutex : Mutex) : Nil
       entries.each do |(url, fragment)|
         next if ids.includes?(fragment)
         # Deliberately not "[404]": a live page missing an anchor is a
@@ -677,14 +749,53 @@ module Deadfinder
         # `record_status` never recorded as dead.
         record_dead(target, url, nil, options, output, coverage_data, mutex)
       end
-    rescue ex
-      Deadfinder::Logger.verbose "[anchor check failed: #{ex}] #{request}" if options.verbose
     end
 
     # Every fragment name `url` offers, or nil when the response cannot answer
     # the question (not fetchable, not a success, or not HTML — a fragment on a
     # PDF or a plain-text file is not ours to judge).
+    #
+    # Run-wide like the status cache, and for the same reason: thirty pages
+    # linking to `/doc#x` used to read `/doc` thirty times. The in-flight
+    # registry is shared with `resolve_status` (under a key no URL can equal),
+    # so a second target arriving mid-fetch waits — holding no permit — and
+    # then reads the cache instead of duplicating the request. After a
+    # transient failure there is nothing cached and a waiter fetches itself.
     private def anchor_ids(url : String, options : Options) : Set(String)?
+      key = "anchors #{url}"
+
+      loop do
+        pending = nil
+
+        @@shared_mutex.synchronize do
+          return @@anchor_ids[url] if @@anchor_ids.has_key?(url)
+          pending = @@inflight[key]?
+          @@inflight[key] = Channel(Nil).new if pending.nil?
+        end
+
+        if pending
+          pending.receive?
+          next
+        end
+
+        begin
+          ids, definitive = begin
+            fetch_anchor_ids(url, options)
+          rescue ex
+            Deadfinder::Logger.verbose "[anchor check failed: #{ex}] #{url}" if options.verbose
+            {nil, false}
+          end
+          @@shared_mutex.synchronize { @@anchor_ids[url] = ids } if definitive
+          return ids
+        ensure
+          @@shared_mutex.synchronize { @@inflight.delete(key).try(&.close) }
+        end
+      end
+    end
+
+    # The ids, and whether that answer holds for the rest of the run: a 429 or
+    # 5xx says nothing about the document, only about this moment.
+    private def fetch_anchor_ids(url : String, options : Options) : Tuple(Set(String)?, Bool)
       uri = URI.parse(url)
       headers = HttpClient.build_headers(options.worker_headers, options.user_agent)
       # Counts against the global in-flight budget like any other request;
@@ -692,12 +803,17 @@ module Deadfinder
       response, _ = Runner.permits(options.concurrency).acquire do
         HttpClient.fetch(uri, options, headers)
       end
-      return nil unless response.status.success?
+      status = response.status_code
+      return {nil, status != 429 && status < 500} unless response.status.success?
 
       content_type = response.headers["Content-Type"]?
-      return nil unless content_type && content_type.downcase.includes?("html")
+      return {nil, true} unless content_type && content_type.downcase.includes?("html")
 
-      page = Lexbor::Parser.new(response.body)
+      {element_ids(Lexbor::Parser.new(response.body)), true}
+    end
+
+    # Everything in `page` a fragment can address.
+    private def element_ids(page : Lexbor::Parser) : Set(String)
       ids = Set(String).new
       # Pre-HTML5 documents still address sections via `<a name="install">`,
       # which browsers honor as a fragment target to this day.
@@ -714,11 +830,20 @@ module Deadfinder
     # when there is nothing to verify: no fragment at all, or one of the
     # document-top fragments. Percent-encoding is undone first because the
     # attribute it has to match is stored decoded (`#%EC%95%88` -> `#안`).
+    #
+    # A fragment directive (`:~:text=...`, the "scroll to text" syntax) is an
+    # instruction to the browser, not part of the element id, so everything
+    # from `:~:` on is dropped: `#intro:~:text=x` verifies `intro`, and a bare
+    # `#:~:text=x` leaves nothing to verify.
+    #
+    # A fragment starting with `/` or `!` (`#/quickstart`, `#!/home`) is a
+    # client-side route of a hash-routed app (Docsify, hashbang SPAs), not an
+    # element id, so it is left alone too.
     private def checkable_fragment(url : String) : String?
       idx = url.index('#')
       return nil if idx.nil?
 
-      raw = url[(idx + 1)..]
+      raw = url[(idx + 1)..].partition(":~:")[0]
       return nil if raw.empty?
       return nil if raw.compare(TOP_FRAGMENT, case_insensitive: true) == 0
 
@@ -727,6 +852,7 @@ module Deadfinder
       rescue
         raw
       end
+      return nil if decoded.starts_with?('/') || decoded.starts_with?('!')
       decoded.presence
     end
   end
