@@ -156,7 +156,9 @@ module Deadfinder
         COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
         return 0
       }
-      complete -F _deadfinder_completions deadfinder
+      # `-o default` hands over to readline's file name completion whenever the
+      # function offers nothing: the list for `file`, the path for -o/--visualize.
+      complete -o default -F _deadfinder_completions deadfinder
       BASH
     end
 

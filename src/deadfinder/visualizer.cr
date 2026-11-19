@@ -80,12 +80,14 @@ module Deadfinder
 
     private def self.draw_corners(canvas, x1, y1, x2, y2, r, color)
       # One quarter circle per corner centre (top-left, top-right, bottom-left,
-      # bottom-right) and the angles it sweeps.
+      # bottom-right) and the angles it sweeps. Screen y grows downward, so 90
+      # points down and 270 up: each sweep runs between the two borders that
+      # meet at that corner, on the outer side of the centre.
       {
-        {x1 + r, y1 + r, 0..90},
-        {x2 - r, y1 + r, 90..180},
-        {x1 + r, y2 - r, 270..360},
-        {x2 - r, y2 - r, 180..270},
+        {x1 + r, y1 + r, 180..270},
+        {x2 - r, y1 + r, 270..360},
+        {x1 + r, y2 - r, 90..180},
+        {x2 - r, y2 - r, 0..90},
       }.each do |(cx, cy, angles)|
         angles.each do |angle|
           rad = angle * Math::PI / 180

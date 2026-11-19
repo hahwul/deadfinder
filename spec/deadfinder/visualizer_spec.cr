@@ -193,6 +193,45 @@ describe Deadfinder::Visualizer do
       end
     end
 
+    it "rounds each corner on the outer side of its centre" do
+      data = Deadfinder::CoverageResult.new(
+        targets: {} of String => Deadfinder::CoverageTarget,
+        summary: Deadfinder::CoverageSummary.new(
+          total_tested: 10,
+          total_dead: 0,
+          overall_coverage_percentage: 0.0,
+          overall_status_counts: {"200" => 10}
+        )
+      )
+      output_path = File.tempname("viz_test", ".png")
+      begin
+        Deadfinder::Visualizer.generate(data, output_path)
+        canvas = StumpyPNG.read(output_path)
+
+        outline = StumpyPNG::RGBA.new(0_u16, 0_u16, 0_u16, 32768_u16)
+        # Corner centres sit r=10 inside the frame (10,100)-(490,190), and
+        # {sx, sy} points from each centre towards its frame corner. The arc
+        # belongs strictly in that quadrant; a mirrored one lands in the
+        # opposite quadrant, inside the plot. Neither quadrant holds a border.
+        {
+          {20, 110, -1, -1}, {480, 110, 1, -1},
+          {20, 180, -1, 1}, {480, 180, 1, 1},
+        }.each do |(cx, cy, sx, sy)|
+          outer = inner = 0
+          (1..10).each do |dx|
+            (1..10).each do |dy|
+              outer += 1 if canvas[cx + sx * dx, cy + sy * dy] == outline
+              inner += 1 if canvas[cx - sx * dx, cy - sy * dy] == outline
+            end
+          end
+          outer.should be > 0
+          inner.should eq 0
+        end
+      ensure
+        FileUtils.rm_rf(output_path)
+      end
+    end
+
     it "skips zero-height bars" do
       data = Deadfinder::CoverageResult.new(
         targets: {} of String => Deadfinder::CoverageTarget,

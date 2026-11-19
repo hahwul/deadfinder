@@ -270,8 +270,9 @@ runs:
 
         # A step output is a single line, so only JSON can be flattened by
         # stripping newlines. YAML/TOML/CSV/SARIF are newline-significant and
-        # go through the heredoc form of $GITHUB_OUTPUT instead.
-        if [ "${fmt}" = "json" ]; then
+        # go through the heredoc form of $GITHUB_OUTPUT instead. The binary
+        # takes the format in any case, so `JSON` has to be flattened as well.
+        if [ "$(printf '%s' "${fmt}" | tr '[:upper:]' '[:lower:]')" = "json" ]; then
           if command -v jq >/dev/null 2>&1; then
             encoded=$(jq -c . /tmp/output.json)
           else
@@ -281,7 +282,10 @@ runs:
         else
           {
             echo "output<<DEADFINDER_OUTPUT_EOF"
-            cat /tmp/output.json
+            # The closing delimiter only counts on a line of its own, and a
+            # SARIF report ends in `}` with no newline. `$(...)` drops whatever
+            # trailing newlines the report has and `printf` puts one back.
+            printf '%s\n' "$(cat /tmp/output.json)"
             echo "DEADFINDER_OUTPUT_EOF"
           } >> "$GITHUB_OUTPUT"
         fi
