@@ -48,15 +48,27 @@ def substitute_base(text, base)
   text.gsub('{{BASE}}', base)
 end
 
-def run_case(base, name:, args:, format:, golden:, stdin: nil, extra_files: {})
+# `broken_stdout` runs the binary un-silenced with STDOUT wired to a pipe whose
+# reader is already gone — what `deadfinder ... | head -1` leaves behind — so
+# the first log line hits EPIPE. The scan must still finish, exit 0 and write
+# the `-o` report.
+def run_case(base, name:, args:, format:, golden:, stdin: nil, extra_files: {}, broken_stdout: false)
   extra_files.each do |path, content|
     File.write(path, substitute_base(content, base))
   end
 
   Tempfile.create(['deadfinder', ".#{format}"]) do |tmp|
     resolved_args = substitute_base(args, base)
-    cmd = "#{BIN} #{resolved_args} -o #{tmp.path} -f #{format} -s"
-    stdout, stderr, status = Open3.capture3(cmd, stdin_data: stdin || '')
+    cmd = "#{BIN} #{resolved_args} -o #{tmp.path} -f #{format}#{' -s' unless broken_stdout}"
+    stdout, stderr, status = if broken_stdout
+                               reader, writer = IO.pipe
+                               reader.close
+                               pid = Process.spawn(cmd, in: File::NULL, out: writer, err: File::NULL)
+                               writer.close
+                               ['', '', Process.wait2(pid).last]
+                             else
+                               Open3.capture3(cmd, stdin_data: stdin || '')
+                             end
 
     unless status.success?
       warn "FAIL: #{name} — exit #{status.exitstatus}"
@@ -149,5 +161,12 @@ results << run_case(base,
                     format: 'json',
                     golden: "#{HARNESS_ROOT}/golden/pipe_json.json",
                     stdin: substitute_base("{{BASE}}/index.html\n", base))
+
+results << run_case(base,
+                    name: 'url_json_broken_stdout',
+                    args: 'url {{BASE}}/index.html',
+                    format: 'json',
+                    golden: "#{HARNESS_ROOT}/golden/url_json.json",
+                    broken_stdout: true)
 
 exit(results.all? ? 0 : 1)
