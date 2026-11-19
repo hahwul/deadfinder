@@ -59,7 +59,7 @@ module Deadfinder
       begin
         StumpyPNG.write(canvas, output_path)
       rescue ex : IO::Error
-        Deadfinder::Logger.error "Failed to write visualization to #{output_path}: #{ex.message}"
+        Deadfinder.io_error "Failed to write visualization to #{output_path}: #{ex.message}"
       end
     end
 

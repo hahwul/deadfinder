@@ -56,7 +56,28 @@ module Deadfinder
   # would otherwise be keyed in whatever order results happened to land in;
   # this restores the requested order at serialization time.
   @@target_order = [] of String
+  # Set once the run could not read its input or write its report or chart.
+  # Library code must not `exit` (embedded callers and the specs expect
+  # `run_*` to return), so it records the failure here and the CLI turns it
+  # into exit status 1.
+  @@io_failed = false
   @@mutex = Mutex.new
+
+  def self.io_failed? : Bool
+    @@io_failed
+  end
+
+  # Reports an I/O failure. Deliberately not `Logger.error`: `--silent` mutes
+  # that, and then nothing told a CI job that the report it is about to read
+  # was never written, or that the list it meant to scan was never read.
+  def self.io_error(message : String) : Nil
+    @@io_failed = true
+    begin
+      STDERR.puts "Error: #{message}"
+    rescue IO::Error
+      # STDERR itself is gone; the exit status still carries the failure.
+    end
+  end
 
   def self.output
     @@output
@@ -95,6 +116,7 @@ module Deadfinder
       @@status_cache.clear
       @@dead_targets.clear
       @@target_order.clear
+      @@io_failed = false
     end
     Runner.reset_shared_state
   end
@@ -137,7 +159,7 @@ module Deadfinder
           File.open(filename) { |file| read_targets(file, options.limit) }
         end
       rescue ex : IO::Error
-        Deadfinder::Logger.error "Failed to read input file #{filename}: #{ex.message}"
+        io_error "Failed to read input file #{filename}: #{ex.message}"
         [] of String
       end
     end
@@ -460,7 +482,8 @@ module Deadfinder
       status_counts = data.status_counts
       coverage_percentage = total > 0 ? ((dead.to_f / total) * 100).round(2) : 0.0
 
-      coverage_summary[target] = CoverageTarget.new(
+      # Scrubbed for the same reason as the report keys in `gen_output`.
+      coverage_summary[target.scrub] = CoverageTarget.new(
         total_tested: total,
         dead_links: dead,
         coverage_percentage: coverage_percentage,
@@ -490,11 +513,19 @@ module Deadfinder
   def self.gen_output(options : Options)
     # Dedupe per-target URLs so a page that references the same link twice
     # (or is scanned more than once) never lists it twice in the report.
-    output_data = in_target_order(@@output.transform_values(&.uniq))
+    #
+    # Every URL is scrubbed on its way into the report: an input line or a
+    # redirect `Location` can carry bytes that are not valid UTF-8 (a Latin-1
+    # `é`), which crashed the YAML and TOML emitters and left the other formats
+    # writing a file strict parsers reject. A valid string comes back untouched.
+    # Keys are scrubbed last because `in_target_order` looks them up raw.
+    # ponytail: two targets that differ only in their invalid bytes scrub to
+    # one key and the later one wins; merge the entries if that ever matters.
+    output_data = in_target_order(@@output.transform_values(&.map(&.scrub).uniq)).transform_keys(&.scrub)
     # Snapshot so the emitters see one consistent view, and so the `dead_targets`
     # key can be skipped entirely when empty — existing golden files and
     # existing consumers must be byte-identical on a run with no dead targets.
-    dead_targets = in_target_order(@@dead_targets.dup)
+    dead_targets = in_target_order(@@dead_targets.dup).transform_keys(&.scrub)
     format = options.output_format.downcase
 
     coverage_info : CoverageResult? = nil
@@ -524,7 +555,7 @@ module Deadfinder
         begin
           File.write(options.output, content)
         rescue ex : IO::Error
-          Deadfinder::Logger.error "Failed to write output file #{options.output}: #{ex.message}"
+          io_error "Failed to write output file #{options.output}: #{ex.message}"
         end
       end
     end
