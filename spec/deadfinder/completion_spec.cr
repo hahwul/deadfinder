@@ -118,6 +118,34 @@ describe Deadfinder::Completion do
       script.should contain "-f|--output_format)"
       script.should contain "complete -o default -F _deadfinder_completions deadfinder"
     end
+
+    it "completes formats after a long option with an equals sign" do
+      bash = Process.find_executable("bash") || pending!("Bash is not installed")
+      script = Deadfinder::Completion.bash + "\n" + <<-'BASH'
+      COMP_CWORD=2
+      COMP_WORDS=(deadfinder url --output_format=ya)
+      _deadfinder_completions deadfinder ya --output_format
+      printf '%s\n' "${COMPREPLY[@]}"
+
+      _deadfinder_completions deadfinder --output_format=ya url
+      printf '%s\n' "${COMPREPLY[@]}"
+
+      COMP_WORDS=(deadfinder url --output_format = ya)
+      COMP_CWORD=4
+      _deadfinder_completions deadfinder ya =
+      printf '%s\n' "${COMPREPLY[@]}"
+
+      COMP_WORDS=(deadfinder url --output_format =)
+      COMP_CWORD=3
+      _deadfinder_completions deadfinder '' =
+      printf '%s\n' "${COMPREPLY[@]}"
+      BASH
+
+      output = IO::Memory.new
+      Process.run(bash, ["--noprofile", "--norc"], input: IO::Memory.new(script), output: output, error: STDERR)
+        .success?.should be_true
+      output.to_s.lines.should eq ["yaml", "--output_format=yaml", "yaml"] + Deadfinder::Completion::OUTPUT_FORMATS
+    end
   end
 
   describe ".zsh" do

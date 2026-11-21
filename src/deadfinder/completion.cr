@@ -118,7 +118,7 @@ module Deadfinder
       <<-BASH
       _deadfinder_completions()
       {
-        local cur prev cmds opts shells formats i
+        local cur prev cmds opts shells formats i format_prefix=''
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
         prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -127,15 +127,28 @@ module Deadfinder
         shells="#{SHELLS.join(" ")}"
         formats="#{OUTPUT_FORMATS.join(" ")}"
 
-        # A value completion depends only on the word before the cursor, so it
-        # has to win over both the option list and the subcommand list.
+        # Bash may include the equals sign in COMP_WORDS or split it out.
+        # $2 is the text Readline will replace, which determines the prefix.
+        if [[ "${cur}" == --output_format=* ]]; then
+          cur="${cur#*=}"
+          prev=--output_format
+          if [[ "$2" == --output_format=* ]]; then
+            format_prefix=--output_format=
+          fi
+        elif [[ "${prev}" == = && COMP_CWORD -ge 2 && "${COMP_WORDS[COMP_CWORD-2]}" == --output_format ]]; then
+          prev=--output_format
+        elif [[ "${prev}" == --output_format && "${cur}" == = ]]; then
+          cur=''
+        fi
+
+        # Value completions take precedence over options and subcommands.
         case "${prev}" in
           completion)
             COMPREPLY=( $(compgen -W "${shells}" -- "${cur}") )
             return 0
             ;;
           #{format_pattern})
-            COMPREPLY=( $(compgen -W "${formats}" -- "${cur}") )
+            COMPREPLY=( $(compgen -P "${format_prefix}" -W "${formats}" -- "${cur}") )
             return 0
             ;;
         esac
