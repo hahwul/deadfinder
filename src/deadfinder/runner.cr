@@ -557,8 +557,6 @@ module Deadfinder
       page.css("base").each do |element|
         href = element.attribute_by("href")
         next unless href
-        href = href.strip
-        next if href.empty?
         return Deadfinder.generate_url(href, page_url) || page_url
       end
       page_url
