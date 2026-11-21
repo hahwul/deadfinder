@@ -316,10 +316,13 @@ module Deadfinder
         return
       end
 
+      record_dead_target(sitemap_url, response.status_code, options)
       unless response.status.success?
         Deadfinder::Logger.error "Failed to fetch sitemap #{sitemap_url}: HTTP #{response.status_code}"
-        record_dead_target(sitemap_url, response.status_code, options)
         return
+      end
+      if options.dead_status?(response.status_code)
+        Deadfinder::Logger.error "Sitemap returned HTTP #{response.status_code}: #{sitemap_url}"
       end
 
       # Relative <loc> values (and relative child-sitemap references) resolve

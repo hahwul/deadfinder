@@ -498,6 +498,27 @@ describe Deadfinder do
       Deadfinder.output["http://mock-sitemap.test/page1"].should contain "http://mock-sitemap.test/dead1"
     end
 
+    it "records a successful sitemap status marked dead and still scans its pages" do
+      sitemap = "http://sm-status.test/sitemap.xml"
+      page = "http://sm-status.test/page"
+      broken = "http://sm-status.test/broken"
+      WebMock.stub(:get, sitemap)
+        .to_return(status: 201, body: %(<urlset><url><loc>#{page}</loc></url></urlset>))
+      WebMock.stub(:get, page).to_return(body: %(<html><a href="#{broken}">Broken link</a></html>))
+      WebMock.stub(:get, broken).to_return(status: 404)
+
+      log = IO::Memory.new
+      Deadfinder::Logger.sink = log
+      options = default_test_options
+      options.silent = false
+      options.dead_status = "201"
+      Deadfinder.run_sitemap(sitemap, options)
+
+      Deadfinder.dead_targets.should eq({sitemap => "201"})
+      Deadfinder.output[page].should eq([broken])
+      log.to_s.should contain "Sitemap returned HTTP 201: #{sitemap}"
+    end
+
     it "terminates on a cyclic sitemap index without infinite recursion" do
       # a.xml references b.xml, b.xml references a.xml — must not loop.
       sitemap_a = <<-XML
