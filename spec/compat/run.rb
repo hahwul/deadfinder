@@ -59,7 +59,7 @@ def run_case(base, name:, args:, format:, golden:, stdin: nil, extra_files: {}, 
 
   Tempfile.create(['deadfinder', ".#{format}"]) do |tmp|
     resolved_args = substitute_base(args, base)
-    cmd = "#{BIN} #{resolved_args} -o #{tmp.path} -f #{format}#{' -s' unless broken_stdout}"
+    cmd = "#{BIN} -o #{tmp.path} -f #{format}#{' -s' unless broken_stdout} #{resolved_args}"
     stdout, stderr, status = if broken_stdout
                                reader, writer = IO.pipe
                                reader.close
@@ -154,6 +154,18 @@ results << run_case(base,
                     format: 'json',
                     golden: "#{HARNESS_ROOT}/golden/file_json.json",
                     extra_files: { urls_file => "{{BASE}}/index.html\n" })
+
+results << run_case(base,
+                    name: 'file_json_after_option_terminator',
+                    args: "file -- #{urls_file}",
+                    format: 'json',
+                    golden: "#{HARNESS_ROOT}/golden/file_json.json",
+                    extra_files: { urls_file => "{{BASE}}/index.html\n" })
+
+stdout, stderr, status = Open3.capture3(BIN, 'version', '--', 'extra')
+rejected = status.exitstatus == 1 && stderr.include?('unexpected argument')
+warn "FAIL: version with trailing argument — exit #{status.exitstatus}\n#{stdout}#{stderr}" unless rejected
+results << rejected
 
 results << run_case(base,
                     name: 'pipe_json',

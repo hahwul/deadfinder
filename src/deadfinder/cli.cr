@@ -58,7 +58,8 @@ module Deadfinder
           exit
         end
 
-        parser.unknown_args do |remaining, _|
+        parser.unknown_args do |before_dash, after_dash|
+          remaining = before_dash + after_dash
           if remaining.size > 0
             subcommand = remaining[0]
             positional_arg = remaining[1]? if remaining.size > 1
