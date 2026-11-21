@@ -845,13 +845,13 @@ module Deadfinder
 
       raw = url[(idx + 1)..].partition(":~:")[0]
       return nil if raw.empty?
-      return nil if raw.compare(TOP_FRAGMENT, case_insensitive: true) == 0
 
       decoded = begin
         URI.decode(raw)
       rescue
         raw
       end
+      return nil if decoded.compare(TOP_FRAGMENT, case_insensitive: true) == 0
       return nil if decoded.starts_with?('/') || decoded.starts_with?('!')
       decoded.presence
     end

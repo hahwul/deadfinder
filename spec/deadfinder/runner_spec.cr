@@ -1190,10 +1190,12 @@ describe Deadfinder::Runner do
       (args[:output]["http://ok-anchor.test/"]? || [] of String).should be_empty
     end
 
-    it "treats #top and an empty fragment as valid by definition" do
+    it "treats #top, encoded #top and an empty fragment as valid by definition" do
       html = %(<html><body>
+        <a href="#%74op">same-page encoded top</a>
         <a href="/guide#top">t</a>
         <a href="/guide#TOP">T</a>
+        <a href="/guide#T%4FP">encoded top</a>
         <a href="/guide#">e</a>
       </body></html>)
       WebMock.stub(:get, "http://top.test/").to_return(body: html)
