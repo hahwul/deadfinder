@@ -144,24 +144,14 @@ module Deadfinder
   end
 
   def self.run_pipe(options : Options)
-    run_with_input(options) { read_targets(STDIN, options.limit) }
+    run_with_input(options, "STDIN") { read_targets(STDIN, options.limit) }
   end
 
   def self.run_file(filename : String, options : Options)
-    run_with_input(options) do
-      # The CLI pre-checks existence, but the file can still be unreadable
-      # (permissions) or vanish between that check and this read (TOCTOU).
-      # Report cleanly and scan nothing rather than crash.
-      begin
-        if filename == STDIN_FILENAME
-          read_targets(STDIN, options.limit)
-        else
-          File.open(filename) { |file| read_targets(file, options.limit) }
-        end
-      rescue ex : IO::Error
-        io_error "Failed to read input file #{filename}: #{ex.message}"
-        [] of String
-      end
+    return run_pipe(options) if filename == STDIN_FILENAME
+
+    run_with_input(options, "input file #{filename}") do
+      File.open(filename) { |file| read_targets(file, options.limit) }
     end
   end
 
@@ -453,11 +443,16 @@ module Deadfinder
     end
   end
 
-  private def self.run_with_input(options : Options, &block : -> Array(String))
+  private def self.run_with_input(options : Options, source : String, &block : -> Array(String))
     Deadfinder::Logger.apply_options(options)
     Deadfinder::Logger.info "Reading input"
     # `read_targets` has already trimmed, deduped and limited the list.
-    targets = yield
+    targets = begin
+      yield
+    rescue ex : IO::Error
+      io_error "Failed to read #{source}: #{ex.message}"
+      [] of String
+    end
     if targets.empty?
       Deadfinder::Logger.info "No URLs to scan"
     else

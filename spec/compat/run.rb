@@ -118,6 +118,19 @@ urls_file = File.join(Dir.tmpdir, "deadfinder_compat_urls_#{Process.pid}.txt")
 
 results = []
 
+[['pipe'], ['file', '-']].each do |args|
+  Tempfile.create('deadfinder_stdin_error') do |error|
+    File.open(File::NULL, 'w') do |write_only|
+      pid = Process.spawn(BIN, *args, '-s', in: write_only, out: File::NULL, err: error)
+      status = Process.wait2(pid).last
+      stderr = File.read(error.path)
+      passed = status.exitstatus == 1 && stderr.start_with?('Error: Failed to read STDIN:')
+      warn "FAIL: #{args.join(' ')} with unreadable STDIN — exit #{status.exitstatus}\n#{stderr}" unless passed
+      results << passed
+    end
+  end
+end
+
 results << run_case(base,
                     name: 'url_json',
                     args: 'url {{BASE}}/index.html',
