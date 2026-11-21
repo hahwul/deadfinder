@@ -15,6 +15,7 @@ SPEC_TOP   = "spec/deadfinder_spec.cr"
 SPEC_CLI   = "spec/deadfinder/cli_spec.cr"
 SNAPCRAFT  = "snap/snapcraft.yaml"
 PKGBUILD   = "packaging/aur/PKGBUILD"
+FLAKE_NIX  = "flake.nix"
 
 SEMVER = /\A\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\z/
 
@@ -55,5 +56,6 @@ ok &= replace_in_file(SPEC_TOP, /VERSION\.should\s+eq\s+"[^"]+"/, %(VERSION.shou
 ok &= replace_in_file(SPEC_CLI, /VERSION\.should\s+eq\s+"[^"]+"/, %(VERSION.should eq "#{nv}"))
 ok &= replace_in_file(SNAPCRAFT, /^version:\s*[^\n]+$/m, "version: #{nv}")
 ok &= replace_in_file(PKGBUILD, /^pkgver=[^\n]+$/m, "pkgver=#{nv}")
+ok &= replace_in_file(FLAKE_NIX, /^( +version = )"[^"]+";$/m, %(\\1"#{nv}";))
 
 exit(ok ? 0 : 1)

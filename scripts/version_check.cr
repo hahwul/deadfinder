@@ -11,6 +11,7 @@ SPEC_TOP   = "spec/deadfinder_spec.cr"
 SPEC_CLI   = "spec/deadfinder/cli_spec.cr"
 SNAPCRAFT  = "snap/snapcraft.yaml"
 PKGBUILD   = "packaging/aur/PKGBUILD"
+FLAKE_NIX  = "flake.nix"
 
 def shard_version(path : String) : String?
   YAML.parse(File.read(path))["version"].as_s
@@ -29,7 +30,8 @@ end
 # Matches both `VERSION = "X"` and `VERSION.should eq "X"` (with or without parens).
 CR_VERSION_RE = /VERSION\s*(?:=|\.should\s+eq\(?)\s*"([^"]+)"/
 # PKGBUILD: pkgver=X.Y.Z
-PKGBUILD_RE = /^pkgver=([^\s]+)/m
+PKGBUILD_RE    = /^pkgver=([^\s]+)/m
+NIX_VERSION_RE = /^ +version = "([^"]+)";$/m
 
 results = [] of {String, String}
 
@@ -39,6 +41,7 @@ results << {SPEC_TOP, match_pattern(SPEC_TOP, CR_VERSION_RE).not_nil!} if File.e
 results << {SPEC_CLI, match_pattern(SPEC_CLI, CR_VERSION_RE).not_nil!} if File.exists?(SPEC_CLI)
 results << {SNAPCRAFT, shard_version(SNAPCRAFT).not_nil!} if File.exists?(SNAPCRAFT)
 results << {PKGBUILD, match_pattern(PKGBUILD, PKGBUILD_RE).not_nil!} if File.exists?(PKGBUILD)
+results << {FLAKE_NIX, match_pattern(FLAKE_NIX, NIX_VERSION_RE).not_nil!} if File.exists?(FLAKE_NIX)
 
 if results.empty?
   STDERR.puts "no tracked version files found"
