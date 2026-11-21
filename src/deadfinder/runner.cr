@@ -453,10 +453,11 @@ module Deadfinder
       loop do
         status = ERROR_STATUS
         retry_after : Time::Span? = nil
+        response_uri : URI? = nil
 
         begin
           result = Runner.permits(options.concurrency).acquire { yield }
-          response = result[0]
+          response, response_uri = result
           status = response.status_code
           return result if attempt >= attempts || !transient?(status)
           # `Retry-After` is only meaningful on the statuses that define it;
@@ -482,8 +483,11 @@ module Deadfinder
         wait = retry_delay(attempt, retry_after, options)
         # Hold the whole host back, not just this fiber: every other worker
         # queued on the same origin would otherwise walk straight into the same
-        # 429 before this one has finished waiting it out.
-        HttpClient.throttle.penalize(origin_key_for(url), wait) if retry_after
+        # 429 before this one has finished waiting it out. A redirected document
+        # may have received the header from a different origin.
+        if retry_after && response_uri
+          HttpClient.throttle.penalize(HttpClient.origin_key(response_uri), wait)
+        end
         Deadfinder::Logger.debug "Retrying #{url} in #{wait.total_milliseconds.round}ms (attempt #{attempt + 1}/#{attempts}, last status #{status})"
         sleep wait
 
@@ -510,14 +514,6 @@ module Deadfinder
 
       cap = options.timeout.seconds
       wait > cap ? cap : wait
-    end
-
-    # Origin of `url` for throttling purposes; a URL that no longer parses just
-    # doesn't get a host-wide penalty.
-    private def origin_key_for(url : String) : String
-      HttpClient.origin_key(URI.parse(url))
-    rescue
-      url
     end
 
     # Checks a single link. Redirects are deliberately *not* followed here: the

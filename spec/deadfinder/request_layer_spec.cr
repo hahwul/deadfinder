@@ -519,6 +519,39 @@ describe "request layer" do
       args[:output][target].should eq ["http://flaky-target.test/gone"]
     end
 
+    it "applies Retry-After to the origin that answered after a redirect" do
+      source = URI.parse("http://redirect-source.test/")
+      destination = URI.parse("http://redirect-destination.test/")
+      WebMock.stub(:get, source.to_s).to_return(status: 302, headers: {"Location" => destination.to_s})
+
+      order = Channel(Symbol).new(2)
+      throttle = Deadfinder::HttpClient.throttle
+      calls = 0
+      WebMock.stub(:get, destination.to_s).to_return do |_request|
+        calls += 1
+        next HTTP::Client::Response.new(200) unless calls == 1
+
+        # These probes run once the retry loop sleeps, after it records the penalty.
+        spawn do
+          throttle.acquire(Deadfinder::HttpClient.origin_key(source), Time::Span.zero)
+          order.send(:source)
+        end
+        spawn do
+          throttle.acquire(Deadfinder::HttpClient.origin_key(destination), Time::Span.zero)
+          order.send(:destination)
+        end
+        HTTP::Client::Response.new(503, headers: HTTP::Headers{"Retry-After" => "1"})
+      end
+
+      options = default_test_options
+      options.retries = 1
+      response, final_uri = Deadfinder::Runner.new.fetch_document(source, options, HTTP::Headers.new)
+
+      {order.receive, order.receive}.should eq({:source, :destination})
+      response.status_code.should eq 200
+      final_uri.should eq destination
+    end
+
     it "retries a target page whose connection failed" do
       target = "http://reset-target.test/"
       calls = 0
