@@ -19,14 +19,14 @@ describe Deadfinder::Visualizer do
       File.exists?(output_path).should be_false
     end
 
-    it "creates a valid 500x300 PNG with 200 status codes" do
+    it "creates a valid 500x300 PNG with green bars for 2xx status codes" do
       data = Deadfinder::CoverageResult.new(
         targets: {} of String => Deadfinder::CoverageTarget,
         summary: Deadfinder::CoverageSummary.new(
           total_tested: 10,
           total_dead: 0,
           overall_coverage_percentage: 0.0,
-          overall_status_counts: {"200" => 10}
+          overall_status_counts: {"200" => 5, "204" => 5}
         )
       )
       output_path = File.tempname("viz_test", ".png")
@@ -38,10 +38,9 @@ describe Deadfinder::Visualizer do
         canvas.width.should eq 500
         canvas.height.should eq 300
 
-        # Check for green pixels (200 status = green)
         green = StumpyPNG::RGBA.from_rgb8(0, 255, 0)
-        green_found = (110..180).any? { |y| canvas[250, y] == green }
-        green_found.should be_true
+        canvas[250, 125].should eq green
+        canvas[250, 160].should eq green
       ensure
         FileUtils.rm_rf(output_path)
       end
