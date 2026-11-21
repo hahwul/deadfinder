@@ -863,8 +863,8 @@ describe Deadfinder::Runner do
       args[:output]["http://relbase.test/a/index.html"].should eq ["http://relbase.test/docs/guide"]
     end
 
-    it "ignores an empty <base href> and falls back to the page URL" do
-      html = %(<html><head><base href=""></head><body><a href="guide">g</a></body></html>)
+    it "uses the page URL when the first <base href> is empty" do
+      html = %(<html><head><base href=""><base href="/other/"></head><body><a href="guide">g</a></body></html>)
       WebMock.stub(:get, "http://emptybase.test/a/index.html").to_return(body: html)
       WebMock.stub(:get, "http://emptybase.test/a/guide").to_return(status: 404)
 
