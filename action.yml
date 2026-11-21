@@ -139,11 +139,14 @@ runs:
         echo "asset=${asset}" >> "$GITHUB_OUTPUT"
 
     - name: Download deadfinder binary
+      id: download
       shell: bash
       run: |
         set -e
         version="${{ inputs.version }}"
         asset="${{ steps.platform.outputs.asset }}"
+        workdir=$(mktemp -d "${RUNNER_TEMP}/deadfinder.XXXXXXXX")
+        cd "${workdir}"
         if [ "${version}" = "latest" ]; then
           base_url="https://github.com/hahwul/deadfinder/releases/latest/download"
         else
@@ -153,7 +156,7 @@ runs:
         # The sha256 sidecar was generated with the tarball's real filename
         # (deadfinder-linux-x86_64.tar.gz etc.), so we must save the download
         # under the same name for `sha256sum -c` to resolve it.
-        if ! curl -fsSL "${base_url}/${asset}" -o "/tmp/${asset}"; then
+        if ! curl -fsSL "${base_url}/${asset}" -o "${asset}"; then
           echo "::error title=DeadFinder binary not found::Failed to download ${base_url}/${asset}"
           echo "::error::Common causes:"
           echo "::error::  1. Using 'uses: hahwul/deadfinder@main' or '@latest' — neither resolves to a release."
@@ -163,11 +166,10 @@ runs:
           echo "::error::  3. Using a v1.x workflow with a v2 ref — v1 users should pin hahwul/deadfinder@1.10.0."
           exit 1
         fi
-        if ! curl -fsSL "${base_url}/${asset}.sha256" -o "/tmp/${asset}.sha256"; then
+        if ! curl -fsSL "${base_url}/${asset}.sha256" -o "${asset}.sha256"; then
           echo "::error::Downloaded ${asset} but its .sha256 sidecar is missing at ${base_url}/${asset}.sha256"
           exit 1
         fi
-        cd /tmp
         # macOS runners ship `shasum`, Linux ships `sha256sum`.
         if command -v sha256sum >/dev/null 2>&1; then
           sha256sum -c "${asset}.sha256"
@@ -177,11 +179,13 @@ runs:
         tar xzf "${asset}"
         chmod +x deadfinder
         ./deadfinder version
+        echo "workdir=${workdir}" >> "$GITHUB_OUTPUT"
 
     - name: Run deadfinder
       id: scan
       shell: bash
       env:
+        DF_WORKDIR:        ${{ steps.download.outputs.workdir }}
         DF_COMMAND:        ${{ inputs.command }}
         DF_TARGET:         ${{ inputs.target }}
         DF_TIMEOUT:        ${{ inputs.timeout }}
@@ -216,7 +220,8 @@ runs:
         # (the failing command is the left side of a `&&`), but the step's own
         # status is that of its LAST command — so never end this script on one.
         fmt="${DF_OUTPUT_FORMAT:-json}"
-        args=( "${DF_COMMAND}" "${DF_TARGET}" -o /tmp/output.json -f "${fmt}" )
+        report="${DF_WORKDIR}/report"
+        args=( "${DF_COMMAND}" "${DF_TARGET}" -o "${report}" -f "${fmt}" )
         [ -n "${DF_TIMEOUT}" ]     && args+=( --timeout="${DF_TIMEOUT}" )
         [ -n "${DF_CONCURRENCY}" ] && args+=( --concurrency="${DF_CONCURRENCY}" )
         [ "${DF_SILENT}" = "true" ]     && args+=( --silent )
@@ -261,10 +266,10 @@ runs:
         # the scan. So hold the status, publish the output, and re-raise it as
         # this step's exit code at the very end.
         scan_status=0
-        /tmp/deadfinder "${args[@]}" || scan_status=$?
+        "${DF_WORKDIR}/deadfinder" "${args[@]}" || scan_status=$?
 
-        if [ ! -f /tmp/output.json ]; then
-          echo "::error::/tmp/output.json was not produced"
+        if [ ! -f "${report}" ]; then
+          echo "::error::DeadFinder did not produce a report"
           exit 1
         fi
 
@@ -274,9 +279,9 @@ runs:
         # takes the format in any case, so `JSON` has to be flattened as well.
         if [ "$(printf '%s' "${fmt}" | tr '[:upper:]' '[:lower:]')" = "json" ]; then
           if command -v jq >/dev/null 2>&1; then
-            encoded=$(jq -c . /tmp/output.json)
+            encoded=$(jq -c . "${report}")
           else
-            encoded=$(tr -d '\n' < /tmp/output.json)
+            encoded=$(tr -d '\n' < "${report}")
           fi
           echo "output=${encoded}" >> "$GITHUB_OUTPUT"
         else
@@ -285,7 +290,7 @@ runs:
             # The closing delimiter only counts on a line of its own, and a
             # SARIF report ends in `}` with no newline. `$(...)` drops whatever
             # trailing newlines the report has and `printf` puts one back.
-            printf '%s\n' "$(cat /tmp/output.json)"
+            printf '%s\n' "$(cat "${report}")"
             echo "DEADFINDER_OUTPUT_EOF"
           } >> "$GITHUB_OUTPUT"
         fi
